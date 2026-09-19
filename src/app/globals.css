@@ -3,6 +3,17 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+
+  /* KUWERA 5K brand tokens - lihat docs/PRD.md bagian 3 */
+  --color-green-deep: #0b4a2c;
+  --color-brand-green: #1c6b06;
+  --color-green-bright: #64a322;
+  --color-yellow-lime: #f4e71d;
+  --color-brand-yellow: #ffbb00;
+  --color-gold: #e3b219;
+  --color-cream: #fdfbf5;
+  --color-glass: rgba(255, 255, 255, 0.1);
+  --color-glass-border: rgba(255, 255, 255, 0.18);
 }
 
 @theme inline {
@@ -10,6 +21,17 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --font-display: var(--font-anton);
+
+  --color-green-deep: var(--color-green-deep);
+  --color-brand-green: var(--color-brand-green);
+  --color-green-bright: var(--color-green-bright);
+  --color-yellow-lime: var(--color-yellow-lime);
+  --color-brand-yellow: var(--color-brand-yellow);
+  --color-gold: var(--color-gold);
+  --color-cream: var(--color-cream);
+  --color-glass: var(--color-glass);
+  --color-glass-border: var(--color-glass-border);
 }
 
 @media (prefers-color-scheme: dark) {
