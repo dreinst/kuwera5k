@@ -1,12 +1,13 @@
 "use client";
 
 import Reveal from "@/components/Reveal";
+import { eventData } from "@/lib/event-data";
 
 export default function CtaBanner() {
   return (
     <section className="bg-cream px-6 pb-24">
       <Reveal
-        className="mx-auto max-w-6xl rounded-[20px] p-10 text-center sm:p-16"
+        className="mx-auto max-w-6xl text-center"
         variants={{
           hidden: { opacity: 0, scale: 0.97, filter: "blur(6px)" },
           show: {
@@ -27,7 +28,8 @@ export default function CtaBanner() {
             Siap lari bareng KUWERA?
           </h2>
           <p className="mx-auto mt-3 max-w-md text-green-deep/80">
-            Kuota terbatas, harga early bird berlaku sampai batas waktu berakhir.
+            Kuota {eventData.quotaTotal.toLocaleString("id-ID")} peserta. Harga early bird Rp
+            {eventData.earlyBirdPrice.toLocaleString("id-ID")} berlaku sampai {eventData.earlyBirdUntil}.
           </p>
           <a
             href="/daftar"

@@ -244,16 +244,16 @@ Non-functional: LCP < 2,5 s, TTI < 3,5 s, Lighthouse >= 90; 500 pengguna bersama
 Biaya berjalan: VPS sudah ada (cek minimal 2 vCPU/4 GB); domain Rp150-300 rb/tahun; Cloudflare gratis; Zoho Mail gratis 5 user; Resend gratis 3.000 email/bulan; WA API +-Rp100 rb/bulan (P1); Midtrans per transaksi dibebankan ke peserta. Total Rp0-150 rb/bulan di luar domain. Cek harga resmi Midtrans (midtrans.com/id/pricing) sebelum production.
 
 Status keputusan (20 Sep 2026):
-- [x] kota Malang, tanggal dummy; **rute resmi sudah ada** (loop Lapangan Rampal, lihat bagian 12), start/finish = Lapangan Rampal
+- [x] kota Malang, tanggal dummy; rute resmi sudah ada (loop Lapangan Rampal, lihat bagian 12), start/finish = Lapangan Rampal
 - [x] kategori/harga dummy, final menyusul
-- [ ] merchant Midtrans: badan usaha ada, konfirmasi ulang dokumen; **menunggu Sandbox Server Key + Client Key** (checklist lengkap sudah dikirim ke Andrew via Telegram 20 Sep)
+- [ ] merchant Midtrans: badan usaha ada, konfirmasi ulang dokumen; menunggu Sandbox Server Key + Client Key (checklist lengkap sudah dikirim ke Andrew via Telegram 20 Sep)
 - [x] biaya layanan ke peserta
 - [x] guest star & sponsor placeholder TBC
 - [x] registrasi perorangan
 - [x] brand dari jersey/lanyard
 - [x] bilingual default ID
-- [ ] domain: **pakai kuwera5k.vercel.app dulu**, domain sendiri ditunda (menentukan email pengirim)
-- [x] hosting: **frontend di Vercel dulu, database di VPS dreinst (Coolify)**, lihat bagian 12. Migrasi app ke VPS sesuai bagian 8 tetap opsi nanti
+- [ ] domain: pakai kuwera5k.vercel.app dulu, domain sendiri ditunda (menentukan email pengirim)
+- [x] hosting: frontend di Vercel dulu, database di VPS dreinst (Coolify), lihat bagian 12. Migrasi app ke VPS sesuai bagian 8 tetap opsi nanti
 - [ ] siapa yang develop belum ditetapkan
 
 ## 12. Status implementasi (per 20 September 2026)
@@ -261,11 +261,11 @@ Status keputusan (20 Sep 2026):
 Sudah jadi dan live di https://kuwera5k.vercel.app (auto-deploy dari `main` GitHub `dreinst/kuwera5k`):
 - Landing page lengkap 9 section (navbar, hero bento 5 kartu, rute + timeline checkpoint, banner tanggal, guest star, sponsor, CTA, newsletter + FAQ, footer) dengan animasi reveal blur/fade/scale sesuai bagian 7 (framer-motion; GSAP/Lenis belum dipakai).
 - Rute resmi dari peta panitia: Start Rampal, Jl. Ronggolawe, Jl. Urip Sumoharjo, Jl. Panglima Sudirman, Jl. Untung Suropati Utara, Jl. Terusan Kesatrian, Jl. Mayjen M. Wiyono, Jl. Indraprasta, Jl. Hamid Rusdi, Jl. Lapangan Brawijaya, Jl. Ronggolawe, Finish Rampal. Ilustrasi SVG loop di `src/components/RouteMap.tsx` (bentuk disederhanakan, belum dari GPX).
-- Database PostgreSQL 16 di VPS dreinst 187.53.129.205 lewat Coolify: project `kuwera5k`, resource `uvx3zbwvek7pig9oiwyzgivg`, db `kuwera5k`, user `kuwera`. Diekspos publik lewat proxy TCP nginx Coolify di port **5435** (port 5433/5434 sudah dipakai Supabase DriveTech). Firewall: `ufw allow 5435/tcp` saja tidak cukup karena VPS memakai `ufw-docker`; harus `ufw-docker allow uvx3zbwvek7pig9oiwyzgivg-proxy 5435`.
-- Prisma **7.10.0** (bukan 8 rc: itu CLI platform cloud Prisma, beda workflow). Di Prisma 7, URL database pindah dari `schema.prisma` ke `prisma.config.ts`, dan `PrismaClient` wajib pakai driver adapter (`@prisma/adapter-pg` + `pg`), lihat `src/lib/db.ts`. Skema bagian 9 sudah di-push (8 tabel). `DATABASE_URL` tersimpan sebagai env sensitive di Vercel dan di `.env` lokal (tidak di-commit).
+- Database PostgreSQL 16 di VPS dreinst 187.53.129.205 lewat Coolify: project `kuwera5k`, resource `uvx3zbwvek7pig9oiwyzgivg`, db `kuwera5k`, user `kuwera`. Diekspos publik lewat proxy TCP nginx Coolify di port 5435 (port 5433/5434 sudah dipakai Supabase DriveTech). Firewall: `ufw allow 5435/tcp` saja tidak cukup karena VPS memakai `ufw-docker`; harus `ufw-docker allow uvx3zbwvek7pig9oiwyzgivg-proxy 5435`.
+- Prisma 7.10.0 (bukan 8 rc: itu CLI platform cloud Prisma, beda workflow). Di Prisma 7, URL database pindah dari `schema.prisma` ke `prisma.config.ts`, dan `PrismaClient` wajib pakai driver adapter (`@prisma/adapter-pg` + `pg`), lihat `src/lib/db.ts`. Skema bagian 9 sudah di-push (8 tabel). `DATABASE_URL` tersimpan sebagai env sensitive di Vercel dan di `.env` lokal (tidak di-commit).
 
 Catatan risiko yang belum ditutup:
-- Koneksi Vercel ke database lewat internet **tanpa SSL** (`sslmode=disable`, driver `pg` menolak `prefer` karena server tidak mendukung SSL). Sebelum data peserta sungguhan masuk: aktifkan SSL di Postgres (sertifikat self-signed cukup, lalu `sslmode=require`) atau pindahkan app ke VPS sesuai bagian 8.
+- Koneksi Vercel ke database lewat internet tanpa SSL (`sslmode=disable`, driver `pg` menolak `prefer` karena server tidak mendukung SSL). Sebelum data peserta sungguhan masuk: aktifkan SSL di Postgres (sertifikat self-signed cukup, lalu `sslmode=require`) atau pindahkan app ke VPS sesuai bagian 8.
 - Belum ada connection pooling (PgBouncer) di depan Postgres; Vercel serverless membuka banyak koneksi pendek. Tambahkan sebelum load test bagian 10.
 
 Belum dikerjakan: `/daftar` (form multi-step), integrasi Midtrans + webhook, `/tiket/:code`, `/cek-status`, dashboard admin, cron expiry/rekonsiliasi, email transaksional, next-intl (bilingual), GSAP/Lenis, foto asli (masih placeholder), humanizer pass untuk seluruh teks.

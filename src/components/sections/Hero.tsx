@@ -81,8 +81,8 @@ export default function Hero() {
           transition={{ duration: 0.5, delay: 0.3 }}
           className="mt-6 max-w-lg text-white/70"
         >
-          Fun run 5K di {eventData.city}. Daftar online, bayar langsung, e-ticket
-          otomatis terkirim &mdash; tanpa antre di panitia.
+          Fun run 5K di {eventData.city}. Daftar dan bayar online, e-ticket langsung
+          masuk ke email dan WhatsApp kamu.
         </motion.p>
 
         <div className="mt-12 grid grid-cols-1 gap-4 sm:grid-cols-3">

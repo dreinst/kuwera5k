@@ -14,15 +14,15 @@ export default function RouteDetail() {
             5K <span className="text-yellow-lime underline decoration-yellow-lime underline-offset-8">Route</span>
           </h2>
           <p className="mt-4 max-w-md text-white/60">
-            Cut-off waktu {route.cutOffMinutes} menit. Water station tersedia di sepanjang rute, dijaga
-            marshal dan tim medis.
+            Batas waktu {route.cutOffMinutes} menit. Ada dua water station di rute, dan marshal
+            berjaga di sepanjang jalur.
           </p>
 
           <div className="mt-8 h-80 rounded-[20px] border border-glass-border bg-glass p-4 backdrop-blur-md">
             <RouteMap />
           </div>
           <p className="mt-2 text-xs text-white/40">
-            Loop dari &amp; ke Lapangan Rampal, diukur ulang dari GPX resmi
+            Ilustrasi rute, bukan peta berskala. Start dan finish di Lapangan Rampal.
           </p>
 
           <p className="mt-4 text-xs leading-relaxed text-white/50">

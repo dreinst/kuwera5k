@@ -15,7 +15,7 @@ export default function GuestStar() {
             Guest <span className="text-brand-yellow">Star</span>
           </h2>
           <p className="mt-3 max-w-md text-white/60">
-            Senam pemanasan, live music, dan doorprize menanti di garis finish.
+            Ada senam pemanasan sebelum start, lalu live music dan undian doorprize setelah finish.
           </p>
         </Reveal>
 

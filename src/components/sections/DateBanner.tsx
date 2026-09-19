@@ -8,7 +8,7 @@ export default function DateBanner() {
   return (
     <section id="info" className="px-6 py-16">
       <Reveal
-        className="mx-auto max-w-6xl overflow-hidden rounded-[20px] p-10 sm:p-16"
+        className="mx-auto max-w-6xl"
         variants={{
           hidden: { opacity: 0, x: 40 },
           show: { opacity: 1, x: 0, transition: { duration: 0.6, ease: [0.16, 1, 0.3, 1] } },

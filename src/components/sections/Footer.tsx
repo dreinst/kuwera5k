@@ -7,7 +7,7 @@ export default function Footer() {
             KUWERA<span className="text-brand-yellow">5K</span>
           </span>
           <p className="mt-2 max-w-xs text-sm text-white/50">
-            Fun run 5K di Malang, Jawa Timur. Diselenggarakan untuk mengajak masyarakat hidup sehat lewat lari.
+            Fun run 5K di Malang, Jawa Timur. Start dan finish di Lapangan Rampal.
           </p>
         </div>
 
