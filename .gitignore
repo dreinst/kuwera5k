@@ -36,6 +36,9 @@ yarn-error.log*
 # vercel
 .vercel
 
+# aset referensi desain (video/berat, potensi bukan milik sendiri; repo ini public)
+/docs/design-reference/
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
