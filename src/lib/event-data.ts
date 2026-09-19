@@ -45,11 +45,12 @@ export const route = {
   ],
 };
 
+// Foto masih dummy (Unsplash, lisensi bebas), ganti dengan foto talent asli 3:4.
 export const guestStars = [
-  { name: "Bintang Tamu 1", role: "TBC" },
-  { name: "Bintang Tamu 2", role: "TBC" },
-  { name: "Bintang Tamu 3", role: "TBC" },
-  { name: "Bintang Tamu 4", role: "TBC" },
+  { name: "Bintang Tamu 1", role: "TBC", image: "/images/guest-1.jpg" },
+  { name: "Bintang Tamu 2", role: "TBC", image: "/images/guest-2.jpg" },
+  { name: "Bintang Tamu 3", role: "TBC", image: "/images/guest-3.jpg" },
+  { name: "Bintang Tamu 4", role: "TBC", image: "/images/guest-4.jpg" },
 ];
 
 export const sponsors = [
