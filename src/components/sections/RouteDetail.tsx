@@ -1,6 +1,7 @@
 "use client";
 
 import Reveal from "@/components/Reveal";
+import RouteMap from "@/components/RouteMap";
 import { route } from "@/lib/event-data";
 
 export default function RouteDetail() {
@@ -17,28 +18,21 @@ export default function RouteDetail() {
             marshal dan tim medis.
           </p>
 
-          <div className="mt-8 flex h-64 items-center justify-center rounded-[20px] border border-glass-border bg-glass backdrop-blur-md">
-            <svg viewBox="0 0 200 100" className="h-40 w-full px-6">
-              <path
-                d="M10,80 C40,20 70,90 100,50 S160,10 190,40"
-                fill="none"
-                stroke="#F4E71D"
-                strokeWidth="2"
-                strokeLinecap="round"
-                pathLength={1}
-                style={{
-                  strokeDasharray: 1,
-                  strokeDashoffset: 0,
-                }}
-              />
-            </svg>
+          <div className="mt-8 h-80 rounded-[20px] border border-glass-border bg-glass p-4 backdrop-blur-md">
+            <RouteMap />
           </div>
-          <p className="mt-2 text-xs text-white/40">Ilustrasi rute, diukur ulang dari GPX resmi</p>
+          <p className="mt-2 text-xs text-white/40">
+            Loop dari &amp; ke Lapangan Rampal, diukur ulang dari GPX resmi
+          </p>
+
+          <p className="mt-4 text-xs leading-relaxed text-white/50">
+            {route.streets.join(" → ")}
+          </p>
         </Reveal>
 
         <div className="relative">
           {route.checkpoints.map((cp, i) => (
-            <Reveal key={cp.label} delay={i * 0.06} className="relative flex gap-4 pb-8 last:pb-0">
+            <Reveal key={`${cp.label}-${cp.km}`} delay={i * 0.06} className="relative flex gap-4 pb-8 last:pb-0">
               <div className="flex flex-col items-center">
                 <span className="flex h-3 w-3 shrink-0 rounded-full bg-gold" />
                 {i < route.checkpoints.length - 1 && (
