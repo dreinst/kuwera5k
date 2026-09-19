@@ -52,7 +52,7 @@ export default function NewsletterFaq() {
             Jangan sampai <span className="text-brand-yellow">ketinggalan</span>
           </h2>
           <p className="mt-3 max-w-sm text-white/60">
-            Dapatkan info early bird, race pack, dan lineup acara langsung ke email atau WhatsApp.
+            Info early bird, jadwal race pack, dan lineup acara kami kirim ke email kamu.
           </p>
           <form
             onSubmit={(e) => e.preventDefault()}
@@ -68,7 +68,7 @@ export default function NewsletterFaq() {
               type="submit"
               className="rounded-full bg-brand-yellow px-6 py-3 text-sm font-semibold text-green-deep"
             >
-              Subscribe
+              Langganan
             </button>
           </form>
         </Reveal>

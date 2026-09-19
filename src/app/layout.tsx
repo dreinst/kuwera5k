@@ -20,7 +20,7 @@ const anton = Anton({
 
 export const metadata: Metadata = {
   title: "KUWERA 5K",
-  description: "Fun run KUWERA 5K, Malang. Daftar dan raih e-ticketmu.",
+  description: "Fun run 5K di Malang. Daftar online, bayar, dan terima e-ticket otomatis.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

@@ -85,6 +85,6 @@ export const faqs = [
   },
   {
     q: "Apa yang saya dapatkan sebagai peserta?",
-    a: "Jersey/BIB, medali finisher, akses race pack, dan e-ticket dengan QR code untuk verifikasi di hari-H.",
+    a: "Race pack berisi jersey dan BIB, medali finisher setelah lari, dan e-ticket dengan QR code untuk pengambilan race pack.",
   },
 ];
