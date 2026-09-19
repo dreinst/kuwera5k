@@ -1,0 +1,125 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum OrderStatus {
+  DRAFT
+  PENDING
+  PAID
+  EXPIRED
+  FAILED
+  REFUNDED
+}
+
+enum Gender {
+  L
+  P
+}
+
+model Category {
+  id        String   @id @default(cuid())
+  name      String
+  price     Int
+  quota     Int
+  saleStart DateTime
+  saleEnd   DateTime
+  isActive  Boolean  @default(true)
+  orders    Order[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Order {
+  id          String      @id // format KWR-{tahun}-{6 acak}, juga jadi kode tiket
+  category    Category    @relation(fields: [categoryId], references: [id])
+  categoryId  String
+  status      OrderStatus @default(DRAFT)
+  subtotal    Int
+  discount    Int         @default(0)
+  fee         Int         @default(0)
+  total       Int
+  promoCode   String?
+  buyerEmail  String
+  buyerPhone  String
+  expiresAt   DateTime?
+  paidAt      DateTime?
+  participant Participant?
+  payments    Payment[]
+  ticket      Ticket?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  @@index([status])
+  @@index([buyerEmail])
+}
+
+model Participant {
+  id             String   @id @default(cuid())
+  order          Order    @relation(fields: [orderId], references: [id])
+  orderId        String   @unique
+  fullName       String
+  birthDate      DateTime
+  gender         Gender
+  phone          String
+  email          String
+  jerseySize     String
+  emergencyName  String
+  emergencyPhone String
+  community      String?
+  createdAt      DateTime @default(now())
+}
+
+model Payment {
+  id         String   @id @default(cuid())
+  order      Order    @relation(fields: [orderId], references: [id])
+  orderId    String
+  gateway    String // "midtrans"
+  gatewayRef String? // transaction_id dari Midtrans
+  method     String // qris, bca_va, gopay, dst.
+  amount     Int
+  rawPayload Json
+  receivedAt DateTime @default(now())
+
+  @@index([orderId])
+}
+
+model Ticket {
+  id                 String    @id @default(cuid())
+  order              Order     @relation(fields: [orderId], references: [id])
+  orderId            String    @unique
+  code               String    @unique
+  bibNumber          String?   @unique
+  qrSvg              String
+  racepackCollectedAt DateTime?
+  collectedBy        String?
+  createdAt          DateTime  @default(now())
+}
+
+model PromoCode {
+  id           String    @id @default(cuid())
+  code         String    @unique
+  discountType String // "percent" | "fixed"
+  discountValue Int
+  quota        Int
+  usedCount    Int       @default(0)
+  validFrom    DateTime
+  validUntil   DateTime
+  isActive     Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+}
+
+model SiteContent {
+  key       String   @id
+  value     Json
+  updatedAt DateTime @updatedAt
+}
+
+model Setting {
+  key       String   @id
+  value     Json
+  updatedAt DateTime @updatedAt
+}
