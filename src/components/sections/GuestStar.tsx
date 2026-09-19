@@ -55,7 +55,7 @@ export default function GuestStar() {
                   className="relative flex h-full flex-col items-center justify-end bg-gradient-to-t from-green-deep via-green-deep/40 to-transparent p-4 text-center"
                 >
                   <p className="font-semibold text-brand-yellow">{guest.name}</p>
-                  <p className="text-xs text-white/50">{guest.role}</p>
+                  <p className="text-xs text-white/75">{guest.role}</p>
                 </motion.div>
               </motion.div>
             </motion.div>

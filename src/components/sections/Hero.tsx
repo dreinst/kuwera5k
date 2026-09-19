@@ -4,6 +4,7 @@ import Image from "next/image";
 import { motion } from "framer-motion";
 import { eventData, remainingQuota } from "@/lib/event-data";
 import Counter from "@/components/Counter";
+import RouteMap from "@/components/RouteMap";
 
 const HEADLINE_WORDS = ["KUWERA", "5K"];
 
@@ -130,9 +131,9 @@ export default function Hero() {
             transition={{ delay: 0.5 }}
             className="rounded-[20px] border border-glass-border bg-glass p-6 backdrop-blur-md"
           >
-            <p className="text-xs tracking-wide text-white/60 uppercase">5K Route</p>
-            <div className="mt-3 flex h-24 items-center justify-center rounded-xl border border-dashed border-white/20 text-xs text-white/40">
-              Peta rute (GPX menyusul)
+            <p className="text-xs tracking-wide text-white/70 uppercase">5K Route</p>
+            <div className="mt-1 h-28">
+              <RouteMap />
             </div>
           </motion.div>
 
@@ -145,10 +146,10 @@ export default function Hero() {
             className="rounded-[20px] p-6 sm:col-span-2"
             style={{
               background:
-                "linear-gradient(135deg, #1C6B06 0%, #64A322 55%, #F4E71D 100%)",
+                "linear-gradient(135deg, #F4E71D 0%, #B9D42A 45%, #64A322 100%)",
             }}
           >
-            <p className="text-xs font-semibold tracking-wide text-green-deep/80 uppercase">
+            <p className="text-xs font-semibold tracking-wide text-green-deep uppercase">
               Early bird
             </p>
             <p className="mt-2 text-2xl font-semibold text-green-deep">

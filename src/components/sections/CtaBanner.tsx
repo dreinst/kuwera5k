@@ -21,13 +21,14 @@ export default function CtaBanner() {
         <div
           className="rounded-[20px] p-10 sm:p-16"
           style={{
-            background: "linear-gradient(135deg, #1C6B06 0%, #64A322 55%, #F4E71D 100%)",
+            background:
+              "radial-gradient(ellipse at center, #F4E71D 0%, #C9DB27 45%, #64A322 100%)",
           }}
         >
           <h2 className="font-display text-3xl text-green-deep uppercase sm:text-5xl">
             Siap lari bareng KUWERA?
           </h2>
-          <p className="mx-auto mt-3 max-w-md text-green-deep/80">
+          <p className="mx-auto mt-3 max-w-md text-green-deep">
             Kuota {eventData.quotaTotal.toLocaleString("id-ID")} peserta. Harga early bird Rp
             {eventData.earlyBirdPrice.toLocaleString("id-ID")} berlaku sampai {eventData.earlyBirdUntil}.
           </p>
