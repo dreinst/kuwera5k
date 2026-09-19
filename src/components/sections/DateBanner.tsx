@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Reveal from "@/components/Reveal";
 import { eventData } from "@/lib/event-data";
 
@@ -13,19 +14,29 @@ export default function DateBanner() {
           show: { opacity: 1, x: 0, transition: { duration: 0.6, ease: [0.16, 1, 0.3, 1] } },
         }}
       >
-        <div
-          className="relative overflow-hidden rounded-[20px] p-10 sm:p-16"
-          style={{
-            background: "linear-gradient(135deg, #1C6B06 0%, #64A322 55%, #F4E71D 100%)",
-          }}
-        >
-          <span className="inline-block rounded-full bg-green-deep px-4 py-1.5 text-xs font-semibold tracking-wide text-white uppercase">
+        <div className="relative overflow-hidden rounded-[20px] p-10 sm:p-16">
+          <Image
+            src="/images/tugu-malang.jpg"
+            alt="Tugu Malang di depan Balai Kota"
+            fill
+            sizes="(min-width: 1152px) 1152px, 100vw"
+            className="object-cover"
+          />
+          <div
+            aria-hidden
+            className="absolute inset-0"
+            style={{
+              background:
+                "linear-gradient(135deg, rgba(28,107,6,0.92) 0%, rgba(100,163,34,0.82) 55%, rgba(244,231,29,0.72) 100%)",
+            }}
+          />
+          <span className="relative inline-block rounded-full bg-green-deep px-4 py-1.5 text-xs font-semibold tracking-wide text-white uppercase">
             {eventData.dateLabel} &middot; {eventData.timeLabel}
           </span>
-          <h2 className="font-display mt-4 max-w-lg text-4xl text-green-deep uppercase sm:text-5xl">
+          <h2 className="font-display relative mt-4 max-w-lg text-4xl text-green-deep uppercase sm:text-5xl">
             Titik kumpul {eventData.startPoint}
           </h2>
-          <p className="mt-3 max-w-md text-green-deep/80">
+          <p className="relative mt-3 max-w-md text-green-deep/80">
             Registrasi dibuka {eventData.registrationOpen}. Datang lebih awal untuk pemanasan bersama.
           </p>
         </div>

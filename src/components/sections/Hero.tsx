@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { motion } from "framer-motion";
 import { eventData, remainingQuota } from "@/lib/event-data";
 import Counter from "@/components/Counter";
@@ -32,12 +33,20 @@ export default function Hero() {
       id="hero"
       className="relative flex min-h-screen flex-col justify-center overflow-hidden bg-green-deep px-6 pt-32 pb-16"
     >
+      <Image
+        src="/images/hero-runners.jpg"
+        alt=""
+        fill
+        priority
+        sizes="100vw"
+        className="object-cover opacity-45"
+      />
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-0 opacity-40"
+        className="pointer-events-none absolute inset-0"
         style={{
           background:
-            "radial-gradient(circle at 20% 20%, rgba(100,163,34,0.35), transparent 55%), radial-gradient(circle at 80% 0%, rgba(244,231,29,0.15), transparent 45%)",
+            "linear-gradient(180deg, rgba(11,74,44,0.4) 0%, rgba(11,74,44,0.8) 60%, #0B4A2C 100%), radial-gradient(circle at 20% 20%, rgba(100,163,34,0.35), transparent 55%)",
         }}
       />
 
@@ -154,12 +163,19 @@ export default function Hero() {
             initial="hidden"
             animate="show"
             transition={{ delay: 0.7 }}
-            className="flex flex-col items-center justify-center rounded-[20px] border border-glass-border bg-glass p-6 text-center backdrop-blur-md"
+            className="relative flex flex-col items-center justify-center overflow-hidden rounded-[20px] border border-glass-border bg-glass p-6 text-center"
           >
-            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-brand-yellow font-display text-green-deep">
+            <Image
+              src="/images/medals.jpg"
+              alt=""
+              fill
+              sizes="(min-width: 640px) 33vw, 100vw"
+              className="object-cover opacity-35"
+            />
+            <div className="relative flex h-14 w-14 items-center justify-center rounded-full bg-brand-yellow font-display text-green-deep">
               5K
             </div>
-            <p className="mt-3 text-xs text-white/60">Medali finisher untuk semua peserta</p>
+            <p className="relative mt-3 text-xs text-white/80">Medali finisher untuk semua peserta</p>
           </motion.div>
         </div>
       </div>
