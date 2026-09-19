@@ -27,7 +27,7 @@ export default function DateBanner() {
             className="absolute inset-0"
             style={{
               background:
-                "linear-gradient(135deg, rgba(28,107,6,0.92) 0%, rgba(100,163,34,0.82) 55%, rgba(244,231,29,0.72) 100%)",
+                "linear-gradient(100deg, rgba(244,231,29,0.94) 0%, rgba(201,219,39,0.9) 40%, rgba(100,163,34,0.6) 75%, rgba(28,107,6,0.45) 100%)",
             }}
           />
           <span className="relative inline-block rounded-full bg-green-deep px-4 py-1.5 text-xs font-semibold tracking-wide text-white uppercase">
@@ -36,7 +36,7 @@ export default function DateBanner() {
           <h2 className="font-display relative mt-4 max-w-lg text-4xl text-green-deep uppercase sm:text-5xl">
             Titik kumpul {eventData.startPoint}
           </h2>
-          <p className="relative mt-3 max-w-md text-green-deep/80">
+          <p className="relative mt-3 max-w-md text-green-deep">
             Registrasi dibuka {eventData.registrationOpen}. Datang lebih awal untuk pemanasan bersama.
           </p>
         </div>

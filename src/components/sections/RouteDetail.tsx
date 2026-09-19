@@ -21,11 +21,11 @@ export default function RouteDetail() {
           <div className="mt-8 h-80 rounded-[20px] border border-glass-border bg-glass p-4 backdrop-blur-md">
             <RouteMap />
           </div>
-          <p className="mt-2 text-xs text-white/40">
+          <p className="mt-2 text-xs text-white/65">
             Ilustrasi rute, bukan peta berskala. Start dan finish di Lapangan Rampal.
           </p>
 
-          <p className="mt-4 text-xs leading-relaxed text-white/50">
+          <p className="mt-4 text-xs leading-relaxed text-white/70">
             {route.streets.join(" → ")}
           </p>
         </Reveal>
