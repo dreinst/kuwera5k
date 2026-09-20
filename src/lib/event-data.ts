@@ -11,6 +11,9 @@ export const eventData = {
   earlyBirdUntil: "15 November 2026",
   earlyBirdPrice: 150000,
   regularPrice: 200000,
+  racePackLabel: "Sabtu, 12 Desember 2026, 10.00 sampai 18.00 WIB",
+  racePackPlace: "Lapangan Rampal (tenda panitia)",
+  whatsappPanitia: "https://wa.me/6281234567890",
 };
 
 export const remainingQuota = eventData.quotaTotal - eventData.paidCount;

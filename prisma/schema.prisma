@@ -43,6 +43,7 @@ model Order {
   fee         Int         @default(0)
   total       Int
   promoCode   String?
+  paymentMethod String? // qris, bca_va, gopay, dst. dipilih di langkah 4 sebelum Snap dibuka
   buyerEmail  String
   buyerPhone  String
   expiresAt   DateTime?
