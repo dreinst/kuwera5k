@@ -270,7 +270,14 @@ Catatan risiko yang belum ditutup:
 - Koneksi Vercel ke database lewat internet tanpa SSL (`sslmode=disable`, driver `pg` menolak `prefer` karena server tidak mendukung SSL). Sebelum data peserta sungguhan masuk: aktifkan SSL di Postgres (sertifikat self-signed cukup, lalu `sslmode=require`) atau pindahkan app ke VPS sesuai bagian 8.
 - Belum ada connection pooling (PgBouncer) di depan Postgres; Vercel serverless membuka banyak koneksi pendek. Tambahkan sebelum load test bagian 10.
 
-Belum dikerjakan: `/daftar` (form multi-step), integrasi Midtrans + webhook, `/tiket/:code`, `/cek-status`, dashboard admin, cron expiry/rekonsiliasi, email transaksional, next-intl (bilingual), GSAP/Lenis, foto asli (masih placeholder), humanizer pass untuk seluruh teks.
+Pendaftaran (dibangun 20 September 2026, pembayaran masih tiruan):
+- `/daftar` empat langkah (kategori, data peserta, ringkasan + promo + S&K, metode bayar dengan biaya layanan per metode), validasi zod di klien dan server (`src/lib/registration.ts`), draft tersimpan di localStorage 24 jam. `/bayar/:orderId` menampilkan order, timer 30 menit, dan polling status; `/tiket/:code` menampilkan QR (dibuat server dengan `qrcode`), data peserta, jadwal race pack, konfeti. `/syarat` dan `/privasi` masih draf.
+- API: `POST /api/orders` (cek kategori terbuka, kuota = lunas + pending belum kedaluwarsa, duplikat email/HP per kategori, promo, biaya layanan, order PENDING + hold 30 menit, id `KWR-{tahun}-{6 acak}` dengan retry tabrakan), `GET /api/orders/:id` (status untuk polling), `POST /api/orders/:id/pay-mock` (hanya saat `PAYMENT_MODE=mock`: tandai PAID, buat Payment gateway `mock` dan Ticket), `POST /api/promo`.
+- `PAYMENT_MODE`: `mock` (tombol simulasi, dipakai sekarang di lokal dan Vercel supaya alur bisa dicoba), `off` (tombol bayar nonaktif), `midtrans` (nanti). Saat Midtrans aktif: ganti tombol simulasi dengan Snap (`enabled_payments` = metode pilihan), tambah `POST /api/payments/webhook` yang melakukan persis yang dilakukan pay-mock setelah verifikasi signature, lalu hapus order berlabel `mock` (`payments.gateway = "mock"`).
+- Seed (`npm run db:seed`): kategori Early Bird 5K Rp150.000 (1 Sep sampai 15 Nov 2026, dimajukan dari 15 Okt supaya pratinjau bisa dicoba sekarang) dan Reguler 5K Rp200.000 (16 Nov sampai 12 Des), promo `KUWERA10` (10%, kuota 100), setting biaya layanan per metode (QRIS 1.500, VA 4.500, e-wallet 4.000, kartu 7.500), hold 30 menit, kuota total 1.000.
+- Keputusan sementara yang diambil tanpa konfirmasi: usia minimal 12 tahun saat hari lomba (`MIN_AGE`), biaya layanan per metode (bukan flat). Ubah lewat tabel Setting atau `src/lib/registration.ts`.
+
+Belum dikerjakan: integrasi Midtrans Snap + webhook, `/cek-status`, dashboard admin, cron expiry/rekonsiliasi, email dan WhatsApp e-ticket, next-intl (bilingual), GSAP/Lenis, foto dan logo asli, counter pendaftar di hero masih angka dummy (belum baca database).
 
 ## 11. Aset desain
 
