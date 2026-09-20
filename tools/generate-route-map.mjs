@@ -24,13 +24,19 @@ const ROUTE = [
   "Jalan Indraprasta",
   "Jalan Hamid Rusdi Timur",
   "Jalan Hamid Rusdi",
-  "Jalan Ronggolawe",
 ];
-// "Jl. Lapangan Brawijaya" di peta panitia = putaran mengelilingi Lapangan Rampal (sisi timur lalu
-// selatan) sebelum finish di sisi barat; jalannya tidak bernama di OSM, jadi dipakai titik antara
-// di sisi timur dan selatan lapangan.
+// Setelah Hamid Rusdi, peta panitia (docs/design-reference/rute-final-panitia.jpg, dicocokkan ke
+// OSM dengan tools/trace-reference.py) menunjukkan rute naik ke ujung utara Hamid Rusdi, belok barat
+// lewat jalan permukiman tanpa nama, turun ke ujung barat Jalan Lapangan, lalu ke timur menyusuri
+// sisi utara lapangan ("Jl. Lapangan Brawijaya") sampai Ronggolawe, dan finish di sisi timur lapangan.
+const REF_WAYPOINTS = [
+  { lat: -7.9692, lon: 112.6428, label: "ujung utara Hamid Rusdi" },
+  { lat: -7.9699, lon: 112.6406, label: "belokan barat (permukiman)" },
+  { lat: -7.9715, lon: 112.6403, label: "ujung barat Jalan Lapangan" },
+];
+const CLOSING_STREETS = ["Jalan Lapangan", "Jalan Ronggolawe"];
 const FIELD_NAME = /Lapangan Rampal/i;
-const WATER_M = [2600, -250]; // meter dari start; negatif = dari finish
+const WATER_M = [450, 2600]; // meter dari start, posisi mengikuti ikon di peta panitia
 const ARROW_EVERY_M = 650;
 
 async function loadRoads() {
@@ -77,14 +83,14 @@ const roads = ways.filter((w) => w.tags.highway);
 // Graf jalan: node id -> {lat,lon}, adjacency dengan panjang + nama jalan.
 const coord = new Map();
 const adj = new Map();
-const routeSet = new Set(ROUTE);
+const routeSet = new Set([...ROUTE, ...CLOSING_STREETS]);
 function addEdge(a, b, len, name) {
   if (!adj.has(a)) adj.set(a, []);
   if (!adj.has(b)) adj.set(b, []);
   adj.get(a).push({ to: b, len, name });
   adj.get(b).push({ to: a, len, name });
 }
-const nodesByStreet = new Map(ROUTE.map((n) => [n, new Set()]));
+const nodesByStreet = new Map([...ROUTE, ...CLOSING_STREETS].map((n) => [n, new Set()]));
 for (const w of roads) {
   const name = w.tags.name ?? "";
   for (let i = 0; i < w.nodes.length; i++) {
@@ -148,23 +154,17 @@ function shortest(from, to) {
   return path.reverse();
 }
 
-const eastV = field.geometry.reduce((a, b) => (b.lon > a.lon ? b : a));
-const southV = field.geometry.reduce((a, b) => (b.lat < a.lat ? b : a));
 function nearestRoadNode(target, maxM = 150) {
   let best = null, bd = Infinity;
   for (const [id, c] of coord) { const d = haversine(c, target); if (d < bd) { bd = d; best = id; } }
   if (bd > maxM) throw new Error(`tidak ada jalan dalam ${maxM} m dari ${target.lat},${target.lon}`);
   return best;
 }
-// FIELD_LAP=true menambah putaran sisi timur lalu selatan lapangan sebelum finish. Dimatikan sampai
-// panitia mengonfirmasi jalur di dalam kawasan Rampal (loop jalan raya saja sekitar 4,0 km).
-const FIELD_LAP = process.env.FIELD_LAP === "1";
-if (FIELD_LAP) {
-  junctions.push(
-    { node: nearestRoadNode(eastV), to: "sisi timur Lapangan Rampal" },
-    { node: nearestRoadNode(southV), to: "sisi selatan Lapangan Rampal" },
-  );
-}
+for (const w of REF_WAYPOINTS) junctions.push({ node: nearestRoadNode(w, 60), to: w.label });
+// Simpang Jalan Lapangan / Ronggolawe (sudut timur laut lapangan), lalu finish di titik start.
+const lapNodes = nodesByStreet.get("Jalan Lapangan"), rongNodes = nodesByStreet.get("Jalan Ronggolawe");
+const lapRong = [...lapNodes].filter((id) => rongNodes.has(id));
+junctions.push({ node: lapRong.length ? lapRong[0] : nearestRoadNode({ lat: -7.9729, lon: 112.6423 }, 60), to: "Jalan Lapangan / Ronggolawe" });
 // Kalau ada tools/route.gpx (rekaman lari resmi), pakai jalurnya langsung; nama jalan per titik
 // diambil dari ruas OSM terdekat supaya label KM tetap terisi.
 const gpxFile = join(here, "route.gpx");
