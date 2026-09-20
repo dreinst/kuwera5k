@@ -30,8 +30,8 @@ export default function RouteDetail() {
             <RouteMap />
           </div>
           <p className="mt-3 text-xs text-white/65">
-            Utara di atas. Titik KM dihitung dari geometri jalan; posisi water station mengikuti
-            keputusan panitia. Data peta &copy;{" "}
+            Utara di atas. Jalur mengikuti peta rute resmi panitia (jarak 5K termasuk lintasan di
+            dalam lapangan); titik KM dan water station diletakkan dari geometri jalan. Data peta &copy;{" "}
             <a href="https://www.openstreetmap.org/copyright" className="underline hover:text-brand-yellow">
               OpenStreetMap contributors
             </a>

@@ -33,15 +33,17 @@ export const route = {
     "Jl. Ronggolawe",
     "Finish Rampal",
   ],
-  // Jarak dihitung dari geometri jalan OpenStreetMap (tools/generate-route-map.mjs).
+  // Urutan dan posisi dari peta rute panitia; jarak dari geometri jalan OpenStreetMap
+  // (tools/generate-route-map.mjs). Jarak resmi 5K termasuk lintasan di dalam lapangan.
   checkpoints: [
-    { label: "Start", place: "Lapangan Rampal, Jl. Ronggolawe", km: 0 },
+    { label: "Start", place: "Lapangan Rampal, sisi Jl. Ronggolawe", km: 0 },
+    { label: "Water station", place: "Jl. Urip Sumoharjo, sisi barat lapangan", km: 0.5 },
     { label: "1 KM", place: "Jl. Panglima Sudirman", km: 1 },
     { label: "2 KM", place: "Jl. Kesatrian", km: 2 },
     { label: "Water station", place: "Jl. Indraprasta", km: 2.6 },
     { label: "3 KM", place: "Jl. Hamid Rusdi Timur", km: 3 },
-    { label: "Water station", place: "Jl. Ronggolawe, menjelang finish", km: 3.7 },
-    { label: "Finish", place: "Lapangan Rampal", km: 4 },
+    { label: "4 KM", place: "Permukiman utara Rampal, menuju Jl. Lapangan", km: 4 },
+    { label: "Finish", place: "Lapangan Rampal", km: 5 },
   ],
 };
 
