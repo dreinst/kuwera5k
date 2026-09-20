@@ -43,3 +43,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# cache data OpenStreetMap untuk tools/generate-route-map.mjs (diunduh ulang saat dijalankan)
+/tools/cache/
