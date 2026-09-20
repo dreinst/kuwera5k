@@ -33,15 +33,15 @@ export const route = {
     "Jl. Ronggolawe",
     "Finish Rampal",
   ],
+  // Jarak dihitung dari geometri jalan OpenStreetMap (tools/generate-route-map.mjs).
   checkpoints: [
-    { label: "Start", place: "Lapangan Rampal", km: 0 },
-    { label: "1 KM", place: "Jl. Ronggolawe", km: 1 },
-    { label: "2 KM", place: "Jl. Untung Suropati Utara", km: 2 },
-    { label: "Water station", place: "Jl. Mayjen M. Wiyono", km: 2.6 },
-    { label: "3 KM", place: "Jl. Indraprasta", km: 3 },
-    { label: "4 KM", place: "Jl. Hamid Rusdi", km: 4 },
-    { label: "Water station", place: "Jl. Lapangan Brawijaya", km: 0.4 },
-    { label: "Finish", place: "Lapangan Rampal", km: 5 },
+    { label: "Start", place: "Lapangan Rampal, Jl. Ronggolawe", km: 0 },
+    { label: "1 KM", place: "Jl. Panglima Sudirman", km: 1 },
+    { label: "2 KM", place: "Jl. Kesatrian", km: 2 },
+    { label: "Water station", place: "Jl. Indraprasta", km: 2.6 },
+    { label: "3 KM", place: "Jl. Hamid Rusdi Timur", km: 3 },
+    { label: "Water station", place: "Jl. Ronggolawe, menjelang finish", km: 3.7 },
+    { label: "Finish", place: "Lapangan Rampal", km: 4 },
   ],
 };
 

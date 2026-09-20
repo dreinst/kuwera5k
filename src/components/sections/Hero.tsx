@@ -133,7 +133,7 @@ export default function Hero() {
           >
             <p className="text-xs tracking-wide text-white/70 uppercase">5K Route</p>
             <div className="mt-1 h-28">
-              <RouteMap />
+              <RouteMap compact />
             </div>
           </motion.div>
 

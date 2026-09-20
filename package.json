@@ -10,7 +10,8 @@
     "typecheck": "tsc --noEmit",
     "db:push": "prisma db push",
     "db:generate": "prisma generate",
-    "db:studio": "prisma studio"
+    "db:studio": "prisma studio",
+    "route:map": "node tools/generate-route-map.mjs"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.10.0",
