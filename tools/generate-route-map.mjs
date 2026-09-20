@@ -165,22 +165,34 @@ if (FIELD_LAP) {
     { node: nearestRoadNode(southV), to: "sisi selatan Lapangan Rampal" },
   );
 }
-const stops = [startNode, ...junctions.map((j) => j.node), startNode];
-const legs = [];
-for (let i = 0; i < stops.length - 1; i++) legs.push(shortest(stops[i], stops[i + 1]));
-const steps = legs.flat();
-const total = steps.reduce((s, e) => s + e.len, 0);
+// Kalau ada tools/route.gpx (rekaman lari resmi), pakai jalurnya langsung; nama jalan per titik
+// diambil dari ruas OSM terdekat supaya label KM tetap terisi.
+const gpxFile = join(here, "route.gpx");
+let pts;
+if (existsSync(gpxFile)) {
+  const gpx = readFileSync(gpxFile, "utf8");
+  const raw = [...gpx.matchAll(/<trkpt[^>]*lat="([-\d.]+)"[^>]*lon="([-\d.]+)"/g)].map((m) => ({ lat: +m[1], lon: +m[2] }));
+  if (raw.length < 2) throw new Error("route.gpx tidak berisi trkpt");
+  const nameNear = (p) => { let best = "", bd = 60; for (const w of roads) for (const g of w.geometry) { const d = haversine(g, p); if (d < bd) { bd = d; best = w.tags.name ?? ""; } } return best; };
+  pts = [{ ...raw[0], d: 0, name: nameNear(raw[0]) }];
+  for (let i = 1; i < raw.length; i++) pts.push({ ...raw[i], d: pts[i - 1].d + haversine(raw[i - 1], raw[i]), name: nameNear(raw[i]) });
+  console.log(`sumber: route.gpx (${raw.length} titik), panjang ${pts.at(-1).d.toFixed(0)} m`);
+} else {
+  const stops = [startNode, ...junctions.map((j) => j.node), startNode];
+  const legs = [];
+  for (let i = 0; i < stops.length - 1; i++) legs.push(shortest(stops[i], stops[i + 1]));
+  const steps = legs.flat();
+  legs.forEach((leg, i) => {
+    const names = leg.map((e) => e.name).filter((n, k, arr) => k === 0 || n !== arr[k - 1]);
+    const j = junctions[i] ? coord.get(junctions[i].node) : coord.get(startNode);
+    console.log(`  leg ${i + 1} -> ${(junctions[i]?.to ?? "Finish")}: ${leg.reduce((s, e) => s + e.len, 0).toFixed(0)} m @ ${j.lat.toFixed(4)},${j.lon.toFixed(4)} via ${names.join(" > ") || "-"}`);
+  });
+  pts = [{ ...coord.get(startNode), d: 0, name: ROUTE[0] }];
+  let acc = 0;
+  for (const e of steps) { acc += e.len; pts.push({ ...coord.get(e.node), d: acc, name: e.name }); }
+}
+const total = pts.at(-1).d;
 console.log(`panjang rute: ${total.toFixed(0)} m`);
-legs.forEach((leg, i) => {
-  const names = leg.map((e) => e.name).filter((n, k, arr) => k === 0 || n !== arr[k - 1]);
-  const j = junctions[i] ? coord.get(junctions[i].node) : coord.get(startNode);
-  console.log(`  leg ${i + 1} -> ${(junctions[i]?.to ?? "Finish")}: ${leg.reduce((s, e) => s + e.len, 0).toFixed(0)} m @ ${j.lat.toFixed(4)},${j.lon.toFixed(4)} via ${names.join(" > ") || "-"}`);
-});
-
-// Titik-titik jalur dengan jarak kumulatif.
-const pts = [{ ...coord.get(startNode), d: 0, name: ROUTE[0] }];
-let acc = 0;
-for (const e of steps) { acc += e.len; pts.push({ ...coord.get(e.node), d: acc, name: e.name }); }
 function at(dm) {
   if (dm < 0) dm = total + dm;
   for (let i = 1; i < pts.length; i++) {
@@ -264,7 +276,7 @@ for (let m = 350; m < total - 200; m += ARROW_EVERY_M) {
   const s = at(m); const a = proj(s.a), b = proj(s.b), p = proj(s);
   arrows.push({ x: r1(p[0]), y: r1(p[1]), angle: Math.round((Math.atan2(b[1] - a[1], b[0] - a[0]) * 180) / Math.PI) });
 }
-const sp = proj(coord.get(startNode));
+const sp = proj(pts[0]);
 const fc = proj(fieldC);
 const ts = `// Dihasilkan oleh tools/generate-route-map.mjs dari data OpenStreetMap. Jangan diedit manual.
 export const routeMap = {
