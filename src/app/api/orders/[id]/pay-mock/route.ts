@@ -1,10 +1,9 @@
 import { NextResponse } from "next/server";
-import QRCode from "qrcode";
 import { prisma } from "@/lib/db";
-import { paymentMode } from "@/lib/orders";
+import { markOrderPaid, paymentMode } from "@/lib/orders";
 
-// Pembayaran tiruan untuk pratinjau. Nanti diganti webhook Midtrans yang melakukan hal yang sama
-// setelah signature diverifikasi. Hanya aktif kalau PAYMENT_MODE=mock.
+// Pembayaran tiruan untuk pratinjau; hanya aktif kalau PAYMENT_MODE=mock. Webhook Midtrans
+// memakai markOrderPaid yang sama setelah tanda tangan diverifikasi.
 export async function POST(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   if (paymentMode() !== "mock") return NextResponse.json({ error: "Simulasi pembayaran tidak aktif" }, { status: 403 });
   const { id } = await params;
@@ -14,15 +13,6 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
   if (order.status !== "PENDING" || !order.expiresAt || order.expiresAt < new Date()) {
     return NextResponse.json({ error: "Order sudah kedaluwarsa, silakan daftar ulang" }, { status: 410 });
   }
-
-  const code = order.id;
-  const qrSvg = await QRCode.toString(code, { type: "svg", margin: 1, color: { dark: "#0B4A2C", light: "#FFFFFF" } });
-  await prisma.$transaction([
-    prisma.order.update({ where: { id }, data: { status: "PAID", paidAt: new Date() } }),
-    prisma.payment.create({
-      data: { orderId: id, gateway: "mock", gatewayRef: `MOCK-${Date.now()}`, method: order.paymentMethod ?? "mock", amount: order.total, rawPayload: { mock: true } },
-    }),
-    prisma.ticket.create({ data: { orderId: id, code, qrSvg } }),
-  ]);
+  const code = await markOrderPaid(id, { gateway: "mock", gatewayRef: `MOCK-${Date.now()}`, method: order.paymentMethod, amount: order.total, rawPayload: { mock: true } });
   return NextResponse.json({ code });
 }

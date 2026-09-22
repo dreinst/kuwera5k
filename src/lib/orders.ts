@@ -1,3 +1,5 @@
+import QRCode from "qrcode";
+import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { DEFAULT_FEES, type PaymentMethodId } from "@/lib/registration";
 
@@ -65,4 +67,23 @@ export async function validatePromo(code: string, price: number, now = new Date(
     : Math.min(promo.discountValue, price);
   const label = promo.discountType === "percent" ? `Diskon ${promo.discountValue}%` : `Potongan Rp${promo.discountValue.toLocaleString("id-ID")}`;
   return { ok: true as const, discount, label, promo };
+}
+
+// Tandai order lunas, catat pembayaran, buat tiket. Idempoten: order yang sudah PAID mengembalikan
+// kode tiketnya tanpa mengubah apa pun. Dipakai simulasi (mock) dan webhook Midtrans.
+export async function markOrderPaid(orderId: string, pay: { gateway: string; gatewayRef?: string | null; method?: string | null; amount: number; rawPayload: unknown }) {
+  const order = await prisma.order.findUnique({ where: { id: orderId }, include: { ticket: true } });
+  if (!order) return null;
+  if (order.status === "PAID" && order.ticket) return order.ticket.code;
+  const code = order.id;
+  const qrSvg = await QRCode.toString(code, { type: "svg", margin: 1, color: { dark: "#0B4A2C", light: "#FFFFFF" } });
+  const ops: Prisma.PrismaPromise<unknown>[] = [
+    prisma.order.update({ where: { id: orderId }, data: { status: "PAID", paidAt: new Date() } }),
+    prisma.payment.create({
+      data: { orderId, gateway: pay.gateway, gatewayRef: pay.gatewayRef ?? null, method: pay.method ?? order.paymentMethod ?? "-", amount: pay.amount, rawPayload: pay.rawPayload as Prisma.InputJsonValue },
+    }),
+  ];
+  if (!order.ticket) ops.push(prisma.ticket.create({ data: { orderId, code, qrSvg } }));
+  await prisma.$transaction(ops);
+  return code;
 }
