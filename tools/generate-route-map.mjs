@@ -1,5 +1,6 @@
 // Bangun peta rute KUWERA 5K dari data OpenStreetMap.
-// Output: public/images/route-map-bg.svg (latar jalan) dan src/lib/route-map.ts (jalur + marker).
+// Output referensi OSM: public/images/route-map-osm.svg dan src/lib/route-map-osm.ts.
+// Peta yang dipakai situs dibuat oleh tools/trace-poster.py dari poster panitia.
 // Jalankan: node tools/generate-route-map.mjs   (pakai cache tools/cache/roads.json kalau ada)
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -263,7 +264,7 @@ const bg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" fill
 <path d="${fieldD}" fill="#64A322" fill-opacity="0.55" stroke="#F4E71D" stroke-opacity="0.6" stroke-width="2"/>
 </svg>`;
 mkdirSync(join(root, "public", "images"), { recursive: true });
-writeFileSync(join(root, "public", "images", "route-map-bg.svg"), bg);
+writeFileSync(join(root, "public", "images", "route-map-osm.svg"), bg);
 
 // Jalur rute + marker.
 const routePts = simplify(pts.map(proj), 0.5);
@@ -290,5 +291,5 @@ export const routeMap = {
   arrows: ${JSON.stringify(arrows)},
 };
 `;
-writeFileSync(join(root, "src", "lib", "route-map.ts"), ts);
+writeFileSync(join(root, "src", "lib", "route-map-osm.ts"), ts);
 console.log(`viewBox 0 0 ${W} ${H}; latar ${(Buffer.byteLength(bg) / 1024).toFixed(0)} KB; titik jalur ${routePts.length}`);

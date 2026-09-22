@@ -29,8 +29,8 @@ export default function CtaBanner() {
             Siap lari bareng KUWERA?
           </h2>
           <p className="mx-auto mt-3 max-w-md text-green-deep">
-            Kuota {eventData.quotaTotal.toLocaleString("id-ID")} peserta. Harga early bird Rp
-            {eventData.earlyBirdPrice.toLocaleString("id-ID")} berlaku sampai {eventData.earlyBirdUntil}.
+            Kuota {eventData.quotaTotal.toLocaleString("id-ID")} peserta, biaya pendaftaran Rp
+            {eventData.price.toLocaleString("id-ID")} per orang.
           </p>
           <a
             href="/daftar"

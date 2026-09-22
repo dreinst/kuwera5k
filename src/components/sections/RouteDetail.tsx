@@ -7,6 +7,15 @@ import { routeMap } from "@/lib/route-map";
 
 const [, , vbW, vbH] = routeMap.viewBox.split(" ").map(Number);
 
+function LegendFlag({ color }: { color: string }) {
+  return (
+    <svg viewBox="0 0 16 16" className="h-4 w-4" aria-hidden>
+      <path d="M3 1v14" stroke="#FDFBF5" strokeWidth="1.5" strokeLinecap="round" />
+      <path d="M4 2h9l-2.5 3L13 8H4z" fill={color} />
+    </svg>
+  );
+}
+
 export default function RouteDetail() {
   return (
     <section id="rute" className="bg-green-deep px-6 py-24">
@@ -29,13 +38,16 @@ export default function RouteDetail() {
           >
             <RouteMap />
           </div>
+          <div className="mt-4 flex flex-wrap gap-x-6 gap-y-2 text-xs text-white/80">
+            <span className="flex items-center gap-2"><LegendFlag color="#3DDC3D" /> Start</span>
+            <span className="flex items-center gap-2"><LegendFlag color="#E53935" /> Finish</span>
+            <span className="flex items-center gap-2"><span className="inline-block h-4 w-4 rounded-md bg-green-deep ring-1 ring-white/50" /> Marshal</span>
+            <span className="flex items-center gap-2"><span className="inline-block h-4 w-4 rounded-full bg-cream ring-1 ring-white/50" /> Water station</span>
+            <span className="flex items-center gap-2"><span className="inline-block h-0.5 w-6 bg-brand-yellow" /> Rute</span>
+            <span className="flex items-center gap-2"><span className="inline-block h-4 w-4 rotate-45 bg-brand-yellow" /> KM</span>
+          </div>
           <p className="mt-3 text-xs text-white/65">
-            Utara di atas. Jalur mengikuti peta rute resmi panitia (jarak 5K termasuk lintasan di
-            dalam lapangan); titik KM dan water station diletakkan dari geometri jalan. Data peta &copy;{" "}
-            <a href="https://www.openstreetmap.org/copyright" className="underline hover:text-brand-yellow">
-              OpenStreetMap contributors
-            </a>
-            , lisensi ODbL.
+            Peta rute resmi panitia, utara di atas. Jarak 5K sudah termasuk lintasan di dalam lapangan.
           </p>
         </Reveal>
 
