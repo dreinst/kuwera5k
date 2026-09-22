@@ -9,11 +9,29 @@ type Order = {
   expiresAt: string | null; paymentMethod: string | null; category: string; name: string; email: string;
 };
 
-export default function PaymentWaiting({ order, paymentMode }: { order: Order; paymentMode: "mock" | "off" | "midtrans" }) {
+type SnapConfig = { clientKey: string; scriptUrl: string };
+declare global {
+  interface Window {
+    snap?: { pay: (token: string, cb: { onSuccess?: () => void; onPending?: () => void; onError?: () => void; onClose?: () => void }) => void };
+  }
+}
+
+function loadSnap({ clientKey, scriptUrl }: SnapConfig) {
+  return new Promise<void>((resolve, reject) => {
+    if (window.snap) return resolve();
+    const el = document.createElement("script");
+    el.src = scriptUrl; el.setAttribute("data-client-key", clientKey); el.async = true;
+    el.onload = () => resolve(); el.onerror = () => reject(new Error("snap.js gagal dimuat"));
+    document.body.appendChild(el);
+  });
+}
+
+export default function PaymentWaiting({ order, paymentMode, snap }: { order: Order; paymentMode: "mock" | "off" | "midtrans"; snap?: SnapConfig }) {
   const router = useRouter();
   const [now, setNow] = useState(() => Date.now());
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [snapNote, setSnapNote] = useState("");
   const expiresAt = order.expiresAt ? new Date(order.expiresAt).getTime() : null;
   const remaining = expiresAt ? Math.max(0, expiresAt - now) : 0;
   const expired = order.status === "EXPIRED" || (order.status === "PENDING" && expiresAt !== null && remaining === 0);
@@ -44,6 +62,28 @@ export default function PaymentWaiting({ order, paymentMode }: { order: Order; p
       const data = await res.json();
       if (!res.ok) { setError(data.error ?? "Gagal"); return; }
       router.replace(`/tiket/${data.code}`);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const openSnap = async () => {
+    if (!snap) return;
+    setBusy(true); setError(""); setSnapNote("");
+    try {
+      const res = await fetch(`/api/orders/${order.id}/snap`, { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) { setError(data.error ?? "Gagal membuka pembayaran"); return; }
+      if (data.paid && data.code) { router.replace(`/tiket/${data.code}`); return; }
+      await loadSnap(snap);
+      window.snap?.pay(data.token, {
+        onSuccess: () => setSnapNote("Pembayaran diterima, menunggu konfirmasi dari Midtrans..."),
+        onPending: () => setSnapNote("Instruksi pembayaran sudah dibuat. Halaman ini otomatis pindah ke e-ticket begitu pembayaran masuk."),
+        onError: () => setError("Pembayaran gagal di Midtrans, coba metode lain atau ulangi."),
+        onClose: () => setSnapNote("Jendela pembayaran ditutup. Kamu bisa membukanya lagi selama timer masih berjalan."),
+      });
+    } catch {
+      setError("Tidak bisa memuat halaman pembayaran Midtrans, periksa koneksi lalu coba lagi");
     } finally {
       setBusy(false);
     }
@@ -107,7 +147,13 @@ export default function PaymentWaiting({ order, paymentMode }: { order: Order; p
           <p className="mt-6 text-sm text-white/70">Pembayaran online belum aktif. Order ini akan kedaluwarsa otomatis.</p>
         )}
         {!expired && paymentMode === "midtrans" && (
-          <p className="mt-6 text-sm text-white/70">Membuka halaman pembayaran Midtrans...</p>
+          <div className="mt-6">
+            <button type="button" onClick={openSnap} disabled={busy} className="w-full rounded-full bg-brand-yellow px-6 py-3 text-sm font-semibold text-green-deep disabled:opacity-60">
+              {busy ? "Membuka pembayaran..." : `Bayar ${formatRupiah(order.total)} dengan ${method}`}
+            </button>
+            {snapNote && <p className="mt-3 text-sm text-white/80">{snapNote}</p>}
+            <p className="mt-3 text-xs text-white/60">Pembayaran diproses Midtrans. Setelah lunas, e-ticket muncul otomatis di halaman ini.</p>
+          </div>
         )}
         {error && <p className="mt-4 text-sm text-yellow-lime">{error}</p>}
         {expired && (

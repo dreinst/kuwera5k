@@ -4,6 +4,7 @@ import Footer from "@/components/sections/Footer";
 import PaymentWaiting from "@/components/registration/PaymentWaiting";
 import { prisma } from "@/lib/db";
 import { paymentMode } from "@/lib/orders";
+import { midtrans } from "@/lib/midtrans";
 
 export const dynamic = "force-dynamic";
 
@@ -35,6 +36,7 @@ export default async function BayarPage({ params }: { params: Promise<{ orderId:
             email: order.participant.email,
           }}
           paymentMode={paymentMode()}
+          snap={{ clientKey: midtrans.clientKey, scriptUrl: midtrans.snapJs }}
         />
       </main>
       <Footer />
