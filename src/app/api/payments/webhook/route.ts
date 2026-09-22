@@ -12,7 +12,9 @@ export async function POST(req: Request) {
   if (!verifySignature(body)) return NextResponse.json({ error: "signature tidak valid" }, { status: 403 });
 
   const order = await prisma.order.findUnique({ where: { id: body.order_id } });
-  if (!order) return NextResponse.json({ error: "order tidak dikenal" }, { status: 404 });
+  // Order yang tidak dikenal (misal transaksi uji dari dashboard) dijawab 200 supaya Midtrans
+  // tidak mengulang notifikasinya; tidak ada yang diubah.
+  if (!order) return NextResponse.json({ ok: false, reason: "order tidak dikenal" });
 
   const live = await fetchTransactionStatus(body.order_id);
   const status = live?.transaction_status ?? body.transaction_status;
