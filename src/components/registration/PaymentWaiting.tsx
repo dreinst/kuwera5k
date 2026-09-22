@@ -28,16 +28,18 @@ function loadSnap({ clientKey, scriptUrl }: SnapConfig) {
 
 export default function PaymentWaiting({ order, paymentMode, snap }: { order: Order; paymentMode: "mock" | "off" | "midtrans"; snap?: SnapConfig }) {
   const router = useRouter();
-  const [now, setNow] = useState(() => Date.now());
+  // Waktu diisi di klien saja supaya HTML server dan klien sama (hindari hydration mismatch).
+  const [now, setNow] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [snapNote, setSnapNote] = useState("");
   const expiresAt = order.expiresAt ? new Date(order.expiresAt).getTime() : null;
-  const remaining = expiresAt ? Math.max(0, expiresAt - now) : 0;
-  const expired = order.status === "EXPIRED" || (order.status === "PENDING" && expiresAt !== null && remaining === 0);
+  const remaining = expiresAt && now ? Math.max(0, expiresAt - now) : 0;
+  const expired = order.status === "EXPIRED" || (order.status === "PENDING" && expiresAt !== null && now !== null && remaining === 0);
   const method = PAYMENT_METHODS.find((m) => m.id === order.paymentMethod)?.label ?? order.paymentMethod ?? "-";
 
   useEffect(() => {
+    setNow(Date.now());
     const t = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(t);
   }, []);
@@ -89,8 +91,8 @@ export default function PaymentWaiting({ order, paymentMode, snap }: { order: Or
     }
   };
 
-  const mm = String(Math.floor(remaining / 60000)).padStart(2, "0");
-  const ss = String(Math.floor((remaining % 60000) / 1000)).padStart(2, "0");
+  const mm = now === null ? "--" : String(Math.floor(remaining / 60000)).padStart(2, "0");
+  const ss = now === null ? "--" : String(Math.floor((remaining % 60000) / 1000)).padStart(2, "0");
 
   return (
     <div>
