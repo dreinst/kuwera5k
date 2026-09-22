@@ -11,9 +11,10 @@ export const midtrans = {
   clientKey: process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY ?? "",
 };
 
-// Kode metode di Snap `enabled_payments` untuk tiap pilihan di langkah 4.
+// Kode metode di Snap `enabled_payments` untuk tiap pilihan di langkah 4. Diverifikasi di sandbox
+// 22 September 2026: QRIS umum = "other_qris" (kode "qris" tidak dikenal), Mandiri VA = "echannel".
 export const MIDTRANS_PAYMENT_CODES: Record<PaymentMethodId, string> = {
-  qris: "qris",
+  qris: "other_qris",
   bca_va: "bca_va",
   bni_va: "bni_va",
   bri_va: "bri_va",
