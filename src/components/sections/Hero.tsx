@@ -137,7 +137,7 @@ export default function Hero() {
             </div>
           </motion.div>
 
-          {/* Early bird promo */}
+          {/* Biaya pendaftaran */}
           <motion.div
             variants={cardVariants}
             initial="hidden"
@@ -150,11 +150,11 @@ export default function Hero() {
             }}
           >
             <p className="text-xs font-semibold tracking-wide text-green-deep uppercase">
-              Early bird
+              Biaya pendaftaran
             </p>
             <p className="mt-2 text-2xl font-semibold text-green-deep">
-              Rp{eventData.earlyBirdPrice.toLocaleString("id-ID")}{" "}
-              <span className="text-base font-normal">sampai {eventData.earlyBirdUntil}</span>
+              Rp{eventData.price.toLocaleString("id-ID")}{" "}
+              <span className="text-base font-normal">sudah termasuk jersey, BIB, dan medali finisher</span>
             </p>
           </motion.div>
 

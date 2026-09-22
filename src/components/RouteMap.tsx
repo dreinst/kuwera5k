@@ -4,11 +4,9 @@ import { motion } from "framer-motion";
 import { routeMap } from "@/lib/route-map";
 
 const [, , vbW, vbH] = routeMap.viewBox.split(" ").map(Number);
-const DRAW_SECONDS = 2.4;
+const DRAW_SECONDS = 2.6;
 const drawEase = [0.65, 0, 0.35, 1] as const;
-
-// Marker muncul saat garis rute sampai di titiknya.
-const reachDelay = (meters: number) => 0.2 + (meters / routeMap.lengthM) * DRAW_SECONDS;
+const reach = (t: number) => 0.2 + t * DRAW_SECONDS;
 
 const pop = (delay: number) => ({
   hidden: { scale: 0, opacity: 0 },
@@ -19,8 +17,28 @@ const pop = (delay: number) => ({
   },
 });
 
-// compact: versi kecil untuk kartu hero, tanpa latar jalan, panah, dan water station.
+// Titik-titik oktagon (radius r) untuk badge KM, meniru poster.
+const octagon = (r: number) =>
+  Array.from({ length: 8 }, (_, i) => {
+    const a = (Math.PI / 8) * (2 * i + 1);
+    return `${(r * Math.cos(a)).toFixed(1)},${(r * Math.sin(a)).toFixed(1)}`;
+  }).join(" ");
+
+export const FLAG_START = "#3DDC3D";
+export const FLAG_FINISH = "#E53935";
+
+function Flag({ x, y, color }: { x: number; y: number; color: string }) {
+  // (x, y) = pangkal tiang bendera, sama seperti posisi di poster.
+  return (
+    <g transform={`translate(${x} ${y})`}>
+      <line x1={0} y1={0} x2={0} y2={-170} stroke="#FDFBF5" strokeWidth={12} strokeLinecap="round" />
+      <path d="M6,-170 L136,-170 L104,-130 L136,-90 L6,-90 Z" fill={color} stroke="#0B4A2C" strokeWidth={7} strokeLinejoin="round" />
+    </g>
+  );
+}
+
 export default function RouteMap({ compact = false }: { compact?: boolean }) {
+  const s = compact ? 1.6 : 1; // marker sedikit lebih besar di peta mini
   return (
     <motion.svg
       viewBox={routeMap.viewBox}
@@ -30,117 +48,91 @@ export default function RouteMap({ compact = false }: { compact?: boolean }) {
       viewport={{ once: true, amount: 0.3 }}
     >
       <defs>
-        <linearGradient id="routeLine" x1="0" y1="0" x2="1" y2="0">
+        <linearGradient id="routeLine" x1="0" y1="0" x2="1" y2="1">
           <stop offset="0%" stopColor="#F4E71D" />
           <stop offset="100%" stopColor="#FFBB00" />
         </linearGradient>
       </defs>
 
-      {!compact && <image href="/images/route-map-bg.svg" x={0} y={0} width={vbW} height={vbH} />}
-
       {!compact && (
-      <text
-        x={routeMap.field.x}
-        y={routeMap.field.y}
-        textAnchor="middle"
-        dominantBaseline="central"
-        className="fill-white font-display"
-        style={{ fontSize: 15, letterSpacing: 2 }}
-        opacity={0.9}
-      >
-        {routeMap.field.label}
-      </text>
+        <image href={routeMap.background} x={0} y={0} width={vbW} height={vbH} preserveAspectRatio="none" />
       )}
 
-      <path
-        d={routeMap.path}
-        fill="none"
-        stroke="#0B4A2C"
-        strokeOpacity={0.75}
-        strokeWidth={15}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
+      {!compact && routeMap.field && (
+        <g>
+          <ellipse
+            cx={routeMap.field.cx} cy={routeMap.field.cy} rx={routeMap.field.rx} ry={routeMap.field.ry}
+            fill="#64A322" fillOpacity={0.85} stroke="#F4E71D" strokeWidth={6}
+          />
+          <ellipse
+            cx={routeMap.field.cx} cy={routeMap.field.cy} rx={routeMap.field.rx * 0.72} ry={routeMap.field.ry * 0.62}
+            fill="none" stroke="#FDFBF5" strokeOpacity={0.5} strokeWidth={4}
+          />
+          <text
+            x={routeMap.field.cx} y={routeMap.field.cy} textAnchor="middle" dominantBaseline="central"
+            className="fill-white font-display" style={{ fontSize: 96, letterSpacing: 4 }}
+            transform={`rotate(-8 ${routeMap.field.cx} ${routeMap.field.cy})`}
+          >
+            {routeMap.field.label}
+          </text>
+        </g>
+      )}
+
+      <path d={routeMap.path} fill="none" stroke="#0B4A2C" strokeOpacity={0.75} strokeWidth={150 * s} strokeLinecap="round" strokeLinejoin="round" />
       <motion.path
         d={routeMap.path}
         fill="none"
         stroke="url(#routeLine)"
-        strokeWidth={8}
+        strokeWidth={118 * s}
         strokeLinecap="round"
         strokeLinejoin="round"
         pathLength={1}
-        variants={{
-          hidden: { pathLength: 0 },
-          show: { pathLength: 1, transition: { duration: DRAW_SECONDS, ease: drawEase } },
-        }}
+        variants={{ hidden: { pathLength: 0 }, show: { pathLength: 1, transition: { duration: DRAW_SECONDS, ease: drawEase } } }}
       />
 
       {!compact && routeMap.arrows.map((a, i) => (
-        <motion.g
-          key={`arrow-${i}`}
-          variants={{
-            hidden: { opacity: 0 },
-            show: { opacity: 1, transition: { delay: DRAW_SECONDS + 0.2 + i * 0.08 } },
-          }}
-        >
-          <polygon
-            points="-11,-8 13,0 -11,8"
-            fill="#0B4A2C"
-            transform={`translate(${a.x} ${a.y}) rotate(${a.angle})`}
-          />
+        <motion.g key={`arrow-${i}`} variants={{ hidden: { opacity: 0 }, show: { opacity: 1, transition: { delay: reach(a.t) + 0.15 } } }}>
+          <polygon points="-110,-70 130,0 -110,70 -62,0" fill="#0B4A2C" transform={`translate(${a.x} ${a.y}) rotate(${a.angle})`} />
         </motion.g>
       ))}
 
-      {!compact && routeMap.water.map((w) => (
-        <motion.g key={`water-${w.m}`} variants={pop(reachDelay(w.m))}>
-          <circle cx={w.x} cy={w.y} r={17} fill="#FDFBF5" stroke="#0B4A2C" strokeWidth={2.5} />
+      {!compact && routeMap.marshals.map((m, i) => (
+        <motion.g key={`marshal-${i}`} variants={{ hidden: { opacity: 0, scale: 0 }, show: { opacity: 1, scale: 1, transition: { delay: DRAW_SECONDS + 0.3 + i * 0.03 } } }}>
+          <rect x={m.x - 62} y={m.y - 62} width={124} height={124} rx={22} fill="#0B4A2C" stroke="#FDFBF5" strokeWidth={6} />
+          <circle cx={m.x} cy={m.y - 16} r={22} fill="#FDFBF5" />
+          <path d={`M${m.x - 40},${m.y + 46} a40,36 0 0 1 80,0 z`} fill="#FDFBF5" />
+        </motion.g>
+      ))}
+
+      {!compact && routeMap.water.map((w, i) => (
+        <motion.g key={`water-${i}`} variants={pop(reach(w.t))}>
           <path
-            d="M0,-8 C4,-3 7,1 7,4.5 C7,8.6 3.9,11.5 0,11.5 C-3.9,11.5 -7,8.6 -7,4.5 C-7,1 -4,-3 0,-8 Z"
-            fill="#1C6B06"
-            transform={`translate(${w.x} ${w.y - 1.5})`}
+            d={`M${w.x},${w.y} c-70,-95 -110,-135 -110,-195 a110,110 0 0 1 220,0 c0,60 -40,100 -110,195 z`}
+            fill="#FDFBF5" stroke="#0B4A2C" strokeWidth={6}
           />
+          <rect x={w.x - 30} y={w.y - 250} width={60} height={92} rx={14} fill="#1C6B06" />
+          <rect x={w.x - 14} y={w.y - 268} width={28} height={22} rx={6} fill="#1C6B06" />
         </motion.g>
       ))}
 
       {routeMap.km.map((k) => (
-        <motion.g key={`km-${k.km}`} variants={pop(reachDelay(k.km * 1000))}>
-          <circle cx={k.x} cy={k.y} r={23} fill="#FFBB00" stroke="#0B4A2C" strokeWidth={3} />
-          <text
-            x={k.x}
-            y={k.y + 1}
-            textAnchor="middle"
-            dominantBaseline="central"
-            className="fill-green-deep font-display"
-            style={{ fontSize: 23 }}
-          >
-            {k.km}
-          </text>
+        <motion.g key={`km-${k.km}`} variants={pop(reach(k.t))}>
+          <polygon points={octagon(88 * s)} fill="#FFBB00" stroke="#0B4A2C" strokeWidth={8 * s} strokeLinejoin="round" transform={`translate(${k.x} ${k.y})`} />
+          <text x={k.x} y={k.y - 14 * s} textAnchor="middle" dominantBaseline="central" className="fill-green-deep font-display" style={{ fontSize: 66 * s }}>{k.km}</text>
+          <text x={k.x} y={k.y + 40 * s} textAnchor="middle" dominantBaseline="central" className="fill-green-deep font-display" style={{ fontSize: 34 * s, letterSpacing: 2 }}>KM</text>
         </motion.g>
       ))}
 
-      <motion.g variants={pop(0.1)}>
-        <circle cx={routeMap.start.x} cy={routeMap.start.y} r={29} fill="#FFFFFF" stroke="#0B4A2C" strokeWidth={3} />
-        <text
-          x={routeMap.start.x}
-          y={routeMap.start.y - 6}
-          textAnchor="middle"
-          dominantBaseline="central"
-          className="fill-green-deep font-display"
-          style={{ fontSize: 13, letterSpacing: 1 }}
-        >
-          START
-        </text>
-        <text
-          x={routeMap.start.x}
-          y={routeMap.start.y + 8}
-          textAnchor="middle"
-          dominantBaseline="central"
-          className="fill-green-deep font-display"
-          style={{ fontSize: 13, letterSpacing: 1 }}
-        >
-          FINISH
-        </text>
-      </motion.g>
+      {routeMap.start && (
+        <motion.g variants={pop(0.1)}>
+          <Flag x={routeMap.start.x} y={routeMap.start.y} color={FLAG_START} />
+        </motion.g>
+      )}
+      {routeMap.finish && (
+        <motion.g variants={pop(DRAW_SECONDS + 0.2)}>
+          <Flag x={routeMap.finish.x} y={routeMap.finish.y} color={FLAG_FINISH} />
+        </motion.g>
+      )}
     </motion.svg>
   );
 }

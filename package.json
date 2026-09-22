@@ -11,8 +11,9 @@
     "db:push": "prisma db push",
     "db:generate": "prisma generate",
     "db:studio": "prisma studio",
-    "route:map": "node tools/generate-route-map.mjs",
-    "db:seed": "node prisma/seed.mjs"
+    "route:map": "python3 tools/trace-poster.py docs/design-reference/rute-final-panitia.jpg",
+    "db:seed": "node prisma/seed.mjs",
+    "route:map:osm": "node tools/generate-route-map.mjs"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.10.0",
