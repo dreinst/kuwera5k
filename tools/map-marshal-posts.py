@@ -6,8 +6,8 @@ dipindah dengan transformasi afin yang dicocokkan dari sudut-sudut rute, lalu di
 terdekat. Ikon diletakkan di samping garis pada arah yang paling lega.
 
 Pakai: npm run route:marshal  (menulis src/lib/marshal-posts.ts)
-Jalankan ulang setiap kali `npm run route:map` membuat ulang route-map.ts: CORNERS memakai indeks
-titik jalur poster, jadi cek juga galat afin yang dicetak (seharusnya puluhan piksel, bukan ratusan).
+Jalankan ulang setiap kali `npm run route:map` membuat ulang route-map.ts (pos ditempel ke jalur terbaru).
+Cek galat afin yang dicetak: seharusnya puluhan piksel, bukan ratusan.
 """
 import json, math, re
 from pathlib import Path
@@ -26,13 +26,14 @@ POSTS = [
     ((967, 580), 2), ((705, 412), 2), ((561, 229), 2), ((441, 309), 1), ((305, 434), 1),
     ((551, 563), 1), ((425, 797), 2),
 ]
-# Sudut rute yang sama di kedua peta: piksel PAM -> indeks titik jalur poster.
-CORNERS = [((137, 625), 6), ((91, 1188), 10), ((394, 1300), 16), ((667, 970), 17), ((890, 1063), 19),
-           ((1250, 657), 24), ((561, 229), 34), ((441, 309), 36), ((345, 292), 37), ((305, 434), 38),
-           ((551, 563), 40), ((967, 580), 29)]
+# Sudut rute yang sama di kedua peta: piksel PAM -> titik jalur poster (koordinat panel, tidak bergantung
+# pada nomor urut titik jalur, jadi aman kalau route-map.ts dibuat ulang).
+CORNERS = [((137, 625), (431, 1531)), ((91, 1188), (342, 3255)), ((394, 1300), (1089, 3589)), ((667, 970), (1789, 2595)),
+           ((890, 1063), (2388, 2850)), ((1250, 657), (3247, 1579)), ((561, 229), (1526, 260)), ((441, 309), (1230, 463)),
+           ((345, 292), (969, 430)), ((305, 434), (893, 861)), ((551, 563), (1485, 1276)), ((967, 580), (2632, 1397))]
 
 X = np.array([[x, y, 1.0] for (x, y), _ in CORNERS])
-Y = np.array([P[i] for _, i in CORNERS])
+Y = np.array([t for _, t in CORNERS], float)
 M, *_ = np.linalg.lstsq(X, Y, rcond=None)
 res = np.linalg.norm(X @ M - Y, axis=1)
 print(f"afin: galat sudut rata-rata {res.mean():.0f} px, maksimum {res.max():.0f} px (lebar peta {VW:.0f})")

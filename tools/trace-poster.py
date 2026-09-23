@@ -240,6 +240,46 @@ if sts:
     if poly[3][0] > poly[0][0]:
         poly = poly[::-1]
         rotate_to_start()
+
+# --- Start dan finish berbentuk U (arahan panitia 23 Sep 2026, sesuai poster dan foto satelit) ---
+# Penelusuran garis tengah melebur lajur-lajur sejajar di Jl. Urip Sumoharjo jadi zig-zag, jadi bagian
+# ini dibangun ulang dari ukuran poster (koordinat panel, sumbu k searah Urip Sumoharjo ke tenggara):
+#   start : titik S/F di lajur tengah -> tenggara -> putar balik di simpang Ronggolawe -> lajur luar ke
+#           barat laut -> pojok barat (lanjut turun Panglima Sudirman seperti poster)
+#   finish: turun Ronggolawe -> lajur dalam (paling dekat lapangan) ke barat laut -> titik S/F yang sama
+PANEL = np.array([px0, py0], float)
+def _nearest(pt):
+    q = np.array(pt, float) + PANEL
+    return int(np.argmin([math.hypot(x - q[0], y - q[1]) for x, y in poly]))
+iN, iE = _nearest((431, 1531)), _nearest((1385, 1646))
+N0 = np.array(poly[iN], float) - PANEL
+U_DIR = np.array([0.83, 0.557]); U_DIR /= np.linalg.norm(U_DIR)
+N_DIR = np.array([U_DIR[1], -U_DIR[0]])             # tegak lurus, mengarah ke lapangan
+K_SF, K_UTURN, OFF_OUT, OFF_FIN = 440, 930, 80, 160  # lajur luar di offset 0
+LANE_W = 56                                          # lebar lajur S/F (garis utama 118); celah antarlajur 24
+lane = lambda k, off: N0 + k * U_DIR + off * N_DIR
+start_part = [lane(k, OFF_OUT) for k in (K_SF, (K_SF + K_UTURN) / 2, K_UTURN)]
+centre = lane(K_UTURN, OFF_OUT / 2)
+for th in np.linspace(0, math.pi, 10)[1:-1]:
+    start_part.append(centre + (OFF_OUT / 2) * (math.cos(th) * N_DIR + math.sin(th) * U_DIR))
+start_part += [lane(K_UTURN, 0), lane(K_UTURN / 2, 0)]
+E0 = np.array(poly[iE], float) - PANEL
+dE = (np.array(poly[iE + 1], float) - PANEL) - E0; dE /= np.linalg.norm(dE)
+off_of = lambda q: float(np.dot(q - N0, N_DIR))
+s_at = lambda target: (off_of(E0) - target) / (-float(np.dot(dE, N_DIR)))
+P_end = E0 + s_at(OFF_FIN + (118 - LANE_W) / 2) * dE   # garis utama berhenti sebelum menyentuh lajur tengah
+J_fin = E0 + s_at(OFF_FIN) * dE
+k_J = float(np.dot(J_fin - N0, U_DIR))
+finish_part = [J_fin, lane((K_SF + k_J) / 2, OFF_FIN), lane(K_SF, OFF_FIN)]
+to_px = lambda q: (float(q[0] + PANEL[0]), float(q[1] + PANEL[1]))
+seg_start = [to_px(q) for q in start_part] + [poly[iN]]
+seg_main = poly[iN:iE + 1] + [to_px(P_end)]
+seg_finish = [to_px(P_end)] + [to_px(q) for q in finish_part]
+poly = seg_start + seg_main[1:] + seg_finish[1:]
+i_main0 = len(seg_start) - 1
+i_fin0 = i_main0 + len(seg_main) - 1
+SF_POINT = lane(K_SF, (OFF_OUT + OFF_FIN) / 2)
+print(f"start/finish U: {len(seg_start)} titik start, {len(seg_finish)} titik finish, S/F di {SF_POINT.round(1)}")
 def route_tangent(x, y):
     i, _ = project_point(x, y); ax, ay = poly[i]; bx, by = poly[i+1]
     d_ = math.hypot(x - _[0], y - _[1])
@@ -264,7 +304,11 @@ for c in arrows:
     a0, a1 = point_at(s_ - 150), point_at(s_ + 150)
     ang = math.degrees(math.atan2(a1[1]-a0[1], a1[0]-a0[0]))
     arrow_out.append({"x": round(pp[0]), "y": round(pp[1]), "angle": round(ang)})
-print(f"titik jalur {len(poly)}, panah di jalur {len(arrow_out)} dari {len(arrows)} blob")
+# Panah tambahan di lajur S/F supaya arah bentuk U terbaca (lajur tengah ke tenggara, lajur dalam ke barat laut).
+for k_, off_, sign in ((700, OFF_OUT, 1), (680, OFF_FIN, -1)):
+    q = to_px(lane(k_, off_))
+    arrow_out.append({"x": round(q[0]), "y": round(q[1]), "angle": round(math.degrees(math.atan2(sign * U_DIR[1], sign * U_DIR[0])))})
+print(f"titik jalur {len(poly)}, panah di jalur {len(arrow_out)} dari {len(arrows)} blob + 2 tambahan")
 
 # jarak kumulatif (satuan piksel) untuk urutan KM
 cum = [0.0]
@@ -297,19 +341,31 @@ print(f"latar {out_bg.name}: {bg_img.size}, {out_bg.stat().st_size // 1024} KB")
 # --- tulis data (koordinat relatif panel, viewBox = ukuran panel) ---
 VW, VH = px1 - px0, py1 - py0
 rx = lambda x: round(x - px0, 1); ry = lambda y: round(y - py0, 1)
-path = "".join(f"{'M' if i == 0 else 'L'}{rx(x)},{ry(y)}" for i, (x, y) in enumerate(poly))
+to_d = lambda pts: "".join(f"{'M' if i == 0 else 'L'}{rx(x)},{ry(y)}" for i, (x, y) in enumerate(pts))
+path = to_d(poly)
+t_main0, t_fin0 = cum[i_main0] / cum[-1], cum[i_fin0] / cum[-1]
+segments = [
+    {"d": to_d(poly[: i_main0 + 1]), "lane": True, "t0": 0, "t1": round(t_main0, 4)},
+    {"d": to_d(poly[i_main0 : i_fin0 + 1]), "lane": False, "t0": round(t_main0, 4), "t1": round(t_fin0, 4)},
+    {"d": to_d(poly[i_fin0:]), "lane": True, "t0": round(t_fin0, 4), "t1": 1},
+]
+sf = {"x": round(float(SF_POINT[0]), 1), "y": round(float(SF_POINT[1]), 1)}
 data = {
     "viewBox": f"0 0 {VW} {VH}",
     "background": "/images/route-map-bg.webp",
     "path": path,
+    "segments": segments,
+    "laneWidth": LANE_W,
     "lengthPx": round(cum[-1]),
-    "start": {"x": rx(max(sts, key=lambda c: c['n'])["cx"]), "y": ry(max(sts, key=lambda c: c['n'])["y1"])} if sts else None,
-    "finish": {"x": rx(max(fins, key=lambda c: c['n'])["cx"]), "y": ry(max(fins, key=lambda c: c['n'])["y1"])} if fins else None,
+    # start dan finish di titik yang sama (antara ujung lajur tengah dan lajur dalam)
+    "start": sf,
+    "finish": sf,
     "field": {"cx": rx(field["cx"]), "cy": ry(field["cy"]), "rx": round((field["x1"]-field["x0"])/2), "ry": round((field["y1"]-field["y0"])/2), "label": "LAP RAMPAL"} if field else None,
     "km": [{"km": k["km"], "x": rx(k["x"]), "y": ry(k["y"]), "t": round(along(k["x"], k["y"]) / cum[-1], 3)} for k in km_out],
     "water": [{"x": rx(c["cx"]), "y": ry(c["y1"]), "t": round(along(c["cx"], c["y1"]) / cum[-1], 3)} for c in wss],
     "marshals": [{"x": rx(c["cx"]), "y": ry(c["cy"])} for c in marshals],
-    "arrows": [{"x": rx(a_["x"]), "y": ry(a_["y"]), "angle": a_["angle"], "t": round(along(a_["x"], a_["y"]) / cum[-1], 3)} for a_ in arrow_out],
+    "arrows": [{"x": rx(a_["x"]), "y": ry(a_["y"]), "angle": a_["angle"], "t": (t_ := round(along(a_["x"], a_["y"]) / cum[-1], 3)),
+                "scale": round((LANE_W - 16) / 64, 2) if (t_ < t_main0 or t_ > t_fin0) else 1} for a_ in arrow_out],
 }
 print(f"start {data['start']} finish {data['finish']} water {len(data['water'])} marshal {len(data['marshals'])} panah {len(data['arrows'])} lapangan {data['field']}")
 ts = "// Dihasilkan oleh tools/trace-poster.py dari poster rute resmi panitia. Jangan diedit manual.\nexport const routeMap = " + json.dumps(data, indent=2, ensure_ascii=False) + " as const;\n"

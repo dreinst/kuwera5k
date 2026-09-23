@@ -8,7 +8,6 @@ import { pointAtT, tAtKm } from "@/lib/route-geo";
 
 const [, , vbW, vbH] = routeMap.viewBox.split(" ").map(Number);
 const DRAW_SECONDS = 2.6;
-const drawEase = [0.65, 0, 0.35, 1] as const;
 const reach = (t: number) => 0.2 + t * DRAW_SECONDS;
 
 // Water station diambil dari daftar checkpoint (km), lalu ditempatkan di titik km itu pada jalur.
@@ -68,7 +67,8 @@ export default function RouteMap({ compact = false }: { compact?: boolean }) {
       viewport={{ once: true, amount: 0.3 }}
     >
       <defs>
-        <linearGradient id="routeLine" x1="0" y1="0" x2="1" y2="1">
+        {/* userSpaceOnUse: semua segmen rute berbagi satu gradasi, jadi warnanya menyambung di sambungan. */}
+        <linearGradient id="routeLine" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2={vbW} y2={vbH}>
           <stop offset="0%" stopColor="#F4E71D" />
           <stop offset="100%" stopColor="#FFBB00" />
         </linearGradient>
@@ -99,22 +99,35 @@ export default function RouteMap({ compact = false }: { compact?: boolean }) {
         </g>
       )}
 
-      <path d={routeMap.path} fill="none" stroke="#0B4A2C" strokeOpacity={0.75} strokeWidth={150 * s} strokeLinecap="round" strokeLinejoin="round" />
-      <motion.path
-        d={routeMap.path}
-        fill="none"
-        stroke="url(#routeLine)"
-        strokeWidth={118 * s}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        pathLength={1}
-        variants={{ hidden: { pathLength: 0 }, show: { pathLength: 1, transition: { duration: DRAW_SECONDS, ease: drawEase } } }}
-      />
+      {/* Rute digambar per segmen: lajur start (bentuk U) dan lajur finish di Jl. Urip Sumoharjo lebih ramping
+          dari garis utama supaya tiga lajur sejajar muat tanpa menutupi lapangan. Digambar berurutan. */}
+      {routeMap.segments.map((seg, i) => (
+        <path
+          key={`halo-${i}`} d={seg.d} fill="none" stroke="#0B4A2C" strokeOpacity={0.75}
+          strokeWidth={(seg.lane ? routeMap.laneWidth + 26 : 150) * s} strokeLinecap="round" strokeLinejoin="round"
+        />
+      ))}
+      {routeMap.segments.map((seg, i) => (
+        <motion.path
+          key={`line-${i}`}
+          d={seg.d}
+          fill="none"
+          stroke="url(#routeLine)"
+          strokeWidth={(seg.lane ? routeMap.laneWidth : 118) * s}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          pathLength={1}
+          variants={{
+            hidden: { pathLength: 0 },
+            show: { pathLength: 1, transition: { delay: 0.2 + seg.t0 * DRAW_SECONDS, duration: (seg.t1 - seg.t0) * DRAW_SECONDS, ease: "linear" } },
+          }}
+        />
+      ))}
 
-      {/* Panah arah dibuat lebih kecil dari lebar garis rute (118) supaya tetap di dalam garis. */}
+      {/* Panah arah dibuat lebih kecil dari lebar garis rute supaya tetap di dalam garis (di lajur S/F diperkecil lagi). */}
       {!compact && routeMap.arrows.map((a, i) => (
         <motion.g key={`arrow-${i}`} variants={{ hidden: { opacity: 0 }, show: { opacity: 1, transition: { delay: reach(a.t) + 0.15 } } }}>
-          <polygon points="-48,-32 58,0 -48,32 -24,0" fill="#0B4A2C" transform={`translate(${a.x} ${a.y}) rotate(${a.angle})`} />
+          <polygon points="-48,-32 58,0 -48,32 -24,0" fill="#0B4A2C" transform={`translate(${a.x} ${a.y}) rotate(${a.angle}) scale(${a.scale})`} />
         </motion.g>
       ))}
 
