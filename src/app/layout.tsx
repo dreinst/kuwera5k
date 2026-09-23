@@ -1,17 +1,10 @@
-import type { Metadata } from "next";
-import { Geist, Geist_Mono, Anton } from "next/font/google";
+import type { Metadata, Viewport } from "next";
+import { Anton } from "next/font/google";
 import "./globals.css";
 import WhatsAppButton from "@/components/WhatsAppButton";
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+import PageTexture from "@/components/PageTexture";
+import MetaPixel from "@/components/MetaPixel";
+import { openGraphBase, siteName, siteUrl } from "@/lib/site";
 
 const anton = Anton({
   variable: "--font-anton",
@@ -20,19 +13,34 @@ const anton = Anton({
 });
 
 export const metadata: Metadata = {
-  title: "KUWERA 5K",
-  description: "Fun run 5K di Malang. Daftar online, bayar, dan terima e-ticket otomatis.",
+  metadataBase: new URL(siteUrl),
+  title: {
+    default: "KUWERA Fun Run 5K Malang 2026 | Sabtu, 24 Oktober",
+    template: "%s | KUWERA Fun Run 5K Malang",
+  },
+  description:
+    "Fun run 5K di Malang, Sabtu 24 Oktober 2026, 06.00 WIB di Lapangan Rampal. Rp125.000 di luar biaya layanan, sudah termasuk jersey, BIB, dan medali finisher.",
+  applicationName: siteName,
+  // og:title dan og:description diwarisi dari title dan description tiap halaman; gambar dari opengraph-image.jpg.
+  openGraph: openGraphBase,
+  ...(process.env.NEXT_PUBLIC_META_DOMAIN_VERIFICATION
+    ? { other: { "facebook-domain-verification": process.env.NEXT_PUBLIC_META_DOMAIN_VERIFICATION } }
+    : {}),
 };
+
+export const viewport: Viewport = { themeColor: "#0B4A2C" };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="id"
-      className={`${geistSans.variable} ${geistMono.variable} ${anton.variable} h-full antialiased`}
+      className={`${anton.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-green-deep">
+        <PageTexture />
         {children}
         <WhatsAppButton />
+        <MetaPixel />
       </body>
     </html>
   );

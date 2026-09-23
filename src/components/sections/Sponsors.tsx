@@ -5,10 +5,10 @@ import { sponsors } from "@/lib/event-data";
 
 export default function Sponsors() {
   return (
-    <section className="bg-cream px-6 py-24">
+    <section className="px-6 py-20">
       <div className="mx-auto max-w-6xl">
         <Reveal>
-          <p className="text-center text-xs font-semibold tracking-wide text-green-deep/75 uppercase">
+          <p className="text-center text-xs font-semibold tracking-wide text-gold uppercase">
             Sponsor &amp; Partner
           </p>
         </Reveal>

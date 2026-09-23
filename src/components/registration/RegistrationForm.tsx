@@ -7,9 +7,10 @@ import {
   JERSEY_CHEST_CM, JERSEY_SIZES, PAYMENT_METHODS, formatRupiah, issuesToMap, participantSchema,
   type ParticipantInput, type PaymentMethodId,
 } from "@/lib/registration";
+import { trackPixel } from "@/lib/meta-pixel";
 
 type Category = { id: string; name: string; price: number; saleEnd: string; remaining: number };
-type Props = { categories: Category[]; fees: Record<PaymentMethodId, number>; methods: PaymentMethodId[]; paymentMode: "mock" | "off" | "midtrans" };
+type Props = { categories: Category[]; fees: Record<PaymentMethodId, number>; methods: PaymentMethodId[]; paymentMode: "mock" | "off" | "midtrans"; trackCheckout: boolean };
 
 const STEPS = ["Kategori", "Data peserta", "Ringkasan", "Pembayaran"];
 const DRAFT_KEY = "kuwera-daftar-draft";
@@ -28,7 +29,7 @@ const slide = {
   exit: { x: -40, opacity: 0, transition: { duration: 0.25 } },
 };
 
-export default function RegistrationForm({ categories, fees, methods, paymentMode }: Props) {
+export default function RegistrationForm({ categories, fees, methods, paymentMode, trackCheckout }: Props) {
   const router = useRouter();
   const [step, setStep] = useState(1);
   const [categoryId, setCategoryId] = useState(categories[0]?.id ?? "");
@@ -50,6 +51,10 @@ export default function RegistrationForm({ categories, fees, methods, paymentMod
   const subtotal = category?.price ?? 0;
   const discount = promo?.discount ?? 0;
   const total = Math.max(0, subtotal - discount) + fee;
+
+  useEffect(() => {
+    trackPixel("ViewContent", { content_name: "Pendaftaran KUWERA Fun Run 5K", value: categories[0]?.price ?? 0, currency: "IDR" });
+  }, [categories]);
 
   useEffect(() => {
     try {
@@ -130,6 +135,7 @@ export default function RegistrationForm({ categories, fees, methods, paymentMod
         return;
       }
       localStorage.removeItem(DRAFT_KEY);
+      if (trackCheckout) trackPixel("InitiateCheckout", { value: data.total, currency: "IDR", content_name: category.name, num_items: 1, payment_method: paymentMethod }, data.orderId);
       router.push(data.next);
     } catch {
       setServerError("Tidak bisa terhubung ke server, coba lagi");
@@ -140,7 +146,7 @@ export default function RegistrationForm({ categories, fees, methods, paymentMod
 
   if (categories.length === 0) {
     return (
-      <div className="rounded-[20px] border border-glass-border bg-glass p-8 text-center backdrop-blur-md">
+      <div className="rounded-[20px] border border-glass-border bg-card p-8 text-center">
         <p className="font-display text-2xl text-brand-yellow uppercase">Pendaftaran belum dibuka</p>
         <p className="mt-2 text-white/70">Ikuti kabar pembukaan lewat newsletter atau WhatsApp panitia.</p>
       </div>
@@ -166,7 +172,7 @@ export default function RegistrationForm({ categories, fees, methods, paymentMod
         })}
       </ol>
 
-      <div className="mt-8 rounded-[20px] border border-glass-border bg-glass p-6 backdrop-blur-md sm:p-8">
+      <div className="mt-8 rounded-[20px] border border-glass-border bg-card p-6 sm:p-8">
         <AnimatePresence mode="wait" initial={false}>
           {step === 1 && (
             <motion.div key="s1" variants={slide} initial="enter" animate="center" exit="exit">
@@ -188,14 +194,14 @@ export default function RegistrationForm({ categories, fees, methods, paymentMod
                   );
                 })}
               </div>
-              <p className="mt-4 text-sm text-white/60">Pendaftaran perorangan, satu peserta per transaksi. Harga belum termasuk biaya layanan pembayaran.</p>
+              <p className="mt-4 text-sm text-white/75">Pendaftaran perorangan, satu peserta per transaksi. Harga belum termasuk biaya layanan pembayaran.</p>
             </motion.div>
           )}
 
           {step === 2 && (
             <motion.div key="s2" variants={slide} initial="enter" animate="center" exit="exit">
               <h2 className="font-display text-2xl text-white uppercase">Data peserta</h2>
-              <p className="mt-1 text-sm text-white/60">Isi sesuai KTP. Data ini dipakai untuk BIB dan asuransi.</p>
+              <p className="mt-1 text-sm text-white/75">Isi sesuai KTP. Data ini dipakai untuk BIB dan asuransi.</p>
               <div className="mt-5 grid gap-4 sm:grid-cols-2">
                 <Field label="Nama lengkap" error={errors["fullName"]} className="sm:col-span-2">
                   <input className={inputCls} value={participant.fullName} onChange={(e) => set("fullName", e.target.value)} onBlur={() => blur("fullName")} autoComplete="name" placeholder="Sesuai KTP" />
@@ -277,7 +283,7 @@ export default function RegistrationForm({ categories, fees, methods, paymentMod
           {step === 4 && category && (
             <motion.div key="s4" variants={slide} initial="enter" animate="center" exit="exit">
               <h2 className="font-display text-2xl text-white uppercase">Pilih metode pembayaran</h2>
-              <p className="mt-1 text-sm text-white/60">Biaya layanan berbeda per metode dan sudah termasuk di total.</p>
+              <p className="mt-1 text-sm text-white/75">Biaya layanan berbeda per metode dan sudah termasuk di total.</p>
               <div className="mt-5 space-y-5">
                 {["QRIS", "Virtual account", "E-wallet", "Kartu"].filter((group) => available.some((m) => m.group === group)).map((group) => (
                   <div key={group}>
@@ -289,7 +295,7 @@ export default function RegistrationForm({ categories, fees, methods, paymentMod
                           <button key={m.id} type="button" onClick={() => setPaymentMethod(m.id)} className={`flex items-center justify-between rounded-2xl border px-4 py-3 text-left transition ${selected ? "border-brand-yellow bg-brand-yellow/10" : "border-glass-border bg-white/5 hover:border-white/40"}`}>
                             <span>
                               <span className="block font-medium text-white">{m.label}</span>
-                              {m.hint && <span className="block text-xs text-white/60">{m.hint}</span>}
+                              {m.hint && <span className="block text-xs text-white/75">{m.hint}</span>}
                             </span>
                             <span className="text-sm text-white/80">+{formatRupiah(fees[m.id] ?? 0)}</span>
                           </button>
@@ -309,7 +315,7 @@ export default function RegistrationForm({ categories, fees, methods, paymentMod
                   <span className="font-display text-2xl text-brand-yellow">{formatRupiah(total)}</span>
                 </div>
               </div>
-              <p className="mt-3 text-xs text-white/60">
+              <p className="mt-3 text-xs text-white/75">
                 Kuota kamu ditahan 30 menit sejak klik Bayar. {paymentMode === "mock" ? "Mode pratinjau: pembayaran disimulasikan, tidak ada uang yang ditarik." : paymentMode === "off" ? "Pembayaran online akan dibuka segera." : ""}
               </p>
             </motion.div>
@@ -341,13 +347,13 @@ function Field({ label, error, hint, className = "", children }: { label: string
     <div className={className}>
       <label className="text-sm font-medium text-white">{label}</label>
       <div className="mt-2">{children}</div>
-      {error ? <p className="mt-1.5 text-sm text-yellow-lime">{error}</p> : hint ? <p className="mt-1.5 text-xs text-white/60">{hint}</p> : null}
+      {error ? <p className="mt-1.5 text-sm text-yellow-lime">{error}</p> : hint ? <p className="mt-1.5 text-xs text-white/75">{hint}</p> : null}
     </div>
   );
 }
 function Row({ k, v }: { k: string; v: string }) {
-  return (<div><dt className="text-white/60">{k}</dt><dd className="font-medium text-white">{v}</dd></div>);
+  return (<div><dt className="text-white/75">{k}</dt><dd className="font-medium text-white">{v}</dd></div>);
 }
 function Line({ k, v, muted = false }: { k: string; v: string; muted?: boolean }) {
-  return (<div className="flex items-center justify-between py-1"><span className="text-white/70">{k}</span><span className={muted ? "text-white/60" : "text-white"}>{v}</span></div>);
+  return (<div className="flex items-center justify-between py-1"><span className="text-white/70">{k}</span><span className={muted ? "text-white/75" : "text-white"}>{v}</span></div>);
 }

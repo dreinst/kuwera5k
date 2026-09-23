@@ -2,11 +2,10 @@
 
 import Reveal from "@/components/Reveal";
 import { eventData } from "@/lib/event-data";
-import JerseyTexture from "@/components/JerseyTexture";
 
 export default function CtaBanner() {
   return (
-    <section className="bg-cream px-6 pb-24">
+    <section className="px-6 py-20">
       <Reveal
         className="mx-auto max-w-6xl text-center"
         variants={{
@@ -20,13 +19,12 @@ export default function CtaBanner() {
         }}
       >
         <div
-          className="relative overflow-hidden rounded-[20px] p-10 pb-20 sm:p-16 sm:pb-28"
+          className="rounded-[20px] p-10 sm:p-16"
           style={{
             background:
               "radial-gradient(ellipse at center, #F4E71D 0%, #C9DB27 45%, #64A322 100%)",
           }}
         >
-          <JerseyTexture dots="none" glow={false} waves wavesOpacity={0.5} wavesHeight="h-28 sm:h-44" />
           <h2 className="font-display relative text-3xl text-green-deep uppercase sm:text-5xl">
             Siap lari bareng KUWERA?
           </h2>

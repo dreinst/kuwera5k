@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { PAYMENT_METHODS, formatRupiah } from "@/lib/registration";
 import { waLink, waText } from "@/lib/whatsapp";
+import { trackPixel } from "@/lib/meta-pixel";
 
 type Order = {
   id: string; status: string; total: number; subtotal: number; discount: number; fee: number;
@@ -32,7 +33,7 @@ function loadSnap({ clientKey, scriptUrl }: SnapConfig) {
   });
 }
 
-export default function PaymentWaiting({ order, paymentMode, snap }: { order: Order; paymentMode: "mock" | "off" | "midtrans"; snap?: SnapConfig }) {
+export default function PaymentWaiting({ order, paymentMode, snap, trackCheckout }: { order: Order; paymentMode: "mock" | "off" | "midtrans"; snap?: SnapConfig; trackCheckout: boolean }) {
   const router = useRouter();
   // Waktu diisi di klien saja supaya HTML server dan klien sama (hindari hydration mismatch).
   const [now, setNow] = useState<number | null>(null);
@@ -114,6 +115,8 @@ export default function PaymentWaiting({ order, paymentMode, snap }: { order: Or
       const data = await res.json();
       if (!res.ok) { setError(data.error ?? "Gagal membuka pembayaran"); return; }
       if (data.paid && data.code) { router.replace(`/tiket/${data.code}`); return; }
+      // Sekali per order: saat Snap pertama kali dibuka, bukan setiap klik Bayar.
+      if (trackCheckout && !snapOpened && !order.hasSnap) trackPixel("AddPaymentInfo", { value: order.total, currency: "IDR", payment_method: order.paymentMethod ?? "" }, `${order.id}-pay`);
       setSnapOpened(true);
       await loadSnap(snap);
       window.snap?.pay(data.token, {
@@ -155,25 +158,25 @@ export default function PaymentWaiting({ order, paymentMode, snap }: { order: Or
         </p>
       )}
 
-      <div className="mt-8 rounded-[20px] border border-glass-border bg-glass p-6 backdrop-blur-md sm:p-8">
+      <div className="mt-8 rounded-[20px] border border-glass-border bg-card p-6 sm:p-8">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-sm text-white/60">Nomor order</p>
+            <p className="text-sm text-white/75">Nomor order</p>
             <p className="font-display text-2xl text-brand-yellow">{order.id}</p>
           </div>
           {!expired && !checking && (
             <div className="text-right">
-              <p className="text-sm text-white/60">Sisa waktu</p>
+              <p className="text-sm text-white/75">Sisa waktu</p>
               <p className="font-display text-3xl text-white tabular-nums">{mm}:{ss}</p>
             </div>
           )}
         </div>
 
         <dl className="mt-6 grid gap-3 text-sm sm:grid-cols-2">
-          <div><dt className="text-white/60">Peserta</dt><dd className="font-medium text-white">{order.name}</dd></div>
-          <div><dt className="text-white/60">Kategori</dt><dd className="font-medium text-white">{order.category}</dd></div>
-          <div><dt className="text-white/60">Metode</dt><dd className="font-medium text-white">{method}</dd></div>
-          <div><dt className="text-white/60">Email e-ticket</dt><dd className="font-medium text-white">{order.email}</dd></div>
+          <div><dt className="text-white/75">Peserta</dt><dd className="font-medium text-white">{order.name}</dd></div>
+          <div><dt className="text-white/75">Kategori</dt><dd className="font-medium text-white">{order.category}</dd></div>
+          <div><dt className="text-white/75">Metode</dt><dd className="font-medium text-white">{method}</dd></div>
+          <div><dt className="text-white/75">Email e-ticket</dt><dd className="font-medium text-white">{order.email}</dd></div>
         </dl>
 
         <div className="mt-6 rounded-2xl bg-white/5 p-4 text-sm">
@@ -203,7 +206,7 @@ export default function PaymentWaiting({ order, paymentMode, snap }: { order: Or
               {busy ? "Membuka pembayaran..." : `Bayar ${formatRupiah(order.total)} dengan ${method}`}
             </button>
             {snapNote && <p className="mt-3 text-sm text-white/80">{snapNote}</p>}
-            <p className="mt-3 text-xs text-white/60">Pembayaran diproses Midtrans. Setelah lunas, e-ticket muncul otomatis di halaman ini.</p>
+            <p className="mt-3 text-xs text-white/75">Pembayaran diproses Midtrans. Setelah lunas, e-ticket muncul otomatis di halaman ini.</p>
           </div>
         )}
         {error && <p className="mt-4 text-sm text-yellow-lime">{error}</p>}

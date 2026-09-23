@@ -1,13 +1,16 @@
+import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import Navbar from "@/components/sections/Navbar";
 import Footer from "@/components/sections/Footer";
 import PaymentWaiting from "@/components/registration/PaymentWaiting";
 import { prisma } from "@/lib/db";
-import { needsSync, paymentMode, syncOrderWithMidtrans } from "@/lib/orders";
+import { needsSync, paymentMode, syncOrderWithMidtrans, trackCheckout } from "@/lib/orders";
 import { midtrans } from "@/lib/midtrans";
-import JerseyTexture from "@/components/JerseyTexture";
 
 export const dynamic = "force-dynamic";
+
+// Berisi data pribadi peserta: jangan diindeks mesin pencari dan jangan tampilkan nama di pratinjau tautan.
+export const metadata: Metadata = { title: "Pembayaran", robots: { index: false, follow: false } };
 
 export default async function BayarPage({ params }: { params: Promise<{ orderId: string }> }) {
   const { orderId } = await params;
@@ -29,8 +32,7 @@ export default async function BayarPage({ params }: { params: Promise<{ orderId:
   }
 
   return (
-    <div className="relative flex flex-1 flex-col overflow-hidden bg-green-deep">
-      <JerseyTexture dots="right" />
+    <div className="relative flex flex-1 flex-col">
       <Navbar />
       <main className="relative mx-auto w-full max-w-2xl flex-1 px-6 pt-28 pb-24">
         <PaymentWaiting
@@ -49,6 +51,7 @@ export default async function BayarPage({ params }: { params: Promise<{ orderId:
             hasSnap: !!order.snapToken,
           }}
           paymentMode={paymentMode()}
+          trackCheckout={trackCheckout()}
           snap={{ clientKey: midtrans.clientKey, scriptUrl: midtrans.snapJs }}
         />
       </main>

@@ -4,7 +4,6 @@ import Image from "next/image";
 import { motion } from "framer-motion";
 import { eventData, remainingQuota } from "@/lib/event-data";
 import Counter from "@/components/Counter";
-import RouteMap from "@/components/RouteMap";
 import JerseyTexture from "@/components/JerseyTexture";
 
 const HEADLINE_WORDS = ["KUWERA", "5K"];
@@ -33,25 +32,31 @@ export default function Hero() {
   return (
     <section
       id="hero"
-      className="relative flex min-h-screen flex-col justify-center overflow-hidden bg-green-deep px-6 pt-32 pb-16"
+      className="relative flex min-h-screen flex-col justify-center overflow-hidden px-6 pt-32 pb-16"
     >
-      <Image
-        src="/images/hero-runners.jpg"
-        alt=""
-        fill
-        priority
-        sizes="100vw"
-        className="object-cover opacity-45"
-      />
+      {/* Latar hero memudar di bagian bawah ke tekstur halaman, jadi tidak ada garis batas saat digulir. */}
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-0"
-        style={{
-          background:
-            "linear-gradient(180deg, rgba(11,74,44,0.4) 0%, rgba(11,74,44,0.8) 55%, #0B4A2C 90%), radial-gradient(circle at 20% 20%, rgba(100,163,34,0.35), transparent 55%)",
-        }}
-      />
-      <JerseyTexture dots="right" glow={false} dotsOpacity={0.32} />
+        className="pointer-events-none absolute inset-0 bg-green-deep"
+        style={{ maskImage: "linear-gradient(to bottom, #000 75%, transparent)", WebkitMaskImage: "linear-gradient(to bottom, #000 75%, transparent)" }}
+      >
+        <Image
+          src="/images/hero-runners.jpg"
+          alt=""
+          fill
+          priority
+          sizes="100vw"
+          className="object-cover opacity-45"
+        />
+        <div
+          className="absolute inset-0"
+          style={{
+            background:
+              "linear-gradient(180deg, rgba(11,74,44,0.4) 0%, rgba(11,74,44,0.8) 55%, #0B4A2C 90%), radial-gradient(circle at 20% 20%, rgba(100,163,34,0.35), transparent 55%)",
+          }}
+        />
+        <JerseyTexture dots="right" glow={false} dotsOpacity={0.32} />
+      </div>
 
       <div className="relative mx-auto w-full max-w-6xl">
         <motion.span
@@ -60,7 +65,7 @@ export default function Hero() {
           transition={{ duration: 0.5 }}
           className="mb-6 inline-block w-fit rounded-full border border-glass-border bg-glass px-4 py-1.5 text-xs font-semibold tracking-wide text-white uppercase backdrop-blur-md"
         >
-          Ayo Lari Bareng
+          Fun Run 5K Malang 2026
         </motion.span>
 
         <h1 className="font-display flex flex-wrap gap-x-5 text-6xl leading-none text-white uppercase sm:text-8xl">
@@ -73,6 +78,7 @@ export default function Hero() {
               transition={{ delay: i * 0.08 }}
               className={word === "5K" ? "text-brand-yellow" : undefined}
             >
+              {i > 0 && " "}
               {word}
             </motion.span>
           ))}
@@ -85,7 +91,7 @@ export default function Hero() {
           className="mt-6 max-w-lg text-white/70"
         >
           Fun run 5K di {eventData.city}. Daftar dan bayar online, e-ticket langsung
-          masuk ke email dan WhatsApp kamu.
+          muncul setelah pembayaran lunas.
         </motion.p>
 
         <div className="mt-12 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -125,66 +131,18 @@ export default function Hero() {
             </a>
           </motion.div>
 
-          {/* Medali: teaser dari desain panitia, bagian tengah medali sengaja ditutup */}
-          <motion.div
-            variants={cardVariants}
-            initial="hidden"
-            animate="show"
-            transition={{ delay: 0.5 }}
-            className="flex flex-col rounded-[20px] border border-glass-border bg-glass p-5 backdrop-blur-md lg:row-span-2"
-          >
-            <p className="text-xs tracking-wide text-white/70 uppercase">Medali finisher</p>
-            <div className="@container relative mx-auto my-auto aspect-[1000/1169] w-full max-w-80">
-              <Image
-                src="/images/medali-teaser.webp"
-                alt="Medali KUWERA Fun Run 5K tampak depan dan belakang, bagian tengahnya masih dirahasiakan"
-                fill
-                sizes="(min-width: 1024px) 330px, (min-width: 640px) 45vw, 90vw"
-                className="object-contain drop-shadow-[0_12px_24px_rgba(0,0,0,0.45)]"
-              />
-              {[
-                { text: "Nantikan!", left: "26.23%" },
-                { text: "Medali keren!", left: "77.05%" },
-              ].map((l) => (
-                <span
-                  key={l.text}
-                  className="absolute top-[77.6%] w-[30%] -translate-x-1/2 -translate-y-1/2 text-center text-[6.5cqw] leading-tight font-bold text-white [text-shadow:0_1px_6px_rgba(0,0,0,0.8)]"
-                  style={{ left: l.left }}
-                >
-                  {l.text}
-                </span>
-              ))}
-            </div>
-          </motion.div>
-
-          {/* Route map placeholder */}
-          <motion.div
-            variants={cardVariants}
-            initial="hidden"
-            animate="show"
-            transition={{ delay: 0.6 }}
-            className="flex flex-col rounded-[20px] border border-glass-border bg-glass p-6 backdrop-blur-md"
-          >
-            <p className="text-xs tracking-wide text-white/70 uppercase">5K Route</p>
-            <div className="mt-1 h-28 min-h-28 flex-1">
-              <RouteMap compact />
-            </div>
-          </motion.div>
-
-
           {/* Biaya pendaftaran */}
           <motion.div
             variants={cardVariants}
             initial="hidden"
             animate="show"
-            transition={{ delay: 0.7 }}
-            className="relative overflow-hidden rounded-[20px] p-6 pb-24 sm:col-span-2 lg:col-span-1 lg:pb-6"
+            transition={{ delay: 0.5 }}
+            className="rounded-[20px] p-6 sm:col-span-2 lg:col-span-1"
             style={{
               background:
-                "linear-gradient(135deg, #F4E71D 0%, #B9D42A 45%, #64A322 100%)",
+                "linear-gradient(135deg, #F4E71D 0%, #C6DA2A 50%, #8DBF2A 100%)",
             }}
           >
-            <JerseyTexture dots="none" glow={false} waves wavesOpacity={0.55} wavesHeight="h-24 lg:h-[300px]" />
             <p className="relative text-xs font-semibold tracking-wide text-green-deep uppercase">
               Biaya pendaftaran
             </p>
@@ -192,6 +150,47 @@ export default function Hero() {
               Rp{eventData.price.toLocaleString("id-ID")}{" "}
               <span className="text-base font-normal">sudah termasuk jersey, BIB, dan medali finisher</span>
             </p>
+            <p className="relative mt-1 text-sm font-medium text-green-deep">Belum termasuk biaya layanan pembayaran.</p>
+          </motion.div>
+
+          {/* Jersey peserta: desain panitia, tampak depan dan belakang, di kiri kartu medali */}
+          <motion.div
+            variants={cardVariants}
+            initial="hidden"
+            animate="show"
+            transition={{ delay: 0.6 }}
+            className="flex flex-col rounded-[20px] border border-glass-border bg-glass p-5 backdrop-blur-md sm:col-span-2"
+          >
+            <p className="mb-3 text-xs tracking-wide text-white/70 uppercase">Jersey peserta</p>
+            <div className="relative mx-auto my-auto aspect-[1400/829] w-full">
+              <Image
+                src="/images/jersey.webp"
+                alt="Jersey KUWERA Fun Run 5K tampak depan dan belakang, hijau dengan pundak kuning"
+                fill
+                sizes="(min-width: 1152px) 720px, (min-width: 640px) 90vw, 90vw"
+                className="object-contain drop-shadow-[0_12px_24px_rgba(0,0,0,0.45)]"
+              />
+            </div>
+          </motion.div>
+
+          {/* Medali finisher dan lanyard: desain panitia, tampak depan dan belakang */}
+          <motion.div
+            variants={cardVariants}
+            initial="hidden"
+            animate="show"
+            transition={{ delay: 0.7 }}
+            className="flex flex-col rounded-[20px] border border-glass-border bg-glass p-5 backdrop-blur-md sm:col-span-2 lg:col-span-1"
+          >
+            <p className="mb-3 text-xs tracking-wide text-white/70 uppercase">Medali finisher</p>
+            <div className="relative mx-auto my-auto aspect-[760/1408] w-full max-w-[17rem]">
+              <Image
+                src="/images/medali.webp"
+                alt="Medali finisher KUWERA Fun Run 5K dengan lanyard hijau, tampak depan (pelari) dan belakang (lambang Keuangan Angkatan Darat)"
+                fill
+                sizes="272px"
+                className="object-contain drop-shadow-[0_12px_24px_rgba(0,0,0,0.45)]"
+              />
+            </div>
           </motion.div>
         </div>
       </div>
