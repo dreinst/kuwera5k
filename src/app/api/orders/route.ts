@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
-import { orderInputSchema, issuesToMap } from "@/lib/registration";
+import { fullNameOf, orderInputSchema, issuesToMap } from "@/lib/registration";
+import { verifyTurnstile } from "@/lib/turnstile";
 import {
   ORDER_LOCK_KEY, activeOrderWhere, getSettings, heldCount, newOrderId, paymentMode, syncOrderWithMidtrans, validatePromo,
 } from "@/lib/orders";
@@ -24,6 +25,11 @@ export async function POST(req: Request) {
   const input = parsed.data;
   const now = new Date();
 
+  const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || null;
+  if (!(await verifyTurnstile(body?.turnstileToken, ip))) {
+    return NextResponse.json({ error: "Verifikasi bukan robot gagal atau kedaluwarsa. Centang ulang kotaknya lalu coba lagi." }, { status: 400 });
+  }
+
   const category = await prisma.category.findFirst({
     where: { id: input.categoryId, isActive: true, saleStart: { lte: now }, saleEnd: { gte: now } },
   });
@@ -36,7 +42,8 @@ export async function POST(req: Request) {
   }
 
   const p = input.participant;
-  const sameContact = { OR: [{ buyerEmail: p.email }, { buyerPhone: p.phone }] };
+  // Satu orang satu pendaftaran: email, nomor HP, atau NIK yang sama dianggap peserta yang sama.
+  const sameContact = { OR: [{ buyerEmail: p.email }, { buyerPhone: p.phone }, { participant: { is: { idNumber: p.idNumber } } }] };
 
   // Order lama dengan email/HP yang sama yang pernah membuka Snap dan belum lunas (hold sudah habis,
   // atau gagal): pastikan dulu ke Midtrans. Bisa jadi sudah dibayar dan notifikasinya telat, jadi
@@ -55,7 +62,7 @@ export async function POST(req: Request) {
       const r = await syncOrderWithMidtrans(o, now);
       if (r.live === "pending" || r.live === "error" || r.mismatch) {
         return NextResponse.json(
-          { error: "Pembayaran sebelumnya dengan email atau nomor HP ini masih diproses Midtrans. Buka lagi halaman pembayarannya di perangkat yang kamu pakai, atau coba beberapa menit lagi." },
+          { error: "Pembayaran sebelumnya dengan email, nomor HP, atau nomor identitas ini masih diproses Midtrans. Buka lagi halaman pembayarannya di perangkat yang kamu pakai, atau coba beberapa menit lagi." },
           { status: 409 },
         );
       }
@@ -84,8 +91,8 @@ export async function POST(req: Request) {
         if (duplicate) {
           return {
             error: duplicate.status === "PAID"
-              ? "Email atau nomor HP ini sudah terdaftar"
-              : "Email atau nomor HP ini sedang dalam proses pembayaran. Selesaikan dulu atau tunggu sampai waktunya habis.",
+              ? "Email, nomor HP, atau nomor identitas ini sudah terdaftar"
+              : "Email, nomor HP, atau nomor identitas ini sedang dalam proses pembayaran. Selesaikan dulu atau tunggu sampai waktunya habis.",
             status: 409,
           };
         }
@@ -110,7 +117,9 @@ export async function POST(req: Request) {
             paymentMethod: input.paymentMethod, buyerEmail: p.email, buyerPhone: p.phone, expiresAt,
             participant: {
               create: {
-                fullName: p.fullName, birthDate: new Date(`${p.birthDate}T00:00:00+07:00`), gender: p.gender,
+                fullName: fullNameOf(p), firstName: p.firstName, lastName: p.lastName || null, idNumber: p.idNumber,
+                address: p.address, province: p.province, city: p.city, postalCode: p.postalCode, bloodType: p.bloodType,
+                birthDate: new Date(`${p.birthDate}T00:00:00+07:00`), gender: p.gender,
                 phone: p.phone, email: p.email, jerseySize: p.jerseySize,
                 emergencyName: p.emergencyName, emergencyPhone: p.emergencyPhone, community: p.community || null,
               },

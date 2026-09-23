@@ -1,13 +1,15 @@
 "use client";
 
 import { useEffect, useMemo, useState, type ReactNode } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import {
-  JERSEY_CHEST_CM, JERSEY_SIZES, PAYMENT_METHODS, formatRupiah, issuesToMap, participantSchema,
-  type ParticipantInput, type PaymentMethodId,
+  BLOOD_TYPES, JERSEY_CHART, JERSEY_SIZES, PAYMENT_METHODS, PROVINCES, formatRupiah, fullNameOf, issuesToMap,
+  participantSchema, type ParticipantForm, type PaymentMethodId,
 } from "@/lib/registration";
 import { trackPixel } from "@/lib/meta-pixel";
+import Turnstile, { TURNSTILE_SITE_KEY } from "@/components/registration/Turnstile";
 
 type Category = { id: string; name: string; price: number; saleEnd: string; remaining: number };
 type Props = { categories: Category[]; fees: Record<PaymentMethodId, number>; methods: PaymentMethodId[]; paymentMode: "mock" | "off" | "midtrans"; trackCheckout: boolean };
@@ -16,12 +18,12 @@ const STEPS = ["Kategori", "Data peserta", "Ringkasan", "Pembayaran"];
 const DRAFT_KEY = "kuwera-daftar-draft";
 const DRAFT_TTL = 24 * 60 * 60 * 1000;
 
-const emptyParticipant: ParticipantInput = {
-  fullName: "", birthDate: "", gender: "L", phone: "", email: "", jerseySize: "M",
-  emergencyName: "", emergencyPhone: "", community: "",
+const emptyParticipant: ParticipantForm = {
+  firstName: "", lastName: "", email: "", phone: "", idNumber: "", address: "", province: "", city: "", postalCode: "",
+  birthDate: "", gender: "", bloodType: "", emergencyName: "", emergencyPhone: "", jerseySize: "M", community: "",
 };
 
-type Draft = { step: number; categoryId: string; participant: ParticipantInput; savedAt: number };
+type Draft = { step: number; categoryId: string; participant: ParticipantForm; savedAt: number };
 
 const slide = {
   enter: { x: 40, opacity: 0 },
@@ -33,7 +35,7 @@ export default function RegistrationForm({ categories, fees, methods, paymentMod
   const router = useRouter();
   const [step, setStep] = useState(1);
   const [categoryId, setCategoryId] = useState(categories[0]?.id ?? "");
-  const [participant, setParticipant] = useState<ParticipantInput>(emptyParticipant);
+  const [participant, setParticipant] = useState<ParticipantForm>(emptyParticipant);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [touched, setTouched] = useState<Record<string, boolean>>({});
   const [promoInput, setPromoInput] = useState("");
@@ -45,6 +47,8 @@ export default function RegistrationForm({ categories, fees, methods, paymentMod
   const [submitting, setSubmitting] = useState(false);
   const [serverError, setServerError] = useState("");
   const [hydrated, setHydrated] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState("");
+  const [turnstileReset, setTurnstileReset] = useState(0);
 
   const category = useMemo(() => categories.find((c) => c.id === categoryId) ?? null, [categories, categoryId]);
   const fee = fees[paymentMethod] ?? 0;
@@ -84,14 +88,14 @@ export default function RegistrationForm({ categories, fees, methods, paymentMod
     return res.success;
   };
 
-  const set = (k: keyof ParticipantInput, v: string) => {
+  const set = (k: keyof ParticipantForm, v: string) => {
     setParticipant((p) => ({ ...p, [k]: v }));
     if (touched[k]) {
       const res = participantSchema.safeParse({ ...participant, [k]: v });
       setErrors(res.success ? {} : issuesToMap(res.error.issues));
     }
   };
-  const blur = (k: keyof ParticipantInput) => {
+  const blur = (k: keyof ParticipantForm) => {
     setTouched((t) => ({ ...t, [k]: true }));
     const res = participantSchema.safeParse(participant);
     setErrors(res.success ? {} : issuesToMap(res.error.issues));
@@ -125,10 +129,11 @@ export default function RegistrationForm({ categories, fees, methods, paymentMod
     try {
       const res = await fetch("/api/orders", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ categoryId: category.id, participant, promoCode: promo?.code ?? "", paymentMethod, agreeTerms: agree }),
+        body: JSON.stringify({ categoryId: category.id, participant, promoCode: promo?.code ?? "", paymentMethod, agreeTerms: agree, turnstileToken }),
       });
       const data = await res.json();
       if (!res.ok) {
+        setTurnstileReset((n) => n + 1); // token Turnstile hanya berlaku sekali
         if (data.fields) setErrors(data.fields);
         setServerError(data.error ?? "Terjadi kesalahan, coba lagi");
         if (data.fields && Object.keys(data.fields).some((k) => k.startsWith("participant."))) setStep(2);
@@ -201,42 +206,60 @@ export default function RegistrationForm({ categories, fees, methods, paymentMod
           {step === 2 && (
             <motion.div key="s2" variants={slide} initial="enter" animate="center" exit="exit">
               <h2 className="font-display text-2xl text-white uppercase">Data peserta</h2>
-              <p className="mt-1 text-sm text-white/75">Isi sesuai KTP. Data ini dipakai untuk BIB dan asuransi.</p>
+              <p className="mt-1 text-sm text-white/75">Isi sesuai KTP atau KIA. Data ini dipakai untuk BIB, asuransi, dan verifikasi saat ambil race pack.</p>
               <div className="mt-5 grid gap-4 sm:grid-cols-2">
-                <Field label="Nama lengkap" error={errors["fullName"]} className="sm:col-span-2">
-                  <input className={inputCls} value={participant.fullName} onChange={(e) => set("fullName", e.target.value)} onBlur={() => blur("fullName")} autoComplete="name" placeholder="Sesuai KTP" />
+                <Field label="Nama depan" error={errors["firstName"]}>
+                  <input className={inputCls} value={participant.firstName} onChange={(e) => set("firstName", e.target.value)} onBlur={() => blur("firstName")} autoComplete="given-name" placeholder="Sesuai KTP/KIA" />
                 </Field>
-                <Field label="Tanggal lahir" error={errors["birthDate"]}>
-                  <input type="date" className={inputCls} value={participant.birthDate} onChange={(e) => set("birthDate", e.target.value)} onBlur={() => blur("birthDate")} max="2020-12-31" min="1930-01-01" />
-                </Field>
-                <Field label="Jenis kelamin" error={errors["gender"]}>
-                  <div className="grid grid-cols-2 gap-2">
-                    {([["L", "Laki-laki"], ["P", "Perempuan"]] as const).map(([v, l]) => (
-                      <button key={v} type="button" onClick={() => set("gender", v)} className={pillCls(participant.gender === v)}>{l}</button>
-                    ))}
-                  </div>
-                </Field>
-                <Field label="Nomor HP (WhatsApp)" error={errors["phone"]}>
-                  <input inputMode="numeric" className={inputCls} value={participant.phone} onChange={(e) => set("phone", e.target.value.replace(/\D/g, ""))} onBlur={() => blur("phone")} autoComplete="tel" placeholder="08xxxxxxxxxx" />
+                <Field label="Nama belakang" error={errors["lastName"]} hint="Kosongkan kalau namamu hanya satu kata">
+                  <input className={inputCls} value={participant.lastName} onChange={(e) => set("lastName", e.target.value)} onBlur={() => blur("lastName")} autoComplete="family-name" placeholder="Sesuai KTP/KIA" />
                 </Field>
                 <Field label="Email" error={errors["email"]}>
                   <input type="email" className={inputCls} value={participant.email} onChange={(e) => set("email", e.target.value)} onBlur={() => blur("email")} autoComplete="email" placeholder="nama@email.com" />
                 </Field>
-                <Field label="Ukuran jersey" error={errors["jerseySize"]} className="sm:col-span-2" hint={`Lingkar dada ${JERSEY_SIZES.map((s) => `${s} ${JERSEY_CHEST_CM[s]}`).join(", ")} cm`}>
-                  <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
-                    {JERSEY_SIZES.map((s) => (
-                      <button key={s} type="button" onClick={() => set("jerseySize", s)} className={pillCls(participant.jerseySize === s)}>{s}</button>
-                    ))}
-                  </div>
+                <Field label="Nomor HP (WhatsApp)" error={errors["phone"]}>
+                  <input inputMode="numeric" className={inputCls} value={participant.phone} onChange={(e) => set("phone", e.target.value.replace(/\D/g, ""))} onBlur={() => blur("phone")} autoComplete="tel" placeholder="08xxxxxxxxxx" />
+                </Field>
+                <Field label="Nomor identitas (KTP/KIA)" error={errors["idNumber"]} hint="Pastikan nomor identitas benar karena akan digunakan untuk verifikasi" className="sm:col-span-2">
+                  <input inputMode="numeric" maxLength={16} className={inputCls} value={participant.idNumber} onChange={(e) => set("idNumber", e.target.value.replace(/\D/g, ""))} onBlur={() => blur("idNumber")} autoComplete="off" placeholder="16 angka NIK" />
+                </Field>
+                <Field label="Alamat" error={errors["address"]} className="sm:col-span-2">
+                  <input className={inputCls} value={participant.address} onChange={(e) => set("address", e.target.value)} onBlur={() => blur("address")} autoComplete="street-address" placeholder="Nama jalan, nomor rumah, RT/RW, kelurahan" />
+                </Field>
+                <Field label="Provinsi" error={errors["province"]}>
+                  <Select value={participant.province} onChange={(v) => set("province", v)} onBlur={() => blur("province")} placeholder="Pilih provinsi" options={PROVINCES.map((p) => [p, p])} autoComplete="address-level1" />
+                </Field>
+                <Field label="Kota/kabupaten" error={errors["city"]}>
+                  <input className={inputCls} value={participant.city} onChange={(e) => set("city", e.target.value)} onBlur={() => blur("city")} autoComplete="address-level2" placeholder="Contoh: Kota Malang" />
+                </Field>
+                <Field label="Kode pos" error={errors["postalCode"]}>
+                  <input inputMode="numeric" maxLength={5} className={inputCls} value={participant.postalCode} onChange={(e) => set("postalCode", e.target.value.replace(/\D/g, ""))} onBlur={() => blur("postalCode")} autoComplete="postal-code" placeholder="5 angka" />
+                </Field>
+                <Field label="Tanggal lahir" error={errors["birthDate"]}>
+                  <input type="date" className={inputCls} value={participant.birthDate} onChange={(e) => set("birthDate", e.target.value)} onBlur={() => blur("birthDate")} max="2020-12-31" min="1930-01-01" autoComplete="bday" />
+                </Field>
+                <Field label="Jenis kelamin" error={errors["gender"]}>
+                  <Select value={participant.gender} onChange={(v) => set("gender", v)} onBlur={() => blur("gender")} placeholder="Pilih jenis kelamin" options={[["L", "Laki-laki"], ["P", "Perempuan"]]} />
+                </Field>
+                <Field label="Golongan darah" error={errors["bloodType"]}>
+                  <Select value={participant.bloodType} onChange={(v) => set("bloodType", v)} onBlur={() => blur("bloodType")} placeholder="Pilih golongan darah" options={BLOOD_TYPES.map((b) => [b, b])} />
                 </Field>
                 <Field label="Nama kontak darurat" error={errors["emergencyName"]}>
                   <input className={inputCls} value={participant.emergencyName} onChange={(e) => set("emergencyName", e.target.value)} onBlur={() => blur("emergencyName")} placeholder="Keluarga atau teman" />
                 </Field>
-                <Field label="Nomor kontak darurat" error={errors["emergencyPhone"]}>
+                <Field label="Nomor HP kontak darurat" error={errors["emergencyPhone"]}>
                   <input inputMode="numeric" className={inputCls} value={participant.emergencyPhone} onChange={(e) => set("emergencyPhone", e.target.value.replace(/\D/g, ""))} onBlur={() => blur("emergencyPhone")} placeholder="08xxxxxxxxxx" />
                 </Field>
+                <Field label="Ukuran jersey" error={errors["jerseySize"]} className="sm:col-span-2">
+                  <div className="grid grid-cols-4 gap-2 sm:grid-cols-8">
+                    {JERSEY_SIZES.map((s) => (
+                      <button key={s} type="button" onClick={() => set("jerseySize", s)} className={pillCls(participant.jerseySize === s)}>{s}</button>
+                    ))}
+                  </div>
+                  <SizeChart />
+                </Field>
                 <Field label="Komunitas lari (opsional)" error={errors["community"]} className="sm:col-span-2">
-                  <input className={inputCls} value={participant.community ?? ""} onChange={(e) => set("community", e.target.value)} placeholder="Nama komunitas untuk rekap panitia" />
+                  <input className={inputCls} value={participant.community} onChange={(e) => set("community", e.target.value)} placeholder="Nama komunitas untuk rekap panitia" />
                 </Field>
               </div>
             </motion.div>
@@ -247,11 +270,14 @@ export default function RegistrationForm({ categories, fees, methods, paymentMod
               <h2 className="font-display text-2xl text-white uppercase">Cek lagi isianmu</h2>
               <dl className="mt-5 grid gap-x-6 gap-y-3 text-sm sm:grid-cols-2">
                 <Row k="Kategori" v={category.name} />
-                <Row k="Nama" v={participant.fullName} />
+                <Row k="Nama" v={fullNameOf(participant)} />
+                <Row k="Nomor identitas" v={participant.idNumber} />
                 <Row k="Tanggal lahir" v={new Date(participant.birthDate).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })} />
                 <Row k="Jenis kelamin" v={participant.gender === "L" ? "Laki-laki" : "Perempuan"} />
+                <Row k="Golongan darah" v={participant.bloodType} />
                 <Row k="HP" v={participant.phone} />
                 <Row k="Email" v={participant.email} />
+                <Row k="Alamat" v={`${participant.address}, ${participant.city}, ${participant.province} ${participant.postalCode}`} />
                 <Row k="Jersey" v={participant.jerseySize} />
                 <Row k="Kontak darurat" v={`${participant.emergencyName} (${participant.emergencyPhone})`} />
                 {participant.community ? <Row k="Komunitas" v={participant.community} /> : null}
@@ -315,6 +341,7 @@ export default function RegistrationForm({ categories, fees, methods, paymentMod
                   <span className="font-display text-2xl text-brand-yellow">{formatRupiah(total)}</span>
                 </div>
               </div>
+              <Turnstile onToken={setTurnstileToken} resetSignal={turnstileReset} />
               <p className="mt-3 text-xs text-white/75">
                 Kuota kamu ditahan 30 menit sejak klik Bayar. {paymentMode === "mock" ? "Mode pratinjau: pembayaran disimulasikan, tidak ada uang yang ditarik." : paymentMode === "off" ? "Pembayaran online akan dibuka segera." : ""}
               </p>
@@ -329,7 +356,7 @@ export default function RegistrationForm({ categories, fees, methods, paymentMod
           {step < 4 ? (
             <button type="button" onClick={next} className="rounded-full bg-brand-yellow px-7 py-3 text-sm font-semibold text-green-deep transition-transform hover:translate-x-0.5">Lanjut &rarr;</button>
           ) : (
-            <button type="button" onClick={submit} disabled={submitting || paymentMode === "off"} className="rounded-full bg-brand-yellow px-7 py-3 text-sm font-semibold text-green-deep transition-transform hover:translate-x-0.5 disabled:opacity-60">
+            <button type="button" onClick={submit} disabled={submitting || paymentMode === "off" || (!!TURNSTILE_SITE_KEY && !turnstileToken)} className="rounded-full bg-brand-yellow px-7 py-3 text-sm font-semibold text-green-deep transition-transform hover:translate-x-0.5 disabled:opacity-60">
               {submitting ? "Memproses..." : paymentMode === "off" ? "Pembayaran belum dibuka" : `Bayar ${formatRupiah(total)} →`}
             </button>
           )}
@@ -357,3 +384,56 @@ function Row({ k, v }: { k: string; v: string }) {
 function Line({ k, v, muted = false }: { k: string; v: string; muted?: boolean }) {
   return (<div className="flex items-center justify-between py-1"><span className="text-white/70">{k}</span><span className={muted ? "text-white/75" : "text-white"}>{v}</span></div>);
 }
+
+function Select({ value, onChange, onBlur, placeholder, options, autoComplete }: {
+  value: string; onChange: (v: string) => void; onBlur: () => void; placeholder: string;
+  options: readonly (readonly [string, string])[]; autoComplete?: string;
+}) {
+  return (
+    <div className="relative">
+      <select
+        className={`${inputCls} appearance-none pr-10 ${value ? "" : "text-white/40"} [&>option]:bg-green-deep [&>option]:text-white`}
+        value={value} onChange={(e) => onChange(e.target.value)} onBlur={onBlur} autoComplete={autoComplete}
+      >
+        <option value="" disabled>{placeholder}</option>
+        {options.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+      </select>
+      <svg aria-hidden viewBox="0 0 20 20" className="pointer-events-none absolute top-1/2 right-4 h-4 w-4 -translate-y-1/2 text-white/70" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M5 8l5 5 5-5" />
+      </svg>
+    </div>
+  );
+}
+
+// Size chart sementara dari panitia (cm): A lingkar dada, B panjang badan, C panjang lengan.
+function SizeChart() {
+  return (
+    <details className="mt-3 rounded-2xl border border-glass-border bg-white/5 p-4 text-sm text-white/85 open:pb-5">
+      <summary className="cursor-pointer font-medium text-brand-yellow">Lihat size chart</summary>
+      <div className="mt-4 grid gap-4">
+        <div className="relative mx-auto aspect-[640/551] w-full max-w-[200px] overflow-hidden rounded-xl bg-white">
+          <Image src="/images/size-chart-jersey.webp" alt="Cara mengukur jersey: A lingkar dada, B panjang badan, C panjang lengan" fill sizes="220px" className="object-contain p-2" />
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[420px] text-center">
+            <thead>
+              <tr className="text-xs text-white/75">
+                <th className="py-2 text-left font-semibold">Ukuran (cm)</th>
+                {JERSEY_SIZES.map((s) => <th key={s} className="py-2 font-semibold text-white">{s}</th>)}
+              </tr>
+            </thead>
+            <tbody>
+              {([["Lingkar dada (A)", "chest"], ["Panjang badan (B)", "length"], ["Panjang lengan (C)", "sleeve"]] as const).map(([label, key]) => (
+                <tr key={key} className="border-t border-white/10">
+                  <th scope="row" className="py-2 text-left text-xs font-medium text-white/75">{label}</th>
+                  {JERSEY_SIZES.map((s) => <td key={s} className="py-2">{JERSEY_CHART[s][key]}</td>)}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </details>
+  );
+}
+

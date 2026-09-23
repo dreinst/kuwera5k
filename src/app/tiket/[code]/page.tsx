@@ -60,7 +60,7 @@ export default async function TiketPage({ params }: { params: Promise<{ code: st
             </div>
           </div>
           <div className="border-t border-dashed border-green-deep/20 px-6 py-5 text-sm sm:px-8">
-            <p><span className="font-semibold">Ambil race pack:</span> {eventData.racePackLabel}, {eventData.racePackPlace}. Bawa KTP asli dan tunjukkan QR ini.</p>
+            <p><span className="font-semibold">Ambil race pack:</span> {eventData.racePackLabel}, {eventData.racePackPlace}. Bawa KTP atau KIA asli dan tunjukkan QR ini.</p>
             <p className="mt-2 text-green-deep/80">Pertanyaan lain ada di <Link href="/#faq" className="underline">FAQ</Link> atau <a href={waLink(waText.tiket(ticket.code))} target="_blank" rel="noopener noreferrer" className="underline">WhatsApp panitia</a>.</p>
           </div>
           {isMock && (

@@ -65,6 +65,15 @@ model Participant {
   order          Order    @relation(fields: [orderId], references: [id])
   orderId        String   @unique
   fullName       String
+  // Kolom tambahan form 24 Sep 2026; nullable supaya aman untuk baris lama (form mewajibkan semuanya kecuali nama belakang).
+  firstName      String?
+  lastName       String?
+  idNumber       String?  // NIK di KTP atau KIA, dipakai untuk verifikasi saat ambil race pack
+  address        String?
+  province       String?
+  city           String?
+  postalCode     String?
+  bloodType      String?
   birthDate      DateTime
   gender         Gender
   phone          String
