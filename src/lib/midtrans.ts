@@ -1,4 +1,4 @@
-import { createHash } from "node:crypto";
+import { createHash, timingSafeEqual } from "node:crypto";
 import type { PaymentMethodId } from "@/lib/registration";
 
 const isProduction = process.env.MIDTRANS_IS_PRODUCTION === "true";
@@ -9,6 +9,8 @@ export const midtrans = {
   coreApi: isProduction ? "https://api.midtrans.com/v2" : "https://api.sandbox.midtrans.com/v2",
   snapJs: isProduction ? "https://app.midtrans.com/snap/snap.js" : "https://app.sandbox.midtrans.com/snap/snap.js",
   clientKey: process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY ?? "",
+  // Dicatat di tabel payments; tiket dari pembayaran sandbox diberi label simulasi dan dihapus saat go-live.
+  gateway: isProduction ? "midtrans" : "midtrans-sandbox",
 };
 
 // Kode metode di Snap `enabled_payments` untuk tiap pilihan di langkah 4. Diverifikasi di sandbox
@@ -48,7 +50,9 @@ export type SnapOrder = {
 
 export async function createSnapToken(order: SnapOrder) {
   const now = new Date();
-  const minutes = Math.max(1, Math.ceil((order.expiresAt.getTime() - now.getTime()) / 60_000));
+  // Dibulatkan ke bawah supaya batas bayar di Midtrans tidak melewati hold kuota di server.
+  // Route /snap menolak membuat token kalau sisa waktu kurang dari 1 menit.
+  const minutes = Math.max(1, Math.floor((order.expiresAt.getTime() - now.getTime()) / 60_000));
   const items = [
     { id: "tiket", price: order.subtotal - order.discount, quantity: 1, name: `KUWERA 5K ${order.categoryName}`.slice(0, 50) },
   ];
@@ -66,6 +70,7 @@ export async function createSnapToken(order: SnapOrder) {
     headers: { Authorization: authHeader(), "Content-Type": "application/json", Accept: "application/json" },
     body: JSON.stringify(body),
     cache: "no-store",
+    signal: AbortSignal.timeout(10_000),
   });
   const data = (await res.json().catch(() => ({}))) as { token?: string; redirect_url?: string; error_messages?: string[] };
   if (!res.ok || !data.token) {
@@ -87,26 +92,47 @@ export type MidtransNotification = {
 };
 
 export function verifySignature(n: Pick<MidtransNotification, "order_id" | "status_code" | "gross_amount" | "signature_key">) {
-  const expected = createHash("sha512")
-    .update(`${n.order_id}${n.status_code}${n.gross_amount}${process.env.MIDTRANS_SERVER_KEY ?? ""}`)
-    .digest("hex");
-  return expected === n.signature_key;
+  const key = process.env.MIDTRANS_SERVER_KEY ?? "";
+  if (!key || typeof n.signature_key !== "string") return false;
+  const expected = Buffer.from(createHash("sha512").update(`${n.order_id}${n.status_code}${n.gross_amount}${key}`).digest("hex"));
+  const given = Buffer.from(n.signature_key);
+  return given.length === expected.length && timingSafeEqual(given, expected);
 }
 
-export async function fetchTransactionStatus(orderId: string) {
-  const res = await fetch(`${midtrans.coreApi}/${encodeURIComponent(orderId)}/status`, {
-    headers: { Authorization: authHeader(), Accept: "application/json" },
-    cache: "no-store",
-  });
-  if (!res.ok) return null;
-  return (await res.json()) as Partial<MidtransNotification>;
+export type LiveStatus =
+  | { kind: "found"; data: Partial<MidtransNotification> & { transaction_status: string } }
+  | { kind: "not_found" }
+  | { kind: "error"; detail: string };
+
+// Status transaksi langsung dari Midtrans. Transaksi yang belum ada (peserta belum memilih metode di
+// Snap) dijawab Midtrans dengan HTTP 200 tapi status_code "404" di body.
+export async function fetchTransactionStatus(orderId: string): Promise<LiveStatus> {
+  try {
+    const res = await fetch(`${midtrans.coreApi}/${encodeURIComponent(orderId)}/status`, {
+      headers: { Authorization: authHeader(), Accept: "application/json" },
+      cache: "no-store",
+      // Batas waktu supaya halaman /bayar dan polling tidak menggantung kalau API Midtrans lambat.
+      signal: AbortSignal.timeout(6_000),
+    });
+    const data = (await res.json().catch(() => ({}))) as Partial<MidtransNotification> & { status_message?: string };
+    if (data.status_code === "404" || res.status === 404) return { kind: "not_found" };
+    if (!res.ok || typeof data.transaction_status !== "string" || data.order_id !== orderId) {
+      return { kind: "error", detail: `HTTP ${res.status} ${data.status_code ?? ""} ${data.status_message ?? ""}`.trim() };
+    }
+    return { kind: "found", data: data as Partial<MidtransNotification> & { transaction_status: string } };
+  } catch (e) {
+    return { kind: "error", detail: e instanceof Error ? e.message : String(e) };
+  }
 }
 
-export function mapTransactionStatus(status?: string, fraud?: string): "PAID" | "PENDING" | "EXPIRED" | "FAILED" | "IGNORE" {
+// "deny" (misal kartu ditolak bank) belum final: di Snap peserta masih bisa mencoba kartu lain untuk
+// order_id yang sama selama batas bayar belum habis. "cancel" dilakukan merchant, jadi final.
+export function mapTransactionStatus(status?: string, fraud?: string): "PAID" | "PENDING" | "DENIED" | "EXPIRED" | "FAILED" | "IGNORE" {
   if (status === "settlement") return "PAID";
   if (status === "capture") return fraud === "challenge" ? "PENDING" : "PAID";
   if (status === "pending") return "PENDING";
+  if (status === "deny") return "DENIED";
   if (status === "expire") return "EXPIRED";
-  if (status === "cancel" || status === "deny" || status === "failure") return "FAILED";
+  if (status === "cancel" || status === "failure") return "FAILED";
   return "IGNORE";
 }

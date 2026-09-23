@@ -16,7 +16,8 @@ export default async function TiketPage({ params }: { params: Promise<{ code: st
   if (!ticket || !ticket.order.participant) notFound();
   const { order } = ticket;
   const p = ticket.order.participant!;
-  const isMock = order.payments.some((pay) => pay.gateway === "mock");
+  // Tiket dari simulasi (mock) atau Midtrans sandbox bukan tiket resmi.
+  const isMock = order.payments.some((pay) => pay.gateway !== "midtrans");
 
   return (
     <div className="flex flex-1 flex-col bg-green-deep">

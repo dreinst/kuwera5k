@@ -21,7 +21,7 @@ export default async function DaftarPage() {
           Empat langkah, sekitar tiga menit. Isianmu tersimpan otomatis di perangkat ini selama 24 jam.
         </p>
         <div className="mt-8">
-          <RegistrationForm categories={categories} fees={settings.fees} paymentMode={paymentMode()} />
+          <RegistrationForm categories={categories} fees={settings.fees} methods={settings.methods} paymentMode={paymentMode()} />
         </div>
       </main>
       <Footer />

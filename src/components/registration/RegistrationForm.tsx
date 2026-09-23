@@ -9,7 +9,7 @@ import {
 } from "@/lib/registration";
 
 type Category = { id: string; name: string; price: number; saleEnd: string; remaining: number };
-type Props = { categories: Category[]; fees: Record<PaymentMethodId, number>; paymentMode: "mock" | "off" | "midtrans" };
+type Props = { categories: Category[]; fees: Record<PaymentMethodId, number>; methods: PaymentMethodId[]; paymentMode: "mock" | "off" | "midtrans" };
 
 const STEPS = ["Kategori", "Data peserta", "Ringkasan", "Pembayaran"];
 const DRAFT_KEY = "kuwera-daftar-draft";
@@ -28,7 +28,7 @@ const slide = {
   exit: { x: -40, opacity: 0, transition: { duration: 0.25 } },
 };
 
-export default function RegistrationForm({ categories, fees, paymentMode }: Props) {
+export default function RegistrationForm({ categories, fees, methods, paymentMode }: Props) {
   const router = useRouter();
   const [step, setStep] = useState(1);
   const [categoryId, setCategoryId] = useState(categories[0]?.id ?? "");
@@ -39,7 +39,8 @@ export default function RegistrationForm({ categories, fees, paymentMode }: Prop
   const [promo, setPromo] = useState<{ code: string; discount: number; label: string } | null>(null);
   const [promoMessage, setPromoMessage] = useState("");
   const [agree, setAgree] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethodId>("qris");
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethodId>(methods.includes("qris") ? "qris" : methods[0]);
+  const available = PAYMENT_METHODS.filter((m) => methods.includes(m.id));
   const [submitting, setSubmitting] = useState(false);
   const [serverError, setServerError] = useState("");
   const [hydrated, setHydrated] = useState(false);
@@ -278,11 +279,11 @@ export default function RegistrationForm({ categories, fees, paymentMode }: Prop
               <h2 className="font-display text-2xl text-white uppercase">Pilih metode pembayaran</h2>
               <p className="mt-1 text-sm text-white/60">Biaya layanan berbeda per metode dan sudah termasuk di total.</p>
               <div className="mt-5 space-y-5">
-                {["QRIS", "Virtual account", "E-wallet", "Kartu"].map((group) => (
+                {["QRIS", "Virtual account", "E-wallet", "Kartu"].filter((group) => available.some((m) => m.group === group)).map((group) => (
                   <div key={group}>
                     <p className="text-xs font-semibold tracking-wide text-gold uppercase">{group}</p>
                     <div className="mt-2 grid gap-2 sm:grid-cols-2">
-                      {PAYMENT_METHODS.filter((m) => m.group === group).map((m) => {
+                      {available.filter((m) => m.group === group).map((m) => {
                         const selected = paymentMethod === m.id;
                         return (
                           <button key={m.id} type="button" onClick={() => setPaymentMethod(m.id)} className={`flex items-center justify-between rounded-2xl border px-4 py-3 text-left transition ${selected ? "border-brand-yellow bg-brand-yellow/10" : "border-glass-border bg-white/5 hover:border-white/40"}`}>

@@ -44,6 +44,8 @@ model Order {
   total       Int
   promoCode   String?
   paymentMethod String? // qris, bca_va, gopay, dst. dipilih di langkah 4 sebelum Snap dibuka
+  snapToken   String? // token Snap pertama; dipakai ulang karena Midtrans menolak order_id yang sama setelah metode dipilih
+  snapRedirectUrl String?
   buyerEmail  String
   buyerPhone  String
   expiresAt   DateTime?
