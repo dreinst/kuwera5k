@@ -29,8 +29,8 @@ export default function RouteDetail() {
             5K <span className="text-yellow-lime underline decoration-yellow-lime underline-offset-8">Route</span>
           </h2>
           <p className="mt-4 text-white/70">
-            Batas waktu {route.cutOffMinutes} menit. Ada dua water station dan {marshalPosts.length} pos
-            marshal di sepanjang jalur.
+            Batas waktu {route.cutOffMinutes} menit. Water station ada di km 2,5, tepatnya di Denzibang,
+            dan ada {marshalPosts.length} pos marshal di sepanjang jalur.
           </p>
         </Reveal>
 
@@ -82,7 +82,7 @@ export default function RouteDetail() {
                   </div>
                   <div>
                     <p className="text-sm font-semibold text-white">
-                      {cp.label} <span className="text-white/50">&middot; km {cp.km}</span>
+                      {cp.label} <span className="text-white/50">&middot; km {cp.km.toLocaleString("id-ID")}</span>
                     </p>
                     <p className="text-sm text-white/70">{cp.place}</p>
                   </div>
