@@ -28,6 +28,10 @@ export const metadata: Metadata = {
   applicationName: siteName,
   // og:title dan og:description diwarisi dari title dan description tiap halaman; gambar dari opengraph-image.jpg.
   openGraph: openGraphBase,
+  // Izinkan Google menampilkan pratinjau gambar besar dan cuplikan penuh (hasil pencarian dan Discover).
+  robots: { index: true, follow: true, googleBot: { index: true, follow: true, "max-image-preview": "large", "max-snippet": -1, "max-video-preview": -1 } },
+  // Kode verifikasi Google Search Console (metode tag HTML), diisi lewat env kalau properti didaftarkan.
+  ...(process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION ? { verification: { google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION } } : {}),
   ...(process.env.NEXT_PUBLIC_META_DOMAIN_VERIFICATION
     ? { other: { "facebook-domain-verification": process.env.NEXT_PUBLIC_META_DOMAIN_VERIFICATION } }
     : {}),
