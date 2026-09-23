@@ -43,8 +43,7 @@ export default function RouteDetail() {
               <RouteMap />
             </div>
             <div className="mt-4 flex flex-wrap gap-x-6 gap-y-2 text-xs text-white/80">
-              <span className="flex items-center gap-2"><LegendFlag color="#3DDC3D" /> Start</span>
-              <span className="flex items-center gap-2"><LegendFlag color="#E53935" /> Finish</span>
+              <span className="flex items-center gap-2"><span className="flex"><LegendFlag color="#3DDC3D" /><LegendFlag color="#E53935" /></span> Start dan finish</span>
               <span className="flex items-center gap-2"><span className="inline-block h-4 w-4 rounded-md bg-green-deep ring-1 ring-white/50" /> Pos marshal</span>
               <span className="flex items-center gap-2"><span className="inline-block h-4 w-4 rounded-full bg-cream ring-1 ring-white/50" /> Water station</span>
               <span className="flex items-center gap-2"><span className="inline-block h-0.5 w-6 bg-brand-yellow" /> Rute</span>

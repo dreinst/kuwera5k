@@ -45,6 +45,18 @@ function Flag({ x, y, color }: { x: number; y: number; color: string }) {
   );
 }
 
+// Start dan finish di titik yang sama (keputusan panitia 23 Sep 2026): dua bendera bersilang,
+// hijau untuk start dan merah untuk finish, di lokasi bendera start pada poster.
+function StartFinish({ x, y }: { x: number; y: number }) {
+  return (
+    <g transform={`translate(${x} ${y})`}>
+      <g transform="rotate(14)"><Flag x={0} y={0} color={FLAG_START} /></g>
+      <g transform="scale(-1 1) rotate(14)"><Flag x={0} y={0} color={FLAG_FINISH} /></g>
+      <circle r={18} fill="#FDFBF5" stroke="#0B4A2C" strokeWidth={6} />
+    </g>
+  );
+}
+
 export default function RouteMap({ compact = false }: { compact?: boolean }) {
   const s = compact ? 1.6 : 1; // marker sedikit lebih besar di peta mini
   return (
@@ -76,7 +88,7 @@ export default function RouteMap({ compact = false }: { compact?: boolean }) {
             cx={routeMap.field.cx} cy={routeMap.field.cy} rx={routeMap.field.rx * 0.72} ry={routeMap.field.ry * 0.62}
             fill="none" stroke="#FDFBF5" strokeOpacity={0.5} strokeWidth={4}
           />
-          {/* Label digeser ke atas kanan supaya tidak tertutup bendera finish. */}
+          {/* Label di bagian atas lapangan supaya tidak tertutup bendera start dan finish. */}
           <text
             x={routeMap.field.cx + 60} y={routeMap.field.cy - 95} textAnchor="middle" dominantBaseline="central"
             className="fill-white font-display" style={{ fontSize: 78, letterSpacing: 4 }}
@@ -138,12 +150,7 @@ export default function RouteMap({ compact = false }: { compact?: boolean }) {
 
       {routeMap.start && (
         <motion.g variants={pop(0.1)}>
-          <Flag x={routeMap.start.x} y={routeMap.start.y} color={FLAG_START} />
-        </motion.g>
-      )}
-      {routeMap.finish && (
-        <motion.g variants={pop(DRAW_SECONDS + 0.2)}>
-          <Flag x={routeMap.finish.x} y={routeMap.finish.y} color={FLAG_FINISH} />
+          <StartFinish x={routeMap.start.x} y={routeMap.start.y} />
         </motion.g>
       )}
     </motion.svg>
