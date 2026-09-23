@@ -412,26 +412,29 @@ function SizeChart() {
       <summary className="cursor-pointer font-medium text-brand-yellow">Lihat size chart</summary>
       <div className="mt-4 grid gap-4">
         <div className="relative mx-auto aspect-[640/551] w-full max-w-[200px] overflow-hidden rounded-xl bg-white">
-          <Image src="/images/size-chart-jersey.webp" alt="Cara mengukur jersey: A lingkar dada, B panjang badan, C panjang lengan" fill sizes="220px" className="object-contain p-2" />
+          <Image src="/images/size-chart-jersey.webp" alt="Cara mengukur jersey: A lingkar dada, B panjang badan, C panjang lengan" fill sizes="200px" loading="eager" className="object-contain p-2" />
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[420px] text-center">
-            <thead>
-              <tr className="text-xs text-white/75">
-                <th className="py-2 text-left font-semibold">Ukuran (cm)</th>
-                {JERSEY_SIZES.map((s) => <th key={s} className="py-2 font-semibold text-white">{s}</th>)}
+        <table className="w-full text-center">
+          <thead>
+            <tr className="text-xs text-white/75">
+              <th className="py-2 text-left font-semibold">Ukuran</th>
+              <th className="py-2 font-semibold">Lingkar dada (A)</th>
+              <th className="py-2 font-semibold">Panjang badan (B)</th>
+              <th className="py-2 font-semibold">Lengan (C)</th>
+            </tr>
+          </thead>
+          <tbody>
+            {JERSEY_SIZES.map((s) => (
+              <tr key={s} className="border-t border-white/10">
+                <th scope="row" className="py-1.5 text-left font-semibold text-white">{s}</th>
+                <td className="py-1.5">{JERSEY_CHART[s].chest}</td>
+                <td className="py-1.5">{JERSEY_CHART[s].length}</td>
+                <td className="py-1.5">{JERSEY_CHART[s].sleeve}</td>
               </tr>
-            </thead>
-            <tbody>
-              {([["Lingkar dada (A)", "chest"], ["Panjang badan (B)", "length"], ["Panjang lengan (C)", "sleeve"]] as const).map(([label, key]) => (
-                <tr key={key} className="border-t border-white/10">
-                  <th scope="row" className="py-2 text-left text-xs font-medium text-white/75">{label}</th>
-                  {JERSEY_SIZES.map((s) => <td key={s} className="py-2">{JERSEY_CHART[s][key]}</td>)}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+            ))}
+          </tbody>
+        </table>
+        <p className="text-xs text-white/75">Semua ukuran dalam cm.</p>
       </div>
     </details>
   );
