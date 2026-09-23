@@ -1,6 +1,7 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { useRef } from "react";
+import { motion, useInView } from "framer-motion";
 import { routeMap } from "@/lib/route-map";
 import { marshalPosts } from "@/lib/marshal-posts";
 import { route } from "@/lib/event-data";
@@ -58,8 +59,12 @@ function StartFinish({ x, y }: { x: number; y: number }) {
 
 export default function RouteMap({ compact = false }: { compact?: boolean }) {
   const s = compact ? 1.6 : 1; // marker sedikit lebih besar di peta mini
+  // Latar peta (~300 KB) baru diunduh saat peta mendekati layar, supaya tidak berebut jaringan dengan hero.
+  const ref = useRef<SVGSVGElement>(null);
+  const near = useInView(ref, { once: true, margin: "800px 0px" });
   return (
     <motion.svg
+      ref={ref}
       viewBox={routeMap.viewBox}
       className="h-full w-full"
       initial="hidden"
@@ -74,7 +79,7 @@ export default function RouteMap({ compact = false }: { compact?: boolean }) {
         </linearGradient>
       </defs>
 
-      {!compact && (
+      {!compact && near && (
         <image href={routeMap.background} x={0} y={0} width={vbW} height={vbH} preserveAspectRatio="none" />
       )}
 

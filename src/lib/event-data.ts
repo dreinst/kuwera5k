@@ -81,7 +81,7 @@ export const faqs = [
   },
   {
     q: "Apakah biaya pendaftaran bisa dikembalikan?",
-    a: "Pendaftaran yang sudah lunas tidak dapat direfund otomatis. Hubungi panitia untuk kasus khusus.",
+    a: "Biaya yang sudah lunas tidak dikembalikan otomatis. Untuk kasus khusus, hubungi panitia lewat WhatsApp.",
   },
   {
     q: "Kapan dan di mana pengambilan race pack?",
@@ -89,10 +89,10 @@ export const faqs = [
   },
   {
     q: "Apakah ada kategori kelompok atau komunitas?",
-    a: "Saat ini registrasi hanya perorangan (1 peserta per transaksi). Kamu tetap bisa mencantumkan nama komunitasmu di form pendaftaran.",
+    a: "Pendaftaran hanya perorangan, satu peserta per transaksi. Nama komunitasmu tetap bisa dicantumkan di form pendaftaran.",
   },
   {
     q: "Apa yang saya dapatkan sebagai peserta?",
-    a: "Jersey dan BIB di dalam race pack, lalu medali finisher setelah menyelesaikan lari. E-ticket berisi QR dipakai saat mengambil race pack.",
+    a: "Race pack berisi jersey dan BIB. Medali finisher kamu terima setelah menyelesaikan lari. QR di e-ticket dipakai saat mengambil race pack.",
   },
 ];

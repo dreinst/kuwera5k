@@ -37,7 +37,7 @@
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-inter), Arial, Helvetica, sans-serif;
   /* animasi masuk yang menggeser elemen ke samping tidak boleh memunculkan scroll horizontal di HP;
      clip (bukan hidden) supaya position: sticky tetap berfungsi */
   overflow-x: clip;
@@ -46,4 +46,10 @@ body {
 /* Kartu dan form: gradasi hijau polos tanpa tekstur (tekstur hanya di latar halaman). */
 @utility bg-card {
   background-image: linear-gradient(160deg, #13663d 0%, #0b4a2c 100%);
+}
+
+/* Judul bergaya konsep: huruf bergaris tepi tanpa isi (warna garis = warna teks). */
+@utility text-outline {
+  color: transparent;
+  -webkit-text-stroke: 2px var(--color-brand-yellow);
 }

@@ -18,11 +18,13 @@ export default function Reveal({
   delay = 0,
   className,
   variants = defaultVariants,
+  as = "div",
 }: {
   children: ReactNode;
   delay?: number;
   className?: string;
   variants?: Variants;
+  as?: "div" | "li";
 }) {
   const mergedVariants: Variants = {
     hidden: variants.hidden,
@@ -35,8 +37,9 @@ export default function Reveal({
     },
   };
 
+  const Tag = as === "li" ? motion.li : motion.div; // "li" supaya item daftar tetap HTML yang sah
   return (
-    <motion.div
+    <Tag
       initial="hidden"
       whileInView="show"
       viewport={{ once: true, amount: 0.2 }}
@@ -44,6 +47,6 @@ export default function Reveal({
       className={className}
     >
       {children}
-    </motion.div>
+    </Tag>
   );
 }
