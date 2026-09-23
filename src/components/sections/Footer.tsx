@@ -37,13 +37,14 @@ export default function Footer() {
         </div>
       </div>
 
-      <div className="relative mx-auto mt-10 flex max-w-6xl flex-col gap-4 border-t border-white/10 pt-6 sm:flex-row sm:items-center sm:justify-between">
+      {/* Kredit standar situs grup D'Pro (sama dengan Produksia, Pet Blessing, EasyLearnn): logo di atas, satu baris kredit di bawahnya, terpusat. */}
+      <div className="relative mx-auto mt-10 max-w-6xl border-t border-white/10 pt-6 text-center">
         <p className="text-xs text-white/70">
           &copy; {new Date().getFullYear()} KUWERA 5K. Semua hak dilindungi.
         </p>
-        <div className="flex items-center gap-3">
+        <div className="mt-6 flex flex-col items-center gap-2">
           {/* eslint-disable-next-line @next/next/no-img-element -- SVG statis, tanpa optimasi */}
-          <img src="/logo-dpro.svg" alt="D'Production Event Organizer" className="h-12 w-auto shrink-0" />
+          <img src="/logo-dpro.svg" alt="D'Production Event Organizer" className="h-12 w-auto" />
           <p className="text-xs text-white/80">Made by dreinst, organized by D&rsquo;Production Event Organizer</p>
         </div>
       </div>
