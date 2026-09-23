@@ -148,7 +148,7 @@ export default function RegistrationForm({ categories, fees, methods, paymentMod
     return (
       <div className="rounded-[20px] border border-glass-border bg-card p-8 text-center">
         <p className="font-display text-2xl text-brand-yellow uppercase">Pendaftaran belum dibuka</p>
-        <p className="mt-2 text-white/70">Ikuti kabar pembukaan lewat newsletter atau WhatsApp panitia.</p>
+        <p className="mt-2 text-white/70">Tanyakan jadwal pembukaannya ke WhatsApp panitia.</p>
       </div>
     );
   }
@@ -275,7 +275,7 @@ export default function RegistrationForm({ categories, fees, methods, paymentMod
 
               <label className="mt-6 flex items-start gap-3 text-sm text-white/80">
                 <input type="checkbox" checked={agree} onChange={(e) => setAgree(e.target.checked)} className="mt-1 h-4 w-4 accent-brand-yellow" />
-                <span>Saya menyatakan data di atas benar dan setuju dengan <a href="/syarat" target="_blank" className="text-brand-yellow underline">syarat dan ketentuan</a> KUWERA 5K, termasuk tidak ada pengembalian dana setelah lunas.</span>
+                <span>Saya menyatakan data di atas benar dan setuju dengan <a href="/syarat" target="_blank" className="text-brand-yellow underline">syarat dan ketentuan</a> KUWERA 5K, termasuk biaya yang sudah lunas tidak dikembalikan otomatis.</span>
               </label>
             </motion.div>
           )}

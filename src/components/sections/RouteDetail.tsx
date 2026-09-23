@@ -17,22 +17,46 @@ function LegendFlag({ color }: { color: string }) {
   );
 }
 
-export default function RouteDetail() {
+// Nama jalan dua warna seperti konsep: kata terakhir putih, sisanya kuning.
+function TwoTone({ text }: { text: string }) {
+  const words = text.toUpperCase().split(" ");
+  const tail = words.length > 1 ? words.pop() : null;
   return (
-    <section id="rute" className="relative px-6 py-20">
+    <>
+      <span className="text-brand-yellow">{words.join(" ")}</span>
+      {tail && <span className="text-white"> {tail}</span>}
+    </>
+  );
+}
+
+function Node({ edge }: { edge: boolean }) {
+  return (
+    <span
+      className={`relative z-10 h-5 w-5 shrink-0 rounded-full border-2 ${
+        edge ? "border-brand-yellow bg-cream shadow-[0_0_14px_rgba(244,231,29,0.85)]" : "border-white bg-green-deep"
+      }`}
+    />
+  );
+}
+
+export default function RouteDetail() {
+  const lastStreet = route.streets.length - 1;
+  const lastCheckpoint = route.checkpoints.length - 1;
+  return (
+    <section id="rute" className="relative scroll-mt-16 px-6 py-20">
       <div className="relative mx-auto max-w-6xl">
-        <Reveal className="max-w-2xl">
-          <p className="text-xs font-semibold tracking-wide text-gold uppercase">Rute</p>
-          <h2 className="font-display mt-2 text-4xl text-white uppercase">
-            5K <span className="text-yellow-lime underline decoration-yellow-lime underline-offset-8">Route</span>
+        <Reveal className="mx-auto max-w-2xl text-center">
+          <h2 className="font-display text-4xl text-white uppercase sm:text-5xl">
+            Detail{" "}
+            <span className="text-brand-yellow underline decoration-brand-yellow decoration-4 underline-offset-8">Rute</span>
           </h2>
-          <p className="mt-4 text-white/70">
-            Batas waktu {route.cutOffMinutes} menit. Water station ada di km 2,5, tepatnya di Denzibang,
-            dan ada {marshalPosts.length} pos marshal di sepanjang jalur.
+          <p className="mt-5 text-white/80">
+            Rute {route.distanceKm} km dengan batas waktu {route.cutOffMinutes} menit. Water station ada di km 2,5, tepatnya di
+            Denzibang, dan {marshalPosts.length} pos marshal berjaga di sepanjang jalur.
           </p>
         </Reveal>
 
-        <div className="mt-10 grid gap-10 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] lg:items-start">
+        <div className="mt-12 grid gap-10 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] lg:items-start">
           <Reveal className="lg:sticky lg:top-24">
             <div
               className="overflow-hidden rounded-[20px] border border-glass-border bg-card p-3 sm:p-5"
@@ -52,39 +76,45 @@ export default function RouteDetail() {
             </p>
           </Reveal>
 
+          {/* Urutan jalan lalu checkpoint di sebelah kanannya (permintaan Donny), bergaya linimasa konsep. */}
           <div className="grid gap-10 sm:grid-cols-2 lg:gap-8">
-            <Reveal>
-              <p className="text-xs font-semibold tracking-wide text-gold uppercase">Urutan jalan</p>
-              <ol className="mt-4 space-y-2 text-sm text-white/80">
+            <div>
+              <Reveal>
+                <p className="mb-5 text-xs font-semibold tracking-wide text-gold uppercase">Urutan jalan</p>
+              </Reveal>
+              <ol>
                 {route.streets.map((street, i) => (
-                  <li key={`${street}-${i}`} className="flex gap-3">
-                    <span className="w-6 shrink-0 font-semibold text-gold">{i + 1}</span>
-                    {street}
-                  </li>
+                  <Reveal as="li" key={`${street}-${i}`} delay={i * 0.04} className="relative flex items-center gap-4 pb-4 last:pb-0">
+                    {i < lastStreet && <span aria-hidden className="absolute top-5 bottom-0 left-[9px] w-0.5 bg-white/35" />}
+                    <Node edge={i === 0 || i === lastStreet} />
+                    <span className="font-display text-base leading-tight tracking-wide sm:text-lg">
+                      <TwoTone text={street} />
+                    </span>
+                  </Reveal>
                 ))}
               </ol>
-            </Reveal>
+            </div>
 
-            <div className="relative">
+            <div>
               <Reveal>
-                <p className="mb-4 text-xs font-semibold tracking-wide text-gold uppercase">Checkpoint</p>
+                <p className="mb-5 text-xs font-semibold tracking-wide text-gold uppercase">Checkpoint</p>
               </Reveal>
-              {route.checkpoints.map((cp, i) => (
-                <Reveal key={`${cp.label}-${cp.km}`} delay={i * 0.06} className="relative flex gap-4 pb-6 last:pb-0">
-                  <div className="flex flex-col items-center">
-                    <span className="flex h-3 w-3 shrink-0 rounded-full bg-gold" />
-                    {i < route.checkpoints.length - 1 && (
-                      <span className="mt-1 w-px flex-1 bg-white/15" />
-                    )}
-                  </div>
-                  <div>
-                    <p className="text-sm font-semibold text-white">
-                      {cp.label} <span className="text-white/70">&middot; km {cp.km.toLocaleString("id-ID")}</span>
-                    </p>
-                    <p className="text-sm text-white/70">{cp.place}</p>
-                  </div>
-                </Reveal>
-              ))}
+              <ol>
+                {route.checkpoints.map((cp, i) => (
+                  <Reveal as="li" key={`${cp.label}-${cp.km}`} delay={i * 0.06} className="relative flex gap-4 pb-5 last:pb-0">
+                    {i < lastCheckpoint && <span aria-hidden className="absolute top-5 bottom-0 left-[9px] w-0.5 bg-white/35" />}
+                    <Node edge={i === 0 || i === lastCheckpoint} />
+                    <div className="-mt-0.5">
+                      <p className="font-display text-base tracking-wide uppercase sm:text-lg">
+                        <span className="text-brand-yellow">{cp.label}</span>
+                        {/* "1 KM" dan seterusnya sudah memuat jaraknya sendiri */}
+                        {!/km/i.test(cp.label) && <span className="text-white"> km {cp.km.toLocaleString("id-ID")}</span>}
+                      </p>
+                      <p className="text-sm text-white/75">{cp.place}</p>
+                    </div>
+                  </Reveal>
+                ))}
+              </ol>
             </div>
           </div>
         </div>
