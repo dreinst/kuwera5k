@@ -2,14 +2,14 @@
 export const eventData = {
   name: "KUWERA Fun Run 5K 2026",
   city: "Malang, Jawa Timur",
-  dateLabel: "Minggu, 13 Desember 2026",
+  dateLabel: "Sabtu, 24 Oktober 2026",
   timeLabel: "06.00 WIB",
   startPoint: "Lapangan Rampal",
   quotaTotal: 1000,
   paidCount: 214,
   registrationOpen: "15 Oktober 2026",
   price: 125000,
-  racePackLabel: "Sabtu, 12 Desember 2026, 10.00 sampai 18.00 WIB",
+  racePackLabel: "Jumat, 23 Oktober 2026, 10.00 sampai 18.00 WIB", // H-1, sesuai FAQ
   racePackPlace: "Lapangan Rampal (tenda panitia)",
 };
 
