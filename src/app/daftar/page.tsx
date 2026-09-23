@@ -1,18 +1,23 @@
+import type { Metadata } from "next";
+import { pageMeta } from "@/lib/site";
 import Navbar from "@/components/sections/Navbar";
 import Footer from "@/components/sections/Footer";
 import RegistrationForm from "@/components/registration/RegistrationForm";
-import { getOpenCategories, getSettings, paymentMode } from "@/lib/orders";
-import JerseyTexture from "@/components/JerseyTexture";
+import { getOpenCategories, getSettings, paymentMode, trackCheckout } from "@/lib/orders";
 
 export const dynamic = "force-dynamic";
 
-export const metadata = { title: "Daftar KUWERA 5K" };
+export const metadata: Metadata = {
+  title: "Pendaftaran Online",
+  description:
+    "Daftar online KUWERA Fun Run 5K Malang. Rp125.000 di luar biaya layanan, bayar lewat QRIS, virtual account, atau e-wallet, e-ticket muncul setelah lunas.",
+  ...pageMeta("/daftar"),
+};
 
 export default async function DaftarPage() {
   const [categories, settings] = await Promise.all([getOpenCategories(), getSettings()]);
   return (
-    <div className="relative flex flex-1 flex-col overflow-hidden bg-green-deep">
-      <JerseyTexture dots="right" />
+    <div className="relative flex flex-1 flex-col">
       <Navbar />
       <main className="relative mx-auto w-full max-w-3xl flex-1 px-6 pt-28 pb-24">
         <p className="text-xs font-semibold tracking-wide text-gold uppercase">Pendaftaran</p>
@@ -23,7 +28,7 @@ export default async function DaftarPage() {
           Empat langkah, sekitar tiga menit. Isianmu tersimpan otomatis di perangkat ini selama 24 jam.
         </p>
         <div className="mt-8">
-          <RegistrationForm categories={categories} fees={settings.fees} methods={settings.methods} paymentMode={paymentMode()} />
+          <RegistrationForm categories={categories} fees={settings.fees} methods={settings.methods} paymentMode={paymentMode()} trackCheckout={trackCheckout()} />
         </div>
       </main>
       <Footer />

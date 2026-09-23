@@ -1,15 +1,12 @@
 import { waLink, waText } from "@/lib/whatsapp";
-import JerseyTexture from "@/components/JerseyTexture";
 
 export default function Footer() {
   return (
-    <footer id="kontak" className="relative overflow-hidden border-t border-white/10 bg-green-deep px-6 pt-12 pb-36 sm:pb-44">
-      <JerseyTexture dots="none" glow={false} waves wavesOpacity={0.55} wavesHeight="h-[190px] sm:h-[250px]" />
+    <footer id="kontak" className="relative border-t border-white/10 px-6 pt-12 pb-28">
       <div className="relative mx-auto flex max-w-6xl flex-col gap-8 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <span className="font-display text-xl tracking-wide text-white">
-            KUWERA<span className="text-brand-yellow">5K</span>
-          </span>
+          {/* eslint-disable-next-line @next/next/no-img-element -- logo SVG statis */}
+          <img src="/brand/kuwera-logo-light.svg" alt="KUWERA Fun Run" width={2400} height={853} className="h-11 w-auto" />
           <p className="mt-2 max-w-xs text-sm text-white/75">
             Fun run 5K di Malang, Jawa Timur. Start dan finish di Lapangan Rampal.
           </p>

@@ -1,8 +1,9 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* latar dasar = hijau tua KUWERA di mode terang maupun gelap; tekstur ada di PageTexture */
+  --background: #0b4a2c;
+  --foreground: #ffffff;
 
   /* Token warna brand KUWERA 5K, lihat docs/PRD.md bagian 3 */
   --color-green-deep: #0b4a2c;
@@ -19,8 +20,6 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
   --font-display: var(--font-anton);
 
   --color-green-deep: var(--color-green-deep);
@@ -34,15 +33,17 @@
   --color-glass-border: var(--color-glass-border);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
 
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+  /* animasi masuk yang menggeser elemen ke samping tidak boleh memunculkan scroll horizontal di HP;
+     clip (bukan hidden) supaya position: sticky tetap berfungsi */
+  overflow-x: clip;
+}
+
+/* Kartu dan form: gradasi hijau polos tanpa tekstur (tekstur hanya di latar halaman). */
+@utility bg-card {
+  background-image: linear-gradient(160deg, #13663d 0%, #0b4a2c 100%);
 }

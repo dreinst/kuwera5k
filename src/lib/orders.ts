@@ -13,6 +13,9 @@ export const paymentMode = (): PaymentMode => {
   return v === "mock" || v === "midtrans" ? v : "off";
 };
 
+// Event checkout Meta Pixel hanya untuk pembayaran sungguhan, bukan simulasi atau Midtrans sandbox.
+export const trackCheckout = () => paymentMode() === "midtrans" && midtrans.isProduction;
+
 export type RegistrationSettings = {
   holdMinutes: number;
   quotaTotal: number;

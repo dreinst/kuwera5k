@@ -1,12 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 
 const NAV_LINKS = [
-  { label: "Beranda", href: "#hero" },
-  { label: "Rute", href: "#rute" },
-  { label: "Info", href: "#info" },
-  { label: "Kontak", href: "#kontak" },
+  { label: "Beranda", href: "/#hero" },
+  { label: "Rute", href: "/#rute" },
+  { label: "Info", href: "/#info" },
+  { label: "Kontak", href: "#kontak" }, // footer ada di semua halaman
 ];
 
 export default function Navbar() {
@@ -21,16 +22,17 @@ export default function Navbar() {
 
   return (
     <header
-      className={`fixed inset-x-0 top-0 z-50 transition-all duration-300 ${
+      className={`fixed inset-x-0 top-0 z-50 px-6 transition-all duration-300 ${
         scrolled
           ? "bg-glass backdrop-blur-md border-b border-glass-border"
           : "bg-transparent"
       }`}
     >
-      <nav className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
-        <span className="font-display text-xl tracking-wide text-white">
-          KUWERA<span className="text-brand-yellow">5K</span>
-        </span>
+      <nav className="mx-auto flex max-w-6xl items-center justify-between py-4">
+        <Link href="/" aria-label="KUWERA Fun Run, ke beranda" className="shrink-0">
+          {/* eslint-disable-next-line @next/next/no-img-element -- logo SVG statis */}
+          <img src="/brand/kuwera-logo-light.svg" alt="KUWERA Fun Run" width={2400} height={853} className="h-9 w-auto sm:h-10" />
+        </Link>
 
         <ul className="hidden items-center gap-8 text-sm text-white/80 md:flex">
           {NAV_LINKS.map((link) => (

@@ -7,10 +7,24 @@ export const eventData = {
   startPoint: "Lapangan Rampal",
   quotaTotal: 1000,
   paidCount: 214,
-  registrationOpen: "15 Oktober 2026",
+  registrationCloseLabel: "Jumat, 23 Oktober 2026 pukul 23.59 WIB", // sama dengan registrationCloseIso
   price: 125000,
   racePackLabel: "Jumat, 23 Oktober 2026, 10.00 sampai 18.00 WIB", // H-1, sesuai FAQ
   racePackPlace: "Lapangan Rampal (tenda panitia)",
+  // Untuk data terstruktur (schema.org) dan metadata; sumber koordinat: OpenStreetMap way 295948065.
+  startIso: "2026-10-24T06:00:00+07:00",
+  registrationOpenIso: "2026-09-01T00:00:00+07:00", // jendela jual kategori di seed
+  registrationCloseIso: "2026-10-23T23:59:59+07:00",
+  venue: {
+    name: "Lapangan Rampal",
+    street: "Jl. Jenderal Urip Sumoharjo",
+    locality: "Kota Malang",
+    region: "Jawa Timur",
+    postalCode: "65121",
+    lat: -7.97357,
+    lng: 112.64017,
+  },
+  organizer: "D'Production Event Organizer",
 };
 
 export const remainingQuota = eventData.quotaTotal - eventData.paidCount;
@@ -36,7 +50,7 @@ export const route = {
   // Urutan dan posisi dari peta rute panitia; jarak dari geometri jalan OpenStreetMap
   // (tools/generate-route-map.mjs). Jarak resmi 5K termasuk lintasan di dalam lapangan.
   checkpoints: [
-    { label: "Start", place: "Lapangan Rampal, sisi Jl. Ronggolawe", km: 0 },
+    { label: "Start", place: "Lapangan Rampal, sisi Jl. Urip Sumoharjo", km: 0 },
     { label: "1 KM", place: "Jl. Panglima Sudirman", km: 1 },
     { label: "2 KM", place: "Jl. Kesatrian", km: 2 },
     // Satu-satunya water station (keputusan panitia 23 Sep 2026); pin di peta mengikuti km ini.
@@ -59,7 +73,7 @@ export const sponsors = [
 export const faqs = [
   {
     q: "Bagaimana cara mendaftar KUWERA 5K?",
-    a: "Klik tombol Daftar, isi data peserta, pilih metode bayar, lalu selesaikan pembayaran. E-ticket otomatis terkirim ke email dan WhatsApp.",
+    a: "Klik tombol Daftar, isi data peserta, pilih metode bayar, lalu selesaikan pembayaran. E-ticket langsung muncul setelah pembayaran lunas; simpan tautannya untuk ambil race pack.",
   },
   {
     q: "Metode pembayaran apa saja yang tersedia?",
@@ -71,7 +85,7 @@ export const faqs = [
   },
   {
     q: "Kapan dan di mana pengambilan race pack?",
-    a: "Race pack diambil H-1 di lokasi yang akan diinformasikan lewat email dan WhatsApp setelah pembayaran lunas.",
+    a: `Race pack diambil ${eventData.racePackLabel} di ${eventData.racePackPlace}. Bawa KTP asli dan tunjukkan QR di e-ticket.`,
   },
   {
     q: "Apakah ada kategori kelompok atau komunitas?",
@@ -79,6 +93,6 @@ export const faqs = [
   },
   {
     q: "Apa yang saya dapatkan sebagai peserta?",
-    a: "Race pack berisi jersey dan BIB, medali finisher setelah lari, dan e-ticket dengan QR code untuk pengambilan race pack.",
+    a: "Jersey dan BIB di dalam race pack, lalu medali finisher setelah menyelesaikan lari. E-ticket berisi QR dipakai saat mengambil race pack.",
   },
 ];

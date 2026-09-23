@@ -2,7 +2,6 @@
 
 import Reveal from "@/components/Reveal";
 import RouteMap from "@/components/RouteMap";
-import JerseyTexture from "@/components/JerseyTexture";
 import { route } from "@/lib/event-data";
 import { routeMap } from "@/lib/route-map";
 import { marshalPosts } from "@/lib/marshal-posts";
@@ -20,8 +19,7 @@ function LegendFlag({ color }: { color: string }) {
 
 export default function RouteDetail() {
   return (
-    <section id="rute" className="relative overflow-clip bg-green-deep px-6 py-24">
-      <JerseyTexture dots="left" glow={false} />
+    <section id="rute" className="relative px-6 py-20">
       <div className="relative mx-auto max-w-6xl">
         <Reveal className="max-w-2xl">
           <p className="text-xs font-semibold tracking-wide text-gold uppercase">Rute</p>
@@ -37,7 +35,7 @@ export default function RouteDetail() {
         <div className="mt-10 grid gap-10 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] lg:items-start">
           <Reveal className="lg:sticky lg:top-24">
             <div
-              className="overflow-hidden rounded-[20px] border border-glass-border bg-glass p-3 sm:p-5"
+              className="overflow-hidden rounded-[20px] border border-glass-border bg-card p-3 sm:p-5"
               style={{ aspectRatio: `${vbW} / ${vbH}` }}
             >
               <RouteMap />
@@ -49,7 +47,7 @@ export default function RouteDetail() {
               <span className="flex items-center gap-2"><span className="inline-block h-0.5 w-6 bg-brand-yellow" /> Rute</span>
               <span className="flex items-center gap-2"><span className="inline-block h-4 w-4 rotate-45 bg-brand-yellow" /> KM</span>
             </div>
-            <p className="mt-3 text-xs text-white/65">
+            <p className="mt-3 text-xs text-white/75">
               Peta rute resmi panitia, utara di atas. Jarak 5K sudah termasuk lintasan di dalam lapangan.
             </p>
           </Reveal>
@@ -81,7 +79,7 @@ export default function RouteDetail() {
                   </div>
                   <div>
                     <p className="text-sm font-semibold text-white">
-                      {cp.label} <span className="text-white/50">&middot; km {cp.km.toLocaleString("id-ID")}</span>
+                      {cp.label} <span className="text-white/70">&middot; km {cp.km.toLocaleString("id-ID")}</span>
                     </p>
                     <p className="text-sm text-white/70">{cp.place}</p>
                   </div>
