@@ -4,6 +4,7 @@ import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import Reveal from "@/components/Reveal";
 import { faqs } from "@/lib/event-data";
+import JerseyTexture from "@/components/JerseyTexture";
 
 function FaqItem({ q, a, index }: { q: string; a: string; index: number }) {
   const [open, setOpen] = useState(false);
@@ -44,15 +45,16 @@ function FaqItem({ q, a, index }: { q: string; a: string; index: number }) {
 
 export default function NewsletterFaq() {
   return (
-    <section className="bg-green-deep px-6 py-24">
-      <div className="mx-auto grid max-w-6xl gap-16 lg:grid-cols-2">
+    <section className="relative overflow-hidden bg-green-deep px-6 py-24">
+      <JerseyTexture dots="right" glow={false} />
+      <div className="relative mx-auto grid max-w-6xl gap-16 lg:grid-cols-2">
         <Reveal>
           <p className="text-xs font-semibold tracking-wide text-gold uppercase">Newsletter</p>
           <h2 className="font-display mt-2 text-3xl text-white uppercase">
             Jangan sampai <span className="text-brand-yellow">ketinggalan</span>
           </h2>
           <p className="mt-3 max-w-sm text-white/60">
-            Info early bird, jadwal race pack, dan lineup acara kami kirim ke email kamu.
+            Jadwal race pack dan kabar terbaru soal acara kami kirim ke email kamu.
           </p>
           <form
             onSubmit={(e) => e.preventDefault()}
@@ -73,7 +75,7 @@ export default function NewsletterFaq() {
           </form>
         </Reveal>
 
-        <div>
+        <div id="faq" className="scroll-mt-24">
           <Reveal>
             <p className="text-xs font-semibold tracking-wide text-gold uppercase">FAQ</p>
           </Reveal>

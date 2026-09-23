@@ -2,8 +2,10 @@
 
 import Reveal from "@/components/Reveal";
 import RouteMap from "@/components/RouteMap";
+import JerseyTexture from "@/components/JerseyTexture";
 import { route } from "@/lib/event-data";
 import { routeMap } from "@/lib/route-map";
+import { marshalPosts } from "@/lib/marshal-posts";
 
 const [, , vbW, vbH] = routeMap.viewBox.split(" ").map(Number);
 
@@ -18,16 +20,17 @@ function LegendFlag({ color }: { color: string }) {
 
 export default function RouteDetail() {
   return (
-    <section id="rute" className="bg-green-deep px-6 py-24">
-      <div className="mx-auto max-w-6xl">
+    <section id="rute" className="relative overflow-hidden bg-green-deep px-6 py-24">
+      <JerseyTexture dots="left" glow={false} />
+      <div className="relative mx-auto max-w-6xl">
         <Reveal className="max-w-2xl">
           <p className="text-xs font-semibold tracking-wide text-gold uppercase">Rute</p>
           <h2 className="font-display mt-2 text-4xl text-white uppercase">
             5K <span className="text-yellow-lime underline decoration-yellow-lime underline-offset-8">Route</span>
           </h2>
           <p className="mt-4 text-white/70">
-            Batas waktu {route.cutOffMinutes} menit. Ada dua water station di rute, dan marshal
-            berjaga di sepanjang jalur.
+            Batas waktu {route.cutOffMinutes} menit. Ada dua water station dan {marshalPosts.length} pos
+            marshal di sepanjang jalur.
           </p>
         </Reveal>
 
@@ -41,7 +44,7 @@ export default function RouteDetail() {
           <div className="mt-4 flex flex-wrap gap-x-6 gap-y-2 text-xs text-white/80">
             <span className="flex items-center gap-2"><LegendFlag color="#3DDC3D" /> Start</span>
             <span className="flex items-center gap-2"><LegendFlag color="#E53935" /> Finish</span>
-            <span className="flex items-center gap-2"><span className="inline-block h-4 w-4 rounded-md bg-green-deep ring-1 ring-white/50" /> Marshal</span>
+            <span className="flex items-center gap-2"><span className="inline-block h-4 w-4 rounded-md bg-green-deep ring-1 ring-white/50" /> Pos marshal</span>
             <span className="flex items-center gap-2"><span className="inline-block h-4 w-4 rounded-full bg-cream ring-1 ring-white/50" /> Water station</span>
             <span className="flex items-center gap-2"><span className="inline-block h-0.5 w-6 bg-brand-yellow" /> Rute</span>
             <span className="flex items-center gap-2"><span className="inline-block h-4 w-4 rotate-45 bg-brand-yellow" /> KM</span>

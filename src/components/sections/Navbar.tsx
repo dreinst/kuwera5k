@@ -44,12 +44,6 @@ export default function Navbar() {
 
         <div className="flex items-center gap-3">
           <a
-            href="https://wa.me/6281234567890"
-            className="hidden text-sm text-white/80 transition-colors hover:text-brand-yellow sm:block"
-          >
-            WA Panitia
-          </a>
-          <a
             href="/daftar"
             className={`rounded-full bg-brand-yellow px-5 py-2 text-sm font-semibold text-green-deep transition-all duration-300 ${
               scrolled ? "opacity-100 scale-100" : "opacity-0 scale-90 pointer-events-none"

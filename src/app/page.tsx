@@ -2,7 +2,6 @@ import Navbar from "@/components/sections/Navbar";
 import Hero from "@/components/sections/Hero";
 import RouteDetail from "@/components/sections/RouteDetail";
 import DateBanner from "@/components/sections/DateBanner";
-import GuestStar from "@/components/sections/GuestStar";
 import Sponsors from "@/components/sections/Sponsors";
 import CtaBanner from "@/components/sections/CtaBanner";
 import NewsletterFaq from "@/components/sections/NewsletterFaq";
@@ -16,7 +15,6 @@ export default function Home() {
         <Hero />
         <RouteDetail />
         <DateBanner />
-        <GuestStar />
         <Sponsors />
         <CtaBanner />
         <NewsletterFaq />

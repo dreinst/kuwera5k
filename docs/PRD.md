@@ -47,7 +47,7 @@ Website KUWERA 5K adalah satu landing page sinematik plus alur registrasi berbay
 | Registrasi dibuka | 15 Oktober 2026 (early bird sampai 15 November 2026) | Dummy |
 | Biaya pendaftaran | Rp125.000 per peserta, satu kategori, tanpa early bird | Tetap (Donny, 22 Sep 2026) |
 | Pengambilan race pack | Sabtu, 12 Desember 2026, 10.00-18.00 WIB | Dummy |
-| Guest star / hiburan | 4 slot "Bintang Tamu (TBC)"; senam pemanasan, live music, doorprize | Dummy |
+| Guest star / hiburan | Tidak ada guest star (dikonfirmasi Donny 23 Sep 2026); section dan datanya dihapus dari situs | Final |
 | Sponsor | 6 slot logo placeholder per tier | Dummy |
 | Domain | kuwera5k.id (placeholder) | Belum diputuskan |
 | Bahasa | Bilingual, default Indonesia, toggle English | Tetap |
@@ -81,7 +81,7 @@ Palet warna mengikuti jersey dan lanyard KUWERA Fun Run 5K: hijau lapangan turun
 
 | Token | Nilai (disampel dari jersey/lanyard) | Pemakaian |
 | --- | --- | --- |
-| green-deep | #0B4A2C (hijau tua lanyard) | Latar gelap utama: hero, route, guest star, newsletter, footer; teks di atas kuning/krem |
+| green-deep | #0B4A2C (hijau tua lanyard) | Latar gelap utama: hero, route, newsletter, footer; teks di atas kuning/krem |
 | brand-green | #1C6B06 (hijau badan jersey) | Navbar saat scroll, kartu kaca, tombol sekunder, overlay foto |
 | green-bright | #64A322 (titik tengah gradasi) | Hover, ikon, garis pemisah |
 | yellow-lime | #F4E71D (ujung bawah jersey) | Underline kata kunci, garis rute di peta, aksen kecil |
@@ -93,7 +93,7 @@ Palet warna mengikuti jersey dan lanyard KUWERA Fun Run 5K: hijau lapangan turun
 
 Gradasi & motif: gradasi jersey vertikal #1C6B06 -> #64A322 (55%) -> #F4E71D untuk banner tanggal, kartu promo hero, CTA banner, hover tombol; gradasi lanyard horizontal #0B4A2C -> #FDFBF5 -> #E3B219 untuk pemisah section dan progress bar form; motif gelombang organik (bawah jersey) sebagai layer dekoratif hero/banner, drift 20 detik loop via SVG + GSAP; motif titik halftone (bahu jersey, lanyard) sebagai tekstur sudut kartu dan section sponsor, opacity 15-25%. Logo KUWERA selalu putih di atas hijau, "FUN RUN 5K" selalu #FFBB00; di atas krem pakai versi hijau tua.
 
-Pemetaan per section: Hero #0B4A2C + foto overlay hijau + gelombang, headline putih dengan "5K" #FFBB00, tombol Daftar #FFBB00/teks #0B4A2C, kartu medali #FFBB00, kartu promo gradasi jersey (ganti kartu oranye Strava); Route #0B4A2C, garis rute #F4E71D, titik #E3B219; Banner tanggal gradasi jersey + gelombang, pill #0B4A2C; Guest star #0B4A2C, nama #FFBB00; Sponsor #FDFBF5 + halftone; CTA banner kartu gradasi jersey di atas krem, tombol #0B4A2C; Newsletter/FAQ/footer #0B4A2C, tombol #FFBB00.
+Pemetaan per section: Hero #0B4A2C + foto overlay hijau + gelombang, headline putih dengan "5K" #FFBB00, tombol Daftar #FFBB00/teks #0B4A2C, kartu medali #FFBB00, kartu promo gradasi jersey (ganti kartu oranye Strava); Route #0B4A2C, garis rute #F4E71D, titik #E3B219; Banner tanggal gradasi jersey + gelombang, pill #0B4A2C; Sponsor #FDFBF5 + halftone; CTA banner kartu gradasi jersey di atas krem, tombol #0B4A2C; Newsletter/FAQ/footer #0B4A2C, tombol #FFBB00.
 
 Kontras WCAG (min 4,5): putih/#0B4A2C 10,3; putih/#1C6B06 6,7; #FFBB00/#0B4A2C 6,1; #0B4A2C/#FFBB00 6,1; #0B4A2C/#F4E71D 8,0; #FFBB00/#1C6B06 3,9 (hanya teks >= 24 px); kuning di atas krem/putih 1,3-1,7 (jangan pernah).
 
@@ -109,11 +109,11 @@ Halaman: `/` landing (single-page scroll) -> `/daftar` (form multi-step) -> `/ba
 
 | # | Section | Isi | Data dinamis |
 | --- | --- | --- | --- |
-| 0 | Navbar | Logo, menu Beranda/Rute/Info/Kontak, WA panitia, tombol Daftar setelah scroll | - |
+| 0 | Navbar | Logo, menu Beranda/Rute/Info/Kontak, tombol Daftar setelah scroll (WhatsApp pindah ke tombol melayang kanan bawah) | - |
 | 1 | Hero bento 5 kartu | Pill "AYO LARI BARENG", headline "KUWERA 5K", sub "didukung oleh ..."; kartu Save the date + kalender, counter pendaftar + Daftar + sisa kuota, peta 5K Route, promo early bird, medali finisher | Jumlah lunas & sisa kuota (refresh 30 s) |
 | 2 | Route Detail | Peta rute 5K, timeline checkpoint, water station, cut-off | Checkpoint dari CMS |
 | 3 | Banner tanggal | Tanggal, jam, titik start, foto landmark | - |
-| 4 | Guest star / rangkaian acara | 4 kartu talent, atau senam, live music, doorprize, bazar | Lineup dari CMS |
+| 4 | (dihapus) | Tidak ada guest star; section ini tidak dipakai | - |
 | 5 | Sponsor & partner | Logo per tier | CMS |
 | 6 | CTA banner | Ajakan + tombol Daftar | - |
 | 7 | Newsletter + FAQ | Email/WA channel + 3 FAQ + Lihat semua | CMS |
@@ -180,7 +180,6 @@ Semua gerak direproduksi di browser dengan kode. Zoom overview di awal/akhir vid
 | Garis rute | Bersama peta | stroke-dashoffset 100->0 (path dari GPX) | 2 s power1.inOut |
 | Timeline checkpoint | +0,4 s | Titik scale 0->1, label x -16->0 | 0,4 s, 0,06 s |
 | Banner tanggal | Viewport | Skeleton -> teks; parallax foto +-30 px | 0,5 s; scrub |
-| Kartu guest star | Viewport | clip-path inset(0 100% 0 0)->inset(0), nama y 20->0 | 0,7 s power3.out, 0,12 s |
 | Logo sponsor | Viewport | opacity + y 12->0; marquee jika > 12 | 0,4 s, 0,05 s |
 | CTA banner | Viewport | Skeleton blur -> scale 0,97->1 | 0,6 s |
 | FAQ | Viewport; klik | x -20->0; accordion auto height | 0,4 s; 0,3 s |
@@ -249,7 +248,7 @@ Status keputusan (20 Sep 2026):
 - [x] kategori/harga dummy, final menyusul
 - [ ] merchant Midtrans: kunci sandbox dan production diterima 22 Sep, alur bayar lolos uji sandbox 23 Sep. Per 23 Sep akun production masih "Business review: In progress" dan belum ada metode bayar yang aktif (lihat bagian 12, Go-live)
 - [x] biaya layanan ke peserta
-- [x] guest star & sponsor placeholder TBC
+- [x] sponsor placeholder TBC; guest star tidak ada (dikonfirmasi 23 Sep 2026)
 - [x] registrasi perorangan
 - [x] brand dari jersey/lanyard
 - [x] bilingual default ID
@@ -260,7 +259,7 @@ Status keputusan (20 Sep 2026):
 ## 12. Status implementasi (per 23 September 2026)
 
 Sudah jadi dan live di https://kuwera5k.vercel.app (auto-deploy dari `main` GitHub `dreinst/kuwera5k`):
-- Landing page lengkap 9 section (navbar, hero bento 5 kartu, rute + timeline checkpoint, banner tanggal, guest star, sponsor, CTA, newsletter + FAQ, footer) dengan animasi reveal blur/fade/scale sesuai bagian 7 (framer-motion; GSAP/Lenis belum dipakai).
+- Landing page 8 section (navbar, hero bento 5 kartu, rute + timeline checkpoint, banner tanggal, sponsor, CTA, newsletter + FAQ, footer) dengan animasi reveal blur/fade/scale sesuai bagian 7 (framer-motion; GSAP/Lenis belum dipakai).
 - Rute resmi dari peta panitia: Start Rampal, Jl. Ronggolawe, Jl. Urip Sumoharjo, Jl. Panglima Sudirman, Jl. Untung Suropati Utara, Jl. Terusan Kesatrian, Jl. Mayjen M. Wiyono, Jl. Indraprasta, Jl. Hamid Rusdi, Jl. Lapangan Brawijaya, Jl. Ronggolawe, Finish Rampal.
 - Peta rute di situs (sejak 22 September 2026) direplikasi langsung dari poster resmi panitia sesuai permintaan Donny ("layout benar-benar sesuai gambaran, tanpa perubahan"): `tools/trace-poster.py` (`npm run route:map`) membaca `docs/design-reference/rute-final-panitia.jpg`, mengekstrak garis biru rute (garis tepi ditelusuri lalu digeser setengah lebar garis; bagian yang tertutup oktagon "3 KM" disambung ulang), bendera start dan finish, dua water station, empat oktagon KM (diurutkan menurut arah lari), 22 ikon marshal, panah arah, dan oval Lapangan Rampal, lalu menulis `src/lib/route-map.ts` (koordinat piksel poster) dan latar jalan `public/images/route-map-bg.webp` (garis abu-abu poster dijadikan putih transparan, elemen berwarna dihapus). `src/components/RouteMap.tsx` menggambar ulang semuanya dalam palet situs dengan animasi. Start dan finish digambar terpisah persis seperti poster (start di barat daya lapangan, finish di selatan lapangan). Rekonstruksi OSM sebelumnya tetap ada sebagai referensi (`npm run route:map:osm`, output `route-map-osm.*`, tidak dipakai situs).
 - Database PostgreSQL 16 di VPS dreinst 187.53.129.205 lewat Coolify: project `kuwera5k`, resource `uvx3zbwvek7pig9oiwyzgivg`, db `kuwera5k`, user `kuwera`. Diekspos publik lewat proxy TCP nginx Coolify di port 5435 (port 5433/5434 sudah dipakai Supabase DriveTech). Firewall: `ufw allow 5435/tcp` saja tidak cukup karena VPS memakai `ufw-docker`; harus `ufw-docker allow uvx3zbwvek7pig9oiwyzgivg-proxy 5435`.
@@ -294,9 +293,15 @@ Pendaftaran (dibangun 20 September 2026, pembayaran masih tiruan):
   3. Setelah metode aktif: isi `Setting.registration.methods` dengan metode yang benar-benar aktif (misal `["qris","bni_va","bri_va","mandiri_va","permata_va","cimb_va","gopay"]`), di Vercel pindahkan `MIDTRANS_PROD_SERVER_KEY` ke `MIDTRANS_SERVER_KEY` dan `MIDTRANS_PROD_CLIENT_KEY` ke `NEXT_PUBLIC_MIDTRANS_CLIENT_KEY`, set `MIDTRANS_IS_PRODUCTION=true`, deploy ulang (client key dibaca saat build).
   4. Tepat sebelum pindah, hapus semua order yang dibuat selama mode sandbox (token Snap sandbox di order itu tidak berlaku di production). Order uji lama sudah dihapus 23 Sep dengan cadangan di `tools/cache/` (gitignored).
   5. Uji satu transaksi sungguhan kecil setelah pindah (dibayar Donny sendiri), lalu refund manual atau hapus.
-  6. Ganti nomor WhatsApp panitia dummy (`eventData.whatsappPanitia`) karena halaman bayar sekarang mengarahkan peserta yang sudah bayar tapi belum dapat tiket ke nomor itu.
 - Seed (`npm run db:seed`): satu kategori "Pendaftaran 5K" Rp125.000 (harga dari Donny 22 Sep 2026; jendela penjualan 1 Sep sampai 12 Des 2026, dimajukan supaya pratinjau bisa dicoba sekarang), promo `KUWERA10` (10%, kuota 100), setting biaya layanan per metode (QRIS 1.500, VA 4.500, e-wallet 4.000, kartu 7.500), hold 30 menit, kuota total 1.000.
 - Keputusan sementara yang diambil tanpa konfirmasi: usia minimal 12 tahun saat hari lomba (`MIN_AGE`), biaya layanan per metode (bukan flat). Ubah lewat tabel Setting atau `src/lib/registration.ts`.
+
+Pembaruan tampilan 23 September 2026 (permintaan Donny):
+- Guest star dihapus seluruhnya (section, data, foto) karena acara tidak memakai guest star.
+- WhatsApp admin panitia: +62 822 3299 9900 (`src/lib/whatsapp.ts`). Tombol WhatsApp melayang di kanan bawah semua halaman (`src/components/WhatsAppButton.tsx`, dipasang di root layout) dan tidak ada lagi di navbar. Isi pesan mengikuti halaman: umum ("Halo kak, izin bertanya soal KUWERA Fun Run 5K: "), `/daftar` ("Halo kak, izin menyampaikan ada error di pendaftaran KUWERA Fun Run 5K. Detailnya: "), `/bayar/:id` (kendala pembayaran + nomor order), `/tiket/:code` (pertanyaan tiket + kode tiket); halaman bayar yang habis waktunya memakai template "sudah membayar tapi e-ticket belum muncul".
+- Tekstur latar ala jersey (`src/components/JerseyTexture.tsx`): titik halftone kuning di pojok atas (`public/images/jersey-dots.svg`, dibuat skrip, titik mengecil seperti bahu jersey) dan pita hijau bergelombang di bawah (`public/images/jersey-waves.webp`, pita kontur dari medan halus, memudar ke atas). Dipakai di hero, rute, newsletter/FAQ, kartu harga, kartu CTA, footer, dan halaman daftar/bayar/tiket/syarat/privasi.
+- Medali memakai desain teaser panitia (`preview medali untuk website.svg`): latar abu dibuang, lingkaran gelap penutup bagian tengah dipertahankan (`public/images/medali-teaser.webp`), label "Nantikan!" dan "Medali keren!" berupa teks HTML. Kartu medali di hero setinggi dua baris; grid hero jadi 3 kolom di layar lebar.
+- Peta rute: panah arah diperkecil supaya muat di dalam garis rute; dua panah palsu (garis tepi oktagon 3 KM dan bendera start) dibuang lewat filter di `tools/trace-poster.py`. Pos marshal diganti 17 pos dari peta "POS PAM" panitia (27 personel, `docs/design-reference/pos-pam-2024.png`, gitignored): `tools/map-marshal-posts.py` mencocokkan sudut rute di kedua peta (transformasi afin, galat rata-rata 32 px dari lebar 3838), menempelkan tiap pos ke garis rute, lalu menulis `src/lib/marshal-posts.ts`. Situs menampilkan titik pos dan ikonnya; jumlah personel per pos tidak ditampilkan.
 
 Belum dikerjakan: `/cek-status`, dashboard admin, cron expiry/rekonsiliasi, email dan WhatsApp e-ticket, next-intl (bilingual), GSAP/Lenis, foto dan logo asli, counter pendaftar di hero masih angka dummy (belum baca database).
 

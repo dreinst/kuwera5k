@@ -11,7 +11,6 @@ export const eventData = {
   price: 125000,
   racePackLabel: "Sabtu, 12 Desember 2026, 10.00 sampai 18.00 WIB",
   racePackPlace: "Lapangan Rampal (tenda panitia)",
-  whatsappPanitia: "https://wa.me/6281234567890",
 };
 
 export const remainingQuota = eventData.quotaTotal - eventData.paidCount;
@@ -47,14 +46,6 @@ export const route = {
     { label: "Finish", place: "Lapangan Rampal", km: 5 },
   ],
 };
-
-// Foto masih dummy (Unsplash, lisensi bebas), ganti dengan foto talent asli 3:4.
-export const guestStars = [
-  { name: "Bintang Tamu 1", role: "TBC", image: "/images/guest-1.jpg" },
-  { name: "Bintang Tamu 2", role: "TBC", image: "/images/guest-2.jpg" },
-  { name: "Bintang Tamu 3", role: "TBC", image: "/images/guest-3.jpg" },
-  { name: "Bintang Tamu 4", role: "TBC", image: "/images/guest-4.jpg" },
-];
 
 export const sponsors = [
   { name: "Sponsor 1", tier: "Utama" },

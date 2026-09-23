@@ -1,7 +1,11 @@
+import { waLink, waText } from "@/lib/whatsapp";
+import JerseyTexture from "@/components/JerseyTexture";
+
 export default function Footer() {
   return (
-    <footer id="kontak" className="border-t border-white/10 bg-green-deep px-6 py-12">
-      <div className="mx-auto flex max-w-6xl flex-col gap-8 sm:flex-row sm:items-start sm:justify-between">
+    <footer id="kontak" className="relative overflow-hidden border-t border-white/10 bg-green-deep px-6 pt-12 pb-36 sm:pb-44">
+      <JerseyTexture dots="none" glow={false} waves wavesOpacity={0.55} wavesHeight="h-[190px] sm:h-[250px]" />
+      <div className="relative mx-auto flex max-w-6xl flex-col gap-8 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <span className="font-display text-xl tracking-wide text-white">
             KUWERA<span className="text-brand-yellow">5K</span>
@@ -14,7 +18,7 @@ export default function Footer() {
         <div className="grid grid-cols-2 gap-8 text-sm sm:flex sm:gap-16">
           <div>
             <p className="font-semibold text-white">Kontak</p>
-            <a href="https://wa.me/6281234567890" className="mt-2 block text-white/80 hover:text-brand-yellow">
+            <a href={waLink(waText.umum)} target="_blank" rel="noopener noreferrer" className="mt-2 block text-white/80 hover:text-brand-yellow">
               WhatsApp Panitia
             </a>
             <a href="mailto:halo@kuwera5k.id" className="mt-1 block text-white/80 hover:text-brand-yellow">
@@ -33,7 +37,7 @@ export default function Footer() {
         </div>
       </div>
 
-      <p className="mx-auto mt-10 max-w-6xl text-xs text-white/60">
+      <p className="relative mx-auto mt-10 max-w-6xl text-xs text-white/70">
         &copy; {new Date().getFullYear()} KUWERA 5K. Semua hak dilindungi.
       </p>
     </footer>
