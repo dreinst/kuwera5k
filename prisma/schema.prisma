@@ -135,3 +135,30 @@ model Setting {
   value     Json
   updatedAt DateTime @updatedAt
 }
+
+// Akun halaman admin (/admin). Dibuat lewat `npm run admin:user`, kata sandi diatur sendiri lewat link sekali pakai.
+model AdminUser {
+  id             String    @id @default(cuid())
+  username       String    @unique
+  role           String // "admin" (semua fitur) | "panitia" (lihat, cek Midtrans, tandai race pack)
+  passwordHash   String?
+  setupTokenHash String?   @unique
+  setupExpires   DateTime?
+  failedLogins   Int       @default(0)
+  lockedUntil    DateTime?
+  sessionVersion Int       @default(0) // dinaikkan untuk mengeluarkan semua sesi lama
+  lastLoginAt    DateTime?
+  createdAt      DateTime  @default(now())
+}
+
+// Jejak aksi admin (login, ekspor, verifikasi Midtrans, race pack).
+model AdminLog {
+  id        String   @id @default(cuid())
+  username  String
+  action    String
+  target    String?
+  ip        String?
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+}
