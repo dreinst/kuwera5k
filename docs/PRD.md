@@ -305,6 +305,8 @@ Pembaruan tampilan 23 September 2026 (permintaan Donny):
 
 Revisi 23 September 2026: water station hanya satu, di km 2,5 tepatnya di Denzibang (keputusan panitia). Water station dekat start dihapus. Posisinya di peta tidak lagi diambil dari pin poster, melainkan dihitung dari daftar checkpoint (`route.checkpoints` di `src/lib/event-data.ts`) lewat `src/lib/route-geo.ts`: km diubah jadi posisi di jalur dengan interpolasi di antara penanda KM poster, jadi kalau lokasinya berubah cukup ganti angka km-nya. Section rute: peta di kiri, urutan jalan dan checkpoint berdampingan di kanan. Footer: kredit "Made by dreinst, organized by D'Production Event Organizer" dengan logo D'Pro, sama seperti situs grup D'Pro lain.
 
+Revisi 23 September 2026: start dan finish di titik yang sama (lokasi bendera start pada poster), digambar sebagai dua bendera bersilang (hijau start, merah finish); bendera finish terpisah di sisi selatan lapangan dihapus. Jalur rute di `route-map.ts` memang sudah melingkar penuh dari dan ke titik itu.
+
 Belum dikerjakan: `/cek-status`, dashboard admin, cron expiry/rekonsiliasi, email dan WhatsApp e-ticket, next-intl (bilingual), GSAP/Lenis, foto dan logo asli, counter pendaftar di hero masih angka dummy (belum baca database).
 
 ## 11. Aset desain

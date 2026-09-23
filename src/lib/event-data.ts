@@ -43,7 +43,7 @@ export const route = {
     { label: "Water station", place: "Denzibang", km: 2.5 },
     { label: "3 KM", place: "Jl. Hamid Rusdi Timur", km: 3 },
     { label: "4 KM", place: "Permukiman utara Rampal, menuju Jl. Lapangan", km: 4 },
-    { label: "Finish", place: "Lapangan Rampal", km: 5 },
+    { label: "Finish", place: "Lapangan Rampal, di titik yang sama dengan start", km: 5 },
   ],
 };
 
