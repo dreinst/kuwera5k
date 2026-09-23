@@ -3,7 +3,7 @@ import { z } from "zod";
 // Keputusan sementara (lihat docs/PRD.md bagian 12): usia minimal dan biaya layanan per metode
 // bisa diubah panitia lewat tabel Setting tanpa deploy ulang.
 export const MIN_AGE = 12;
-export const RACE_DATE = "2026-12-13";
+export const RACE_DATE = "2026-10-24";
 
 export const JERSEY_SIZES = ["XS", "S", "M", "L", "XL", "XXL"] as const;
 export const JERSEY_CHEST_CM: Record<(typeof JERSEY_SIZES)[number], string> = {

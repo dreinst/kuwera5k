@@ -40,13 +40,13 @@ Website KUWERA 5K adalah satu landing page sinematik plus alur registrasi berbay
 | --- | --- | --- |
 | Nama event | KUWERA Fun Run 5K 2026 | Tetap |
 | Kota | Malang, Jawa Timur | Tetap |
-| Tanggal & jam start | Minggu, 13 Desember 2026, 06.00 WIB | Dummy |
+| Tanggal & jam start | Sabtu, 24 Oktober 2026, 06.00 WIB | Final (Donny, 23 Sep 2026) |
 | Titik start & finish | Alun-Alun Tugu (depan Balai Kota Malang) | Dummy |
 | Rute ilustrasi | Alun-Alun Tugu -> Jl. Kahuripan -> Jl. Semeru -> Jl. Besar Ijen -> Jl. Bandung -> Jl. Veteran -> Jl. Kawi -> Jl. Semeru -> Alun-Alun Tugu | Dummy, ukur ulang dari GPX |
 | Kuota total | 1.000 peserta | Dummy |
 | Registrasi dibuka | 15 Oktober 2026 (early bird sampai 15 November 2026) | Dummy |
 | Biaya pendaftaran | Rp125.000 per peserta, satu kategori, tanpa early bird | Tetap (Donny, 22 Sep 2026) |
-| Pengambilan race pack | Sabtu, 12 Desember 2026, 10.00-18.00 WIB | Dummy |
+| Pengambilan race pack | Jumat, 23 Oktober 2026 (H-1), 10.00 sampai 18.00 WIB | Dummy, ikut tanggal acara |
 | Guest star / hiburan | Tidak ada guest star (dikonfirmasi Donny 23 Sep 2026); section dan datanya dihapus dari situs | Final |
 | Sponsor | 6 slot logo placeholder per tier | Dummy |
 | Domain | kuwera5k.id (placeholder) | Belum diputuskan |
@@ -293,7 +293,7 @@ Pendaftaran (dibangun 20 September 2026, pembayaran masih tiruan):
   3. Setelah metode aktif: isi `Setting.registration.methods` dengan metode yang benar-benar aktif (misal `["qris","bni_va","bri_va","mandiri_va","permata_va","cimb_va","gopay"]`), di Vercel pindahkan `MIDTRANS_PROD_SERVER_KEY` ke `MIDTRANS_SERVER_KEY` dan `MIDTRANS_PROD_CLIENT_KEY` ke `NEXT_PUBLIC_MIDTRANS_CLIENT_KEY`, set `MIDTRANS_IS_PRODUCTION=true`, deploy ulang (client key dibaca saat build).
   4. Tepat sebelum pindah, hapus semua order yang dibuat selama mode sandbox (token Snap sandbox di order itu tidak berlaku di production). Order uji lama sudah dihapus 23 Sep dengan cadangan di `tools/cache/` (gitignored).
   5. Uji satu transaksi sungguhan kecil setelah pindah (dibayar Donny sendiri), lalu refund manual atau hapus.
-- Seed (`npm run db:seed`): satu kategori "Pendaftaran 5K" Rp125.000 (harga dari Donny 22 Sep 2026; jendela penjualan 1 Sep sampai 12 Des 2026, dimajukan supaya pratinjau bisa dicoba sekarang), promo `KUWERA10` (10%, kuota 100), setting biaya layanan per metode (QRIS 1.500, VA 4.500, e-wallet 4.000, kartu 7.500), hold 30 menit, kuota total 1.000.
+- Seed (`npm run db:seed`): satu kategori "Pendaftaran 5K" Rp125.000 (harga dari Donny 22 Sep 2026; jendela penjualan 1 Sep sampai 23 Okt 2026 23.59 WIB (H-1 acara), dimajukan supaya pratinjau bisa dicoba sekarang), promo `KUWERA10` (10%, kuota 100), setting biaya layanan per metode (QRIS 1.500, VA 4.500, e-wallet 4.000, kartu 7.500), hold 30 menit, kuota total 1.000.
 - Keputusan sementara yang diambil tanpa konfirmasi: usia minimal 12 tahun saat hari lomba (`MIN_AGE`), biaya layanan per metode (bukan flat). Ubah lewat tabel Setting atau `src/lib/registration.ts`.
 
 Pembaruan tampilan 23 September 2026 (permintaan Donny):
