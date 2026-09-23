@@ -88,17 +88,22 @@ export default function RegistrationForm({ categories, fees, methods, paymentMod
     return res.success;
   };
 
+  // Pesan error hanya untuk kolom yang sudah disentuh. Kalau semua kolom ikut divalidasi, error kolom yang
+  // belum diisi muncul lalu hilang saat fokus pindah, tata letak bergeser, dan klik tombol Lanjut meleset.
+  const visibleErrors = (p: ParticipantForm, t: Record<string, boolean>) => {
+    const res = participantSchema.safeParse(p);
+    if (res.success) return {};
+    return Object.fromEntries(Object.entries(issuesToMap(res.error.issues)).filter(([k]) => t[k]));
+  };
   const set = (k: keyof ParticipantForm, v: string) => {
-    setParticipant((p) => ({ ...p, [k]: v }));
-    if (touched[k]) {
-      const res = participantSchema.safeParse({ ...participant, [k]: v });
-      setErrors(res.success ? {} : issuesToMap(res.error.issues));
-    }
+    const nextP = { ...participant, [k]: v };
+    setParticipant(nextP);
+    if (touched[k]) setErrors(visibleErrors(nextP, touched));
   };
   const blur = (k: keyof ParticipantForm) => {
-    setTouched((t) => ({ ...t, [k]: true }));
-    const res = participantSchema.safeParse(participant);
-    setErrors(res.success ? {} : issuesToMap(res.error.issues));
+    const t = { ...touched, [k]: true };
+    setTouched(t);
+    setErrors(visibleErrors(participant, t));
   };
 
   const next = () => {

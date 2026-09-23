@@ -6,6 +6,8 @@ import PaymentWaiting from "@/components/registration/PaymentWaiting";
 import { prisma } from "@/lib/db";
 import { needsSync, paymentMode, syncOrderWithMidtrans, trackCheckout } from "@/lib/orders";
 import { midtrans } from "@/lib/midtrans";
+import { maskEmail } from "@/lib/registration";
+import { rateLimit } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
@@ -13,6 +15,7 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Pembayaran", robots: { index: false, follow: false } };
 
 export default async function BayarPage({ params }: { params: Promise<{ orderId: string }> }) {
+  if (!(await rateLimit("bayar", 120, 600))) notFound(); // batasi tebak-tebakan nomor order
   const { orderId } = await params;
   const order = await prisma.order.findUnique({
     where: { id: orderId },
@@ -47,7 +50,7 @@ export default async function BayarPage({ params }: { params: Promise<{ orderId:
             paymentMethod: order.paymentMethod,
             category: order.category.name,
             name: order.participant.fullName,
-            email: order.participant.email,
+            email: maskEmail(order.participant.email),
             hasSnap: !!order.snapToken,
           }}
           paymentMode={paymentMode()}

@@ -2,10 +2,12 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { validatePromo } from "@/lib/orders";
+import { rateLimit } from "@/lib/rate-limit";
 
 const schema = z.object({ code: z.string().trim().toUpperCase().min(1).max(30), categoryId: z.string().min(1) });
 
 export async function POST(req: Request) {
+  if (!(await rateLimit("promo", 20, 600))) return NextResponse.json({ valid: false, message: "Terlalu banyak percobaan, tunggu beberapa menit" }, { status: 429 });
   const parsed = schema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ valid: false, message: "Masukkan kode promo" }, { status: 400 });
   const category = await prisma.category.findUnique({ where: { id: parsed.data.categoryId } });

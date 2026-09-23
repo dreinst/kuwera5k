@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { paymentMode } from "@/lib/orders";
 import { createSnapToken } from "@/lib/midtrans";
+import { rateLimit, tooMany } from "@/lib/rate-limit";
+import { siteUrl } from "@/lib/site";
 import type { PaymentMethodId } from "@/lib/registration";
 
 // Token Snap untuk order PENDING; popup dikunci ke metode yang dipilih peserta. Token pertama disimpan
@@ -9,6 +11,7 @@ import type { PaymentMethodId } from "@/lib/registration";
 // menolak token baru untuk order_id yang sama ("order_id sudah digunakan").
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   if (paymentMode() !== "midtrans") return NextResponse.json({ error: "Pembayaran Midtrans tidak aktif" }, { status: 403 });
+  if (!(await rateLimit("snap", 30, 600))) return tooMany();
   const { id } = await params;
   const order = await prisma.order.findUnique({ where: { id }, include: { participant: true, category: true, ticket: true } });
   if (!order || !order.participant) return NextResponse.json({ error: "Order tidak ditemukan" }, { status: 404 });
@@ -22,7 +25,9 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     return NextResponse.json({ error: "Sisa waktu kurang dari 1 menit, tidak cukup untuk membayar. Tunggu order ini habis lalu daftar ulang." }, { status: 410 });
   }
 
-  const origin = req.headers.get("origin") ?? `https://${req.headers.get("host") ?? "kuwera5k.vercel.app"}`;
+  // Alamat kembali dari Midtrans memakai alamat situs sendiri, bukan header Origin yang bisa dipalsukan.
+  // Di luar production (lokal, preview) alamat asal permintaan dipakai supaya uji tetap kembali ke tempatnya.
+  const origin = process.env.VERCEL_ENV === "production" ? siteUrl : new URL(req.url).origin;
   try {
     const snap = await createSnapToken({
       id: order.id, subtotal: order.subtotal, discount: order.discount, fee: order.fee, total: order.total,

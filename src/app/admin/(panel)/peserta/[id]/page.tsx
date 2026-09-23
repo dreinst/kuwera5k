@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireAdmin } from "@/lib/admin-auth";
-import { fmtDateTime } from "@/lib/admin-data";
+import { fmtDateTime, maskNik } from "@/lib/admin-data";
 import { prisma } from "@/lib/db";
 import { PAYMENT_METHODS, formatRupiah } from "@/lib/registration";
 import { StatusBadge } from "@/components/admin/Badges";
@@ -41,6 +41,8 @@ export default async function PesertaDetailPage({ params }: { params: Promise<{ 
   const p = order.participant;
   const method = PAYMENT_METHODS.find((m) => m.id === order.paymentMethod)?.label ?? order.paymentMethod;
   const usesMidtrans = !!order.snapToken || order.payments.some((x) => x.gateway.startsWith("midtrans"));
+  // Panitia cukup melihat NIK tersamar (4 angka awal dan akhir) untuk dicocokkan dengan KTP/KIA; alamat khusus admin.
+  const full = admin.role === "admin";
 
   return (
     <div className="space-y-6">
@@ -57,13 +59,13 @@ export default async function PesertaDetailPage({ params }: { params: Promise<{ 
             <dl className="grid gap-4 sm:grid-cols-2">
               <Item k="Nama depan" v={p.firstName ?? p.fullName} />
               <Item k="Nama belakang" v={p.lastName} />
-              <Item k="Nomor identitas (NIK)" v={p.idNumber} mono />
+              <Item k="Nomor identitas (NIK)" v={full ? p.idNumber : maskNik(p.idNumber)} mono />
               <Item k="Tanggal lahir" v={p.birthDate.toLocaleDateString("id-ID", { timeZone: "Asia/Jakarta", day: "numeric", month: "long", year: "numeric" })} />
               <Item k="Jenis kelamin" v={p.gender === "L" ? "Laki-laki" : "Perempuan"} />
               <Item k="Golongan darah" v={p.bloodType} />
               <Item k="Email" v={p.email} />
               <Item k="Nomor HP" v={p.phone} />
-              <div className="sm:col-span-2"><Item k="Alamat" v={[p.address, p.city, p.province, p.postalCode].filter(Boolean).join(", ")} /></div>
+              <div className="sm:col-span-2"><Item k="Alamat" v={full ? [p.address, p.city, p.province, p.postalCode].filter(Boolean).join(", ") : `${p.city ?? "-"} (alamat lengkap khusus admin)`} /></div>
               <Item k="Kontak darurat" v={`${p.emergencyName} (${p.emergencyPhone})`} />
               <Item k="Ukuran jersey" v={p.jerseySize} />
               <Item k="Komunitas" v={p.community} />
@@ -113,7 +115,7 @@ export default async function PesertaDetailPage({ params }: { params: Promise<{ 
                     ? <> &middot; diambil {fmtDateTime(order.ticket.racepackCollectedAt)} (dicatat {order.ticket.collectedBy})</>
                     : <> &middot; belum diambil</>}
                 </p>
-                <p className="mt-2 text-sm text-white/70">Cocokkan nama dan NIK di atas dengan KTP atau KIA asli sebelum menandai.</p>
+                <p className="mt-2 text-sm text-white/70">Cocokkan nama dan angka NIK di atas dengan KTP atau KIA asli sebelum menandai.</p>
                 <div className="mt-4">
                   <RacepackButton orderId={order.id} collected={!!order.ticket.racepackCollectedAt} canUndo={admin.role === "admin"} />
                 </div>

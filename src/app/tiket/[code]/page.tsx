@@ -8,6 +8,8 @@ import PurchasePixel from "@/components/registration/PurchasePixel";
 import { prisma } from "@/lib/db";
 import { eventData } from "@/lib/event-data";
 import { waLink, waText } from "@/lib/whatsapp";
+import { maskEmail } from "@/lib/registration";
+import { rateLimit } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
@@ -15,6 +17,7 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "E-ticket", robots: { index: false, follow: false } };
 
 export default async function TiketPage({ params }: { params: Promise<{ code: string }> }) {
+  if (!(await rateLimit("tiket", 120, 600))) notFound(); // batasi tebak-tebakan kode tiket
   const { code } = await params;
   const ticket = await prisma.ticket.findUnique({
     where: { code },
@@ -68,7 +71,7 @@ export default async function TiketPage({ params }: { params: Promise<{ code: st
           )}
         </div>
 
-        <p className="mt-6 text-sm text-white/75">Salinan e-ticket akan dikirim ke {p.email} begitu pengiriman email aktif.</p>
+        <p className="mt-6 text-sm text-white/75">Salinan e-ticket akan dikirim ke {maskEmail(p.email)} begitu pengiriman email aktif.</p>
       </main>
       <Footer />
     </div>

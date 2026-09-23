@@ -98,6 +98,12 @@ export type OrderInput = z.infer<typeof orderInputSchema>;
 
 export const formatRupiah = (n: number) => `Rp${n.toLocaleString("id-ID")}`;
 
+// Email disamarkan di halaman yang bisa dibuka siapa pun yang memegang tautannya (/bayar, /tiket).
+export const maskEmail = (email: string) => {
+  const [user, domain] = email.split("@");
+  return domain ? `${user.slice(0, 2)}${"*".repeat(Math.max(3, user.length - 2))}@${domain}` : email;
+};
+
 export function issuesToMap(issues: { path: PropertyKey[]; message: string }[]) {
   const out: Record<string, string> = {};
   for (const i of issues) {

@@ -3,7 +3,8 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
-import { attemptLogin, clientIp, endSession, getAdmin, hashPassword, logAdmin, sha256 } from "@/lib/admin-auth";
+import { LOGIN_ERROR, attemptLogin, clientIp, endSession, getAdmin, hashPassword, logAdmin, sha256 } from "@/lib/admin-auth";
+import { rateLimit } from "@/lib/rate-limit";
 import { checkOrderWithMidtrans, type MidtransCheck } from "@/lib/admin-data";
 import { syncOrderWithMidtrans } from "@/lib/orders";
 import { verifyTurnstile } from "@/lib/turnstile";
@@ -15,10 +16,13 @@ export type FormState = { error?: string; ok?: string } | null;
 export async function loginAction(_prev: FormState, form: FormData): Promise<FormState> {
   const username = String(form.get("username") ?? "").trim().toLowerCase();
   const password = String(form.get("password") ?? "");
+  if (!(await rateLimit("admin-login", 10, 900))) return { error: "Terlalu banyak percobaan dari jaringan ini. Coba lagi 15 menit lagi." };
   if (!(await verifyTurnstile(form.get("cf-turnstile-response"), await clientIp()))) {
     return { error: "Verifikasi bukan robot gagal. Centang ulang kotaknya." };
   }
   if (!username || !password) return { error: "Isi username dan kata sandi" };
+  // Format username dicek dulu supaya isian aneh tidak ikut tercatat di log.
+  if (!/^[a-z0-9._-]{3,32}$/.test(username) || password.length > 200) return { error: LOGIN_ERROR };
   const res = await attemptLogin(username, password);
   if (!res.ok) return { error: res.message };
   redirect("/admin");
@@ -27,7 +31,7 @@ export async function loginAction(_prev: FormState, form: FormData): Promise<For
 export async function logoutAction() {
   const admin = await getAdmin();
   if (admin) await logAdmin(admin.username, "logout");
-  await endSession();
+  await endSession(admin?.id);
   redirect("/admin/login");
 }
 
