@@ -5,6 +5,7 @@ import PaymentWaiting from "@/components/registration/PaymentWaiting";
 import { prisma } from "@/lib/db";
 import { needsSync, paymentMode, syncOrderWithMidtrans } from "@/lib/orders";
 import { midtrans } from "@/lib/midtrans";
+import JerseyTexture from "@/components/JerseyTexture";
 
 export const dynamic = "force-dynamic";
 
@@ -28,9 +29,10 @@ export default async function BayarPage({ params }: { params: Promise<{ orderId:
   }
 
   return (
-    <div className="flex flex-1 flex-col bg-green-deep">
+    <div className="relative flex flex-1 flex-col overflow-hidden bg-green-deep">
+      <JerseyTexture dots="right" />
       <Navbar />
-      <main className="mx-auto w-full max-w-2xl flex-1 px-6 pt-28 pb-24">
+      <main className="relative mx-auto w-full max-w-2xl flex-1 px-6 pt-28 pb-24">
         <PaymentWaiting
           order={{
             id: order.id,

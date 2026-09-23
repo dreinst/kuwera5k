@@ -2,6 +2,7 @@
 
 import Reveal from "@/components/Reveal";
 import { eventData } from "@/lib/event-data";
+import JerseyTexture from "@/components/JerseyTexture";
 
 export default function CtaBanner() {
   return (
@@ -19,22 +20,23 @@ export default function CtaBanner() {
         }}
       >
         <div
-          className="rounded-[20px] p-10 sm:p-16"
+          className="relative overflow-hidden rounded-[20px] p-10 pb-20 sm:p-16 sm:pb-28"
           style={{
             background:
               "radial-gradient(ellipse at center, #F4E71D 0%, #C9DB27 45%, #64A322 100%)",
           }}
         >
-          <h2 className="font-display text-3xl text-green-deep uppercase sm:text-5xl">
+          <JerseyTexture dots="none" glow={false} waves wavesOpacity={0.5} wavesHeight="h-28 sm:h-44" />
+          <h2 className="font-display relative text-3xl text-green-deep uppercase sm:text-5xl">
             Siap lari bareng KUWERA?
           </h2>
-          <p className="mx-auto mt-3 max-w-md text-green-deep">
+          <p className="relative mx-auto mt-3 max-w-md text-green-deep">
             Kuota {eventData.quotaTotal.toLocaleString("id-ID")} peserta, biaya pendaftaran Rp
             {eventData.price.toLocaleString("id-ID")} per orang.
           </p>
           <a
             href="/daftar"
-            className="mt-6 inline-flex items-center gap-2 rounded-full bg-green-deep px-8 py-3 text-sm font-semibold text-white transition-transform hover:translate-x-0.5"
+            className="relative mt-6 inline-flex items-center gap-2 rounded-full bg-green-deep px-8 py-3 text-sm font-semibold text-white transition-transform hover:translate-x-0.5"
           >
             Daftar sekarang &rarr;
           </a>

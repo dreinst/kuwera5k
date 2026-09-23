@@ -214,6 +214,10 @@ for c in blks:
     fill = c["n"]*f*f / (w_*h_)
     if 0.75 < w_/h_ < 1.33 and c["n"]*f*f > 2500 and w_ > 45 and fill > 0.45: marshals.append(c)
     elif c["n"]*f*f > 300: arrows.append(c)
+# Garis tepi hitam oktagon KM dan bendera ikut terdeteksi sebagai blob hitam; itu bukan panah.
+def near_any(c, comps, pad):
+    return any(k["x0"] - pad <= c["cx"] <= k["x1"] + pad and k["y0"] - pad <= c["cy"] <= k["y1"] + pad for k in comps)
+arrows = [c for c in arrows if not near_any(c, kms + sts + fins, 40)]
 # --- arah jalur: di sisi kiri poster panah mengarah ke bawah; mulai dari proyeksi bendera start ---
 def project_point(x, y):
     best, bi, bp = 1e18, 0, poly[0]
@@ -240,10 +244,26 @@ def route_tangent(x, y):
     i, _ = project_point(x, y); ax, ay = poly[i]; bx, by = poly[i+1]
     d_ = math.hypot(x - _[0], y - _[1])
     return math.degrees(math.atan2(by-ay, bx-ax)), d_
+# Panah ditempel ke garis tengah rute; arahnya diambil dari titik 150 px sebelum dan sesudahnya
+# (bukan dari satu potongan garis terdekat, yang bisa berupa belokan kecil hasil penelusuran).
+_cum = [0.0]
+for i in range(1, len(poly)): _cum.append(_cum[-1] + math.hypot(poly[i][0]-poly[i-1][0], poly[i][1]-poly[i-1][1]))
+def point_at(s_):
+    s_ = max(0.0, min(_cum[-1], s_))
+    for i in range(len(poly)-1):
+        if _cum[i+1] >= s_:
+            L = (_cum[i+1] - _cum[i]) or 1; u = (s_ - _cum[i]) / L
+            return (poly[i][0] + u*(poly[i+1][0]-poly[i][0]), poly[i][1] + u*(poly[i+1][1]-poly[i][1]))
+    return poly[-1]
 arrow_out = []
 for c in arrows:
-    ang, dist = route_tangent(c["cx"], c["cy"])
-    if dist < 150: arrow_out.append({"x": round(c["cx"]), "y": round(c["cy"]), "angle": round(ang)})
+    i, pp = project_point(c["cx"], c["cy"])
+    dist = math.hypot(c["cx"] - pp[0], c["cy"] - pp[1])
+    if dist >= 150: continue
+    s_ = _cum[i] + math.hypot(pp[0]-poly[i][0], pp[1]-poly[i][1])
+    a0, a1 = point_at(s_ - 150), point_at(s_ + 150)
+    ang = math.degrees(math.atan2(a1[1]-a0[1], a1[0]-a0[0]))
+    arrow_out.append({"x": round(pp[0]), "y": round(pp[1]), "angle": round(ang)})
 print(f"titik jalur {len(poly)}, panah di jalur {len(arrow_out)} dari {len(arrows)} blob")
 
 # jarak kumulatif (satuan piksel) untuk urutan KM

@@ -6,7 +6,7 @@ import { eventData } from "@/lib/event-data";
 
 export default function DateBanner() {
   return (
-    <section id="info" className="px-6 py-16">
+    <section id="info" className="bg-cream px-6 py-16">
       <Reveal
         className="mx-auto max-w-6xl"
         variants={{

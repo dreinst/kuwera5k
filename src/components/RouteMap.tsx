@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion";
 import { routeMap } from "@/lib/route-map";
+import { marshalPosts } from "@/lib/marshal-posts";
 
 const [, , vbW, vbH] = routeMap.viewBox.split(" ").map(Number);
 const DRAW_SECONDS = 2.6;
@@ -68,10 +69,11 @@ export default function RouteMap({ compact = false }: { compact?: boolean }) {
             cx={routeMap.field.cx} cy={routeMap.field.cy} rx={routeMap.field.rx * 0.72} ry={routeMap.field.ry * 0.62}
             fill="none" stroke="#FDFBF5" strokeOpacity={0.5} strokeWidth={4}
           />
+          {/* Label digeser ke atas kanan supaya tidak tertutup pin water station dan bendera finish. */}
           <text
-            x={routeMap.field.cx} y={routeMap.field.cy} textAnchor="middle" dominantBaseline="central"
-            className="fill-white font-display" style={{ fontSize: 96, letterSpacing: 4 }}
-            transform={`rotate(-8 ${routeMap.field.cx} ${routeMap.field.cy})`}
+            x={routeMap.field.cx + 60} y={routeMap.field.cy - 95} textAnchor="middle" dominantBaseline="central"
+            className="fill-white font-display" style={{ fontSize: 78, letterSpacing: 4 }}
+            transform={`rotate(-8 ${routeMap.field.cx + 60} ${routeMap.field.cy - 95})`}
           >
             {routeMap.field.label}
           </text>
@@ -90,17 +92,21 @@ export default function RouteMap({ compact = false }: { compact?: boolean }) {
         variants={{ hidden: { pathLength: 0 }, show: { pathLength: 1, transition: { duration: DRAW_SECONDS, ease: drawEase } } }}
       />
 
+      {/* Panah arah dibuat lebih kecil dari lebar garis rute (118) supaya tetap di dalam garis. */}
       {!compact && routeMap.arrows.map((a, i) => (
         <motion.g key={`arrow-${i}`} variants={{ hidden: { opacity: 0 }, show: { opacity: 1, transition: { delay: reach(a.t) + 0.15 } } }}>
-          <polygon points="-110,-70 130,0 -110,70 -62,0" fill="#0B4A2C" transform={`translate(${a.x} ${a.y}) rotate(${a.angle})`} />
+          <polygon points="-48,-32 58,0 -48,32 -24,0" fill="#0B4A2C" transform={`translate(${a.x} ${a.y}) rotate(${a.angle})`} />
         </motion.g>
       ))}
 
-      {!compact && routeMap.marshals.map((m, i) => (
-        <motion.g key={`marshal-${i}`} variants={{ hidden: { opacity: 0, scale: 0 }, show: { opacity: 1, scale: 1, transition: { delay: DRAW_SECONDS + 0.3 + i * 0.03 } } }}>
-          <rect x={m.x - 62} y={m.y - 62} width={124} height={124} rx={22} fill="#0B4A2C" stroke="#FDFBF5" strokeWidth={6} />
-          <circle cx={m.x} cy={m.y - 16} r={22} fill="#FDFBF5" />
-          <path d={`M${m.x - 40},${m.y + 46} a40,36 0 0 1 80,0 z`} fill="#FDFBF5" />
+      {/* Pos marshal dari peta pos PAM panitia: titik di garis rute, ikon di sampingnya. */}
+      {!compact && marshalPosts.map((m, i) => (
+        <motion.g key={`marshal-${i}`} variants={{ hidden: { opacity: 0, scale: 0 }, show: { opacity: 1, scale: 1, transition: { delay: reach(m.t) + 0.2 } } }}>
+          <line x1={m.x} y1={m.y} x2={m.ix} y2={m.iy} stroke="#FDFBF5" strokeWidth={8} strokeLinecap="round" />
+          <circle cx={m.x} cy={m.y} r={30} fill="#0B4A2C" stroke="#FDFBF5" strokeWidth={9} />
+          <rect x={m.ix - 62} y={m.iy - 62} width={124} height={124} rx={22} fill="#0B4A2C" stroke="#FDFBF5" strokeWidth={6} />
+          <circle cx={m.ix} cy={m.iy - 16} r={22} fill="#FDFBF5" />
+          <path d={`M${m.ix - 40},${m.iy + 46} a40,36 0 0 1 80,0 z`} fill="#FDFBF5" />
         </motion.g>
       ))}
 

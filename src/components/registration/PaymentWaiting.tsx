@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { PAYMENT_METHODS, formatRupiah } from "@/lib/registration";
-import { eventData } from "@/lib/event-data";
+import { waLink, waText } from "@/lib/whatsapp";
 
 type Order = {
   id: string; status: string; total: number; subtotal: number; discount: number; fee: number;
@@ -151,7 +151,7 @@ export default function PaymentWaiting({ order, paymentMode, snap }: { order: Or
       </p>
       {expired && !failed && canBePaidLate && (
         <p className="mt-2 text-white/70">
-          Sudah membayar tapi halaman ini tidak berubah? <a href={eventData.whatsappPanitia} className="text-brand-yellow underline">Hubungi panitia lewat WhatsApp</a> dan sebutkan nomor order di bawah.
+          Sudah membayar tapi halaman ini tidak berubah? <a href={waLink(waText.sudahBayar(order.id))} target="_blank" rel="noopener noreferrer" className="text-brand-yellow underline">Hubungi panitia lewat WhatsApp</a>, nomor order sudah otomatis ada di pesannya.
         </p>
       )}
 

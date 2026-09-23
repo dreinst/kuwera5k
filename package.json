@@ -13,7 +13,8 @@
     "db:studio": "prisma studio",
     "route:map": "python3 tools/trace-poster.py docs/design-reference/rute-final-panitia.jpg",
     "db:seed": "node prisma/seed.mjs",
-    "route:map:osm": "node tools/generate-route-map.mjs"
+    "route:map:osm": "node tools/generate-route-map.mjs",
+    "route:marshal": "python3 tools/map-marshal-posts.py"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.10.0",
