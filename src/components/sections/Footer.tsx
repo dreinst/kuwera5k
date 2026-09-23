@@ -37,9 +37,16 @@ export default function Footer() {
         </div>
       </div>
 
-      <p className="relative mx-auto mt-10 max-w-6xl text-xs text-white/70">
-        &copy; {new Date().getFullYear()} KUWERA 5K. Semua hak dilindungi.
-      </p>
+      <div className="relative mx-auto mt-10 flex max-w-6xl flex-col gap-4 border-t border-white/10 pt-6 sm:flex-row sm:items-center sm:justify-between">
+        <p className="text-xs text-white/70">
+          &copy; {new Date().getFullYear()} KUWERA 5K. Semua hak dilindungi.
+        </p>
+        <div className="flex items-center gap-3">
+          {/* eslint-disable-next-line @next/next/no-img-element -- SVG statis, tanpa optimasi */}
+          <img src="/logo-dpro.svg" alt="D'Production Event Organizer" className="h-12 w-auto shrink-0" />
+          <p className="text-xs text-white/80">Made by dreinst, organized by D&rsquo;Production Event Organizer</p>
+        </div>
+      </div>
     </footer>
   );
 }
