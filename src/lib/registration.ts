@@ -5,10 +5,29 @@ import { z } from "zod";
 export const MIN_AGE = 12;
 export const RACE_DATE = "2026-10-24";
 
-export const JERSEY_SIZES = ["XS", "S", "M", "L", "XL", "XXL"] as const;
-export const JERSEY_CHEST_CM: Record<(typeof JERSEY_SIZES)[number], string> = {
-  XS: "84-88", S: "88-92", M: "92-96", L: "96-100", XL: "100-106", XXL: "106-112",
+// Size chart sementara dari Donny (24 Sep 2026), dalam cm: A lingkar dada, B panjang badan, C panjang lengan.
+export const JERSEY_SIZES = ["XS", "S", "M", "L", "XL", "XXL", "3XL", "4XL"] as const;
+export const JERSEY_CHART: Record<(typeof JERSEY_SIZES)[number], { chest: number; length: number; sleeve: number }> = {
+  XS: { chest: 90, length: 64, sleeve: 31 },
+  S: { chest: 95, length: 66, sleeve: 32 },
+  M: { chest: 100, length: 68, sleeve: 33 },
+  L: { chest: 105, length: 70, sleeve: 34 },
+  XL: { chest: 110, length: 72, sleeve: 35 },
+  XXL: { chest: 115, length: 74, sleeve: 36 },
+  "3XL": { chest: 120, length: 76, sleeve: 37 },
+  "4XL": { chest: 125, length: 78, sleeve: 38 },
 };
+
+export const PROVINCES = [
+  "Aceh", "Sumatera Utara", "Sumatera Barat", "Riau", "Kepulauan Riau", "Jambi", "Sumatera Selatan",
+  "Kepulauan Bangka Belitung", "Bengkulu", "Lampung", "DKI Jakarta", "Jawa Barat", "Banten", "Jawa Tengah",
+  "DI Yogyakarta", "Jawa Timur", "Bali", "Nusa Tenggara Barat", "Nusa Tenggara Timur", "Kalimantan Barat",
+  "Kalimantan Tengah", "Kalimantan Selatan", "Kalimantan Timur", "Kalimantan Utara", "Sulawesi Utara", "Gorontalo",
+  "Sulawesi Tengah", "Sulawesi Barat", "Sulawesi Selatan", "Sulawesi Tenggara", "Maluku", "Maluku Utara", "Papua",
+  "Papua Barat", "Papua Barat Daya", "Papua Tengah", "Papua Pegunungan", "Papua Selatan",
+] as const;
+
+export const BLOOD_TYPES = ["A", "B", "AB", "O", "Belum tahu"] as const;
 
 export const PAYMENT_METHODS = [
   { id: "qris", label: "QRIS", group: "QRIS", hint: "Semua e-wallet dan m-banking" },
@@ -41,7 +60,14 @@ export function ageOn(birthDate: string, on: string = RACE_DATE) {
 }
 
 export const participantSchema = z.object({
-  fullName: z.string().trim().min(3, "Nama minimal 3 huruf").max(80, "Nama maksimal 80 huruf"),
+  firstName: z.string().trim().min(2, "Nama depan minimal 2 huruf").max(40, "Nama depan maksimal 40 huruf"),
+  lastName: z.string().trim().max(40, "Nama belakang maksimal 40 huruf").optional().or(z.literal("")),
+  idNumber: z.string().trim().regex(/^\d{16}$/, "Nomor identitas (NIK) harus 16 angka"),
+  address: z.string().trim().min(10, "Alamat minimal 10 huruf").max(200, "Alamat maksimal 200 huruf"),
+  province: z.enum(PROVINCES, { message: "Pilih provinsi" }),
+  city: z.string().trim().min(3, "Kota/kabupaten minimal 3 huruf").max(60, "Maksimal 60 huruf"),
+  postalCode: z.string().trim().regex(/^\d{5}$/, "Kode pos harus 5 angka"),
+  bloodType: z.enum(BLOOD_TYPES, { message: "Pilih golongan darah" }),
   birthDate: z
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/, "Tanggal lahir wajib diisi")
@@ -57,6 +83,9 @@ export const participantSchema = z.object({
   community: z.string().trim().max(80, "Maksimal 80 huruf").optional().or(z.literal("")),
 });
 export type ParticipantInput = z.infer<typeof participantSchema>;
+// Isian form sebelum divalidasi (pilihan yang belum dipilih = string kosong).
+export type ParticipantForm = Record<keyof ParticipantInput, string>;
+export const fullNameOf = (p: { firstName: string; lastName?: string | null }) => `${p.firstName} ${p.lastName ?? ""}`.trim();
 
 export const orderInputSchema = z.object({
   categoryId: z.string().min(1, "Pilih kategori"),

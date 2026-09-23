@@ -86,7 +86,7 @@ export const faqs = [
   },
   {
     q: "Kapan dan di mana pengambilan race pack?",
-    a: `Race pack diambil ${eventData.racePackLabel} di ${eventData.racePackPlace}. Bawa KTP asli dan tunjukkan QR di e-ticket.`,
+    a: `Race pack diambil ${eventData.racePackLabel} di ${eventData.racePackPlace}. Bawa KTP atau KIA asli dan tunjukkan QR di e-ticket.`,
   },
   {
     q: "Apakah ada kategori kelompok atau komunitas?",

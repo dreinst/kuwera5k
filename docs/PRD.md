@@ -327,6 +327,8 @@ SEO lanjutan 23 September 2026: data terstruktur beranda jadi satu `@graph` (Spo
 
 Newsletter (status 23 September 2026): form di beranda belum menyimpan maupun mengirim apa pun (`onSubmit` hanya mencegah reload). Belum ada layanan email, alamat pengirim, maupun domain email (`halo@kuwera5k.id` belum ada karena domain kuwera5k.id belum dibeli). Keputusan yang dibutuhkan dari panitia: alamat pengirim dan domainnya, isi dan jadwal email, serta siapa yang menulis kontennya.
 
+Form pendaftaran 24 September 2026 (permintaan Donny): nama depan dan belakang (nama belakang boleh kosong; `fullName` tetap disimpan sebagai gabungan), email, nomor HP, nomor identitas KTP/KIA (NIK 16 angka, ikut dicek duplikat bersama email dan HP), alamat, provinsi (38 provinsi), kota/kabupaten, kode pos, tanggal lahir, jenis kelamin, golongan darah (A, B, AB, O, Belum tahu), kontak darurat, ukuran jersey, komunitas (opsional). Kolom baru di tabel Participant nullable (sudah di-push ke database live). Ukuran jersey XS sampai 4XL dengan size chart sementara dari Donny (lingkar dada 90 sampai 125, panjang badan 64 sampai 78, lengan 31 sampai 38 cm) yang bisa dibuka di form. Cloudflare Turnstile ("bukan robot") di langkah pembayaran, diverifikasi server di `POST /api/orders`; aktif hanya kalau `NEXT_PUBLIC_TURNSTILE_SITE_KEY` dan `TURNSTILE_SECRET_KEY` keduanya diisi (menunggu kunci dari dashboard Cloudflare panitia). Kebijakan privasi menyebut data baru dan Cloudflare.
+
 Belum dikerjakan: `/cek-status`, dashboard admin, cron expiry/rekonsiliasi, email dan WhatsApp e-ticket, next-intl (bilingual), GSAP/Lenis, foto asli, counter pendaftar di hero masih angka dummy (belum baca database), ID Meta Pixel dan GA4.
 
 ## 11. Aset desain
