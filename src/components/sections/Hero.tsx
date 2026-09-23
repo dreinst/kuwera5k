@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { motion } from "framer-motion";
-import { eventData, remainingQuota, route } from "@/lib/event-data";
+import { eventData, route } from "@/lib/event-data";
 import Counter from "@/components/Counter";
 import JerseyTexture from "@/components/JerseyTexture";
 import ArrowCircle from "@/components/ArrowCircle";
@@ -54,7 +54,7 @@ const HEADLINE = [
   { word: "5K", outline: true },
 ];
 
-export default function Hero() {
+export default function Hero({ stats }: { stats: { paid: number; remaining: number } | null }) {
   return (
     <section id="hero" className="relative overflow-hidden px-6 pt-32 pb-20">
       {/* Latar hero memudar di bagian bawah ke tekstur halaman, jadi tidak ada garis batas saat digulir. */}
@@ -161,11 +161,19 @@ export default function Hero() {
               className="rounded-[20px] border border-glass-border bg-glass p-6 backdrop-blur-md"
               style={{ backgroundImage: "radial-gradient(circle at 100% 0%, rgba(244,231,29,0.28), transparent 60%)" }}
             >
-              <p className="flex items-baseline gap-3">
-                <span className="font-display text-6xl leading-none text-brand-yellow"><Counter to={eventData.paidCount} /></span>
-                <span className="font-display text-2xl text-white uppercase">Peserta</span>
-              </p>
-              <p className="mt-2 text-lg text-white/85">sudah terdaftar</p>
+              {stats ? (
+                <>
+                  <p className="flex items-baseline gap-3">
+                    <span className="font-display text-6xl leading-none text-brand-yellow"><Counter to={stats.paid} /></span>
+                    <span className="font-display text-2xl text-white uppercase">Peserta</span>
+                  </p>
+                  <p className="mt-2 text-lg text-white/85">sudah terdaftar</p>
+                </>
+              ) : (
+                <p className="font-display text-4xl leading-tight text-brand-yellow uppercase">
+                  Kuota {eventData.quotaTotal.toLocaleString("id-ID")} peserta
+                </p>
+              )}
               <a
                 href="/daftar"
                 className="mt-5 flex items-center justify-between rounded-full bg-brand-yellow py-1.5 pr-1.5 pl-6 font-semibold text-green-deep transition-transform hover:translate-x-0.5"
@@ -173,7 +181,7 @@ export default function Hero() {
                 Daftar sekarang
                 <ArrowCircle />
               </a>
-              <p className="mt-3 text-center text-sm text-white/75">Sisa kuota {remainingQuota}</p>
+              {stats && <p className="mt-3 text-center text-sm text-white/75">Sisa kuota {stats.remaining.toLocaleString("id-ID")}</p>}
             </motion.div>
 
             <motion.div

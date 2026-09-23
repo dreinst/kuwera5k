@@ -25,6 +25,7 @@ export const eventData = {
     lng: 112.64017,
   },
   organizer: "D'Production Event Organizer",
+  organizerUrl: "https://www.dpro.events",
 };
 
 export const remainingQuota = eventData.quotaTotal - eventData.paidCount;

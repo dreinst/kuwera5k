@@ -46,6 +46,16 @@ export async function heldCount(categoryId: string | null, now = new Date(), db:
   return db.order.count({ where: { ...(categoryId ? { categoryId } : {}), ...activeOrderWhere(now) } });
 }
 
+// Angka di hero dan data terstruktur: peserta lunas dan sisa kuota total.
+export async function getPublicStats(now = new Date()) {
+  const [settings, paid, held] = await Promise.all([
+    getSettings(),
+    prisma.order.count({ where: { status: "PAID" } }),
+    heldCount(null, now),
+  ]);
+  return { paid, remaining: Math.max(0, settings.quotaTotal - held) };
+}
+
 // Kunci Postgres untuk pembuatan order: cek kuota, cek duplikat, kuota promo, dan insert berjalan
 // satu per satu supaya pendaftaran bersamaan tidak melewati kuota.
 export const ORDER_LOCK_KEY = 50_052_026;
