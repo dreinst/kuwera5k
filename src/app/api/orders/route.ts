@@ -3,6 +3,7 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { fullNameOf, orderInputSchema, issuesToMap } from "@/lib/registration";
 import { verifyTurnstile } from "@/lib/turnstile";
+import { rateLimit, tooMany } from "@/lib/rate-limit";
 import {
   ORDER_LOCK_KEY, activeOrderWhere, getSettings, heldCount, newOrderId, paymentMode, syncOrderWithMidtrans, validatePromo,
 } from "@/lib/orders";
@@ -17,6 +18,7 @@ function isBusy(e: unknown) {
 }
 
 export async function POST(req: Request) {
+  if (!(await rateLimit("order", 20, 600))) return tooMany();
   const body = await req.json().catch(() => null);
   const parsed = orderInputSchema.safeParse(body);
   if (!parsed.success) {

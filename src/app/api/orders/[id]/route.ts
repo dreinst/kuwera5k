@@ -1,10 +1,13 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { needsSync, syncOrderWithMidtrans, type SyncResult } from "@/lib/orders";
+import { rateLimit, tooMany } from "@/lib/rate-limit";
 
 // Status order untuk polling halaman /bayar. Dengan ?sync=1 order PENDING/FAILED yang pernah membuka
 // Snap dicek ulang ke Midtrans, jadi pembayaran tetap terdeteksi walau notifikasinya telat atau gagal.
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
+  // Cukup untuk polling /bayar tiap 5 detik, terlalu sedikit untuk menebak nomor order.
+  if (!(await rateLimit("status", 300, 600))) return tooMany();
   const { id } = await params;
   const sync = new URL(req.url).searchParams.get("sync") === "1";
   const order = await prisma.order.findUnique({

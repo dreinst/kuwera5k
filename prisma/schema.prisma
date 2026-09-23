@@ -162,3 +162,10 @@ model AdminLog {
 
   @@index([createdAt])
 }
+
+// Pembatas laju per IP (lihat src/lib/rate-limit.ts). Satu baris per kunci "<ember>:<ip>".
+model RateLimit {
+  key         String   @id
+  windowStart DateTime
+  count       Int
+}

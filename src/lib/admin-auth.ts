@@ -36,7 +36,8 @@ export async function verifyPassword(password: string, stored: string | null) {
 }
 
 // Kunci penanda tangan sesi disimpan di tabel Setting (dibuat sekali), jadi tidak perlu env tambahan.
-// Menghapus baris "adminAuth" = semua sesi admin keluar.
+// Kunci ini di-cache per instance; untuk mengeluarkan semua sesi, naikkan sessionVersion semua akun
+// (jangan hapus baris "adminAuth").
 let cachedSecret: string | null = null;
 async function sessionSecret() {
   if (cachedSecret) return cachedSecret;
@@ -64,7 +65,9 @@ export async function startSession(user: { id: string; sessionVersion: number })
   });
 }
 
-export async function endSession() {
+// Keluar = semua sesi akun itu tidak berlaku lagi (juga salinan cookie di perangkat lain).
+export async function endSession(userId?: string) {
+  if (userId) await prisma.adminUser.update({ where: { id: userId }, data: { sessionVersion: { increment: 1 } } }).catch(() => null);
   (await cookies()).delete({ name: COOKIE, path: "/admin" });
 }
 
@@ -101,27 +104,33 @@ export async function logAdmin(username: string, action: string, target?: string
   await prisma.adminLog.create({ data: { username, action, target: target ?? null, ip: await clientIp() } }).catch(() => null);
 }
 
-// Login: hitungan gagal per akun, dikunci sementara setelah beberapa kali salah.
+export const LOGIN_ERROR = `Username atau kata sandi salah. Setelah ${MAX_FAILED} kali salah, akun dikunci ${LOCK_MINUTES} menit.`;
+
+// Login: satu jatah percobaan dipesan secara atomik sebelum kata sandi dicek, jadi permintaan bersamaan
+// tidak bisa melewati batas. Akun tidak ada, terkunci, dan sandi salah mendapat pesan dan waktu yang sama.
 export async function attemptLogin(username: string, password: string): Promise<{ ok: true } | { ok: false; message: string }> {
-  const generic = "Username atau kata sandi salah";
+  const now = new Date();
   const user = await prisma.adminUser.findUnique({ where: { username } });
-  if (user?.lockedUntil && user.lockedUntil > new Date()) {
-    await logAdmin(username, "login_terkunci");
-    return { ok: false, message: `Terlalu banyak percobaan. Coba lagi setelah ${LOCK_MINUTES} menit.` };
+  let reserved = false;
+  if (user) {
+    const r = await prisma.adminUser.updateMany({
+      where: { id: user.id, failedLogins: { lt: MAX_FAILED }, OR: [{ lockedUntil: null }, { lockedUntil: { lt: now } }] },
+      data: { failedLogins: { increment: 1 } },
+    });
+    reserved = r.count === 1;
   }
-  const valid = await verifyPassword(password, user?.passwordHash ?? null);
-  if (!user || !valid) {
-    if (user) {
-      const failed = user.failedLogins + 1;
-      await prisma.adminUser.update({
-        where: { id: user.id },
-        data: failed >= MAX_FAILED ? { failedLogins: 0, lockedUntil: new Date(Date.now() + LOCK_MINUTES * 60_000) } : { failedLogins: failed },
+  const valid = await verifyPassword(password, user && reserved ? user.passwordHash : null);
+  if (!user || !reserved || !valid) {
+    if (user && reserved) {
+      await prisma.adminUser.updateMany({
+        where: { id: user.id, failedLogins: { gte: MAX_FAILED } },
+        data: { failedLogins: 0, lockedUntil: new Date(now.getTime() + LOCK_MINUTES * 60_000) },
       });
     }
-    await logAdmin(username || "(kosong)", "login_gagal");
-    return { ok: false, message: generic };
+    await logAdmin(username, user && !reserved ? "login_terkunci" : "login_gagal");
+    return { ok: false, message: LOGIN_ERROR };
   }
-  await prisma.adminUser.update({ where: { id: user.id }, data: { failedLogins: 0, lockedUntil: null, lastLoginAt: new Date() } });
+  await prisma.adminUser.update({ where: { id: user.id }, data: { failedLogins: 0, lockedUntil: null, lastLoginAt: now } });
   await startSession(user);
   await logAdmin(user.username, "login");
   return { ok: true };
