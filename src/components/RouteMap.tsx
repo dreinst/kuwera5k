@@ -3,11 +3,18 @@
 import { motion } from "framer-motion";
 import { routeMap } from "@/lib/route-map";
 import { marshalPosts } from "@/lib/marshal-posts";
+import { route } from "@/lib/event-data";
+import { pointAtT, tAtKm } from "@/lib/route-geo";
 
 const [, , vbW, vbH] = routeMap.viewBox.split(" ").map(Number);
 const DRAW_SECONDS = 2.6;
 const drawEase = [0.65, 0, 0.35, 1] as const;
 const reach = (t: number) => 0.2 + t * DRAW_SECONDS;
+
+// Water station diambil dari daftar checkpoint (km), lalu ditempatkan di titik km itu pada jalur.
+const waterStations = route.checkpoints
+  .filter((c) => c.label === "Water station")
+  .map((c) => { const t = tAtKm(c.km); return { ...pointAtT(t), t }; });
 
 const pop = (delay: number) => ({
   hidden: { scale: 0, opacity: 0 },
@@ -69,7 +76,7 @@ export default function RouteMap({ compact = false }: { compact?: boolean }) {
             cx={routeMap.field.cx} cy={routeMap.field.cy} rx={routeMap.field.rx * 0.72} ry={routeMap.field.ry * 0.62}
             fill="none" stroke="#FDFBF5" strokeOpacity={0.5} strokeWidth={4}
           />
-          {/* Label digeser ke atas kanan supaya tidak tertutup pin water station dan bendera finish. */}
+          {/* Label digeser ke atas kanan supaya tidak tertutup bendera finish. */}
           <text
             x={routeMap.field.cx + 60} y={routeMap.field.cy - 95} textAnchor="middle" dominantBaseline="central"
             className="fill-white font-display" style={{ fontSize: 78, letterSpacing: 4 }}
@@ -110,7 +117,7 @@ export default function RouteMap({ compact = false }: { compact?: boolean }) {
         </motion.g>
       ))}
 
-      {!compact && routeMap.water.map((w, i) => (
+      {!compact && waterStations.map((w, i) => (
         <motion.g key={`water-${i}`} variants={pop(reach(w.t))}>
           <path
             d={`M${w.x},${w.y} c-70,-95 -110,-135 -110,-195 a110,110 0 0 1 220,0 c0,60 -40,100 -110,195 z`}
