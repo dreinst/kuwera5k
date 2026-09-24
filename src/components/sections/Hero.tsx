@@ -83,38 +83,41 @@ export default function Hero({ stats }: { stats: { paid: number; remaining: numb
             Fun Run 5K Malang 2026
           </motion.span>
 
-          <h1 className="font-display mt-6 flex flex-wrap justify-center gap-x-4 text-5xl leading-none uppercase sm:gap-x-6 sm:text-7xl lg:text-8xl">
-            {HEADLINE.map((w, i) => (
-              <motion.span
-                key={w.word}
-                variants={wordVariants}
-                initial="hidden"
-                animate="show"
-                transition={{ delay: i * 0.08 }}
-                className={w.outline ? "text-outline" : "text-brand-yellow"}
-              >
-                {i > 0 && " "}
-                {w.word}
-              </motion.span>
-            ))}
-          </h1>
+          {/* Judul dan hitung mundur sebaris di layar lebar; di HP hitung mundur turun ke bawah judul. */}
+          <div className="mt-6 flex flex-col items-center gap-8 lg:flex-row lg:gap-8 xl:gap-10">
+            <h1 className="font-display flex flex-wrap justify-center gap-x-4 text-5xl leading-none uppercase sm:gap-x-6 sm:text-7xl lg:shrink-0 xl:text-8xl">
+              {HEADLINE.map((w, i) => (
+                <motion.span
+                  key={w.word}
+                  variants={wordVariants}
+                  initial="hidden"
+                  animate="show"
+                  transition={{ delay: i * 0.08 }}
+                  className={w.outline ? "text-outline" : "text-brand-yellow"}
+                >
+                  {i > 0 && " "}
+                  {w.word}
+                </motion.span>
+              ))}
+            </h1>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.5, delay: 0.4 }}
+              className="lg:border-l lg:border-glass-border lg:pl-8 xl:pl-10"
+            >
+              <Countdown to={eventData.startIso} label="Menuju hari lomba" />
+            </motion.div>
+          </div>
 
           <motion.p
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.3 }}
-            className="mt-6 max-w-xl text-white/80"
+            className="mt-8 max-w-xl text-white/80"
           >
-            Fun run 5K di {eventData.city}. Diselenggarakan oleh {eventData.host}.
+            Fun run 5K yang diselenggarakan oleh {eventData.host}, dengan start dan finish di {eventData.startPoint}.
           </motion.p>
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.5, delay: 0.4 }}
-            className="mt-8"
-          >
-            <Countdown to={eventData.startIso} label="Menuju hari lomba" />
-          </motion.div>
         </div>
 
         {/* Tiga kolom bertingkat seperti konsep: kolom tengah paling tinggi. */}

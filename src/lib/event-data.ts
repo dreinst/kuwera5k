@@ -1,5 +1,5 @@
 // Data dummy sesuai docs/PRD.md bagian 1. Ganti begitu panitia konfirmasi data final.
-const racePackDates = "Kamis dan Jumat, 22 sampai 23 Oktober 2026"; // H-2 dan H-1
+const racePackDates = "Kamis dan Jumat, 22 dan 23 Oktober 2026"; // H-2 dan H-1
 
 export const eventData = {
   name: "KUWERA Fun Run 5K 2026",
@@ -91,7 +91,7 @@ export const faqs = [
   },
   {
     q: "Kapan dan di mana pengambilan race pack?",
-    a: `Race pack diambil ${eventData.racePackDates} di ${eventData.racePackPlace}. Jamnya diumumkan menyusul. Bawa KTP atau KIA asli dan tunjukkan QR di e-ticket.`,
+    a: `Race pack diambil ${eventData.racePackDates} di ${eventData.racePackPlace}. Bawa KTP atau KIA asli dan tunjukkan QR di e-ticket.`,
   },
   {
     q: "Apakah ada kategori kelompok atau komunitas?",
