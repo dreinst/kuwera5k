@@ -10,18 +10,19 @@ const [closeDate, closeTime] = eventData.registrationCloseLabel.split(" pukul ")
 const SCHEDULE = [
   {
     title: "Periode pendaftaran",
-    date: `Sampai ${closeDate}`,
-    note: `Ditutup pukul ${closeTime}, atau lebih awal kalau kuota ${eventData.quotaTotal.toLocaleString("id-ID")} peserta sudah penuh. Setelah itu ukuran jersey dikirim ke vendor untuk dicetak.`,
+    date: `Dibuka hingga ${closeDate}`,
+    note: `Pendaftaran ditutup pukul ${closeTime} atau saat kuota ${eventData.quotaTotal.toLocaleString("id-ID")} peserta terpenuhi.`,
   },
   {
     title: "Pengambilan race pack",
     date: eventData.racePackDates,
-    note: `Jamnya diumumkan menyusul. Tempatnya di ${eventData.racePackPlace}; bawa KTP atau KIA asli dan QR e-ticket.`,
+    // "e\u2011ticket" memakai tanda hubung tak terputus supaya tidak terbelah di ujung baris.
+    note: `Lokasinya di ${eventData.racePackPlace}. Bawa KTP atau KIA asli dan tunjukkan QR di e\u2011ticket.`,
   },
   {
     title: "Hari lomba",
     date: eventData.dateLabel,
-    note: `Start pukul ${eventData.timeLabel} di ${eventData.startPoint}, batas waktu lari ${route.cutOffMinutes} menit.`,
+    note: `Start pukul ${eventData.timeLabel} dari ${eventData.startPoint}, dengan batas waktu ${route.cutOffMinutes} menit.`,
   },
 ];
 
@@ -35,7 +36,7 @@ export default function Schedule() {
             Jadwal{" "}
             <span className="text-brand-yellow underline decoration-brand-yellow decoration-4 underline-offset-8">Lomba</span>
           </h2>
-          <p className="mt-5 text-white/80">Catat tanggalnya supaya tidak ketinggalan pendaftaran, race pack, dan hari lomba.</p>
+          <p className="mt-5 text-white/80">Tandai tanggal-tanggal ini di kalendermu.</p>
         </Reveal>
 
         <ol className="mt-12 grid gap-5 md:grid-cols-3">
