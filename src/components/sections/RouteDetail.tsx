@@ -41,7 +41,6 @@ function Node({ edge }: { edge: boolean }) {
 
 export default function RouteDetail() {
   const lastStreet = route.streets.length - 1;
-  const lastCheckpoint = route.checkpoints.length - 1;
   return (
     <section id="rute" className="relative scroll-mt-16 px-6 py-20">
       <div className="relative mx-auto max-w-6xl">
@@ -56,15 +55,20 @@ export default function RouteDetail() {
           </p>
         </Reveal>
 
-        <div className="mt-12 grid gap-10 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] lg:items-start">
-          <Reveal className="lg:sticky lg:top-24">
+        {/* Layar lebar: peta di kiri, kartu urutan jalan di kanan setinggi kartu peta; legenda di bawah peta.
+            Di HP urutannya peta, legenda, lalu urutan jalan. */}
+        <div className="mt-12 grid gap-8 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] lg:gap-x-12 lg:gap-y-0">
+          <Reveal className="lg:col-start-1 lg:row-start-1">
             <div
               className="overflow-hidden rounded-[20px] border border-glass-border bg-card p-3 sm:p-5"
               style={{ aspectRatio: `${vbW} / ${vbH}` }}
             >
               <RouteMap />
             </div>
-            <div className="mt-4 flex flex-wrap gap-x-6 gap-y-2 text-xs text-white/80">
+          </Reveal>
+
+          <Reveal className="lg:col-start-1 lg:row-start-2 lg:mt-4">
+            <div className="flex flex-wrap gap-x-6 gap-y-2 text-xs text-white/80">
               <span className="flex items-center gap-2"><span className="flex"><LegendFlag color="#3DDC3D" /><LegendFlag color="#E53935" /></span> Start dan finish</span>
               <span className="flex items-center gap-2"><span className="inline-block h-4 w-4 rounded-md bg-green-deep ring-1 ring-white/50" /> Pos marshal</span>
               <span className="flex items-center gap-2"><span className="inline-block h-4 w-4 rounded-full bg-cream ring-1 ring-white/50" /> Water station</span>
@@ -76,46 +80,27 @@ export default function RouteDetail() {
             </p>
           </Reveal>
 
-          {/* Urutan jalan lalu checkpoint di sebelah kanannya (permintaan Donny), bergaya linimasa konsep. */}
-          <div className="grid gap-10 sm:grid-cols-2 lg:gap-8">
-            <div>
-              <Reveal>
-                <p className="mb-5 text-xs font-semibold tracking-wide text-gold uppercase">Urutan jalan</p>
-              </Reveal>
-              <ol>
-                {route.streets.map((street, i) => (
-                  <Reveal as="li" key={`${street}-${i}`} delay={i * 0.04} className="relative flex items-center gap-4 pb-4 last:pb-0">
-                    {i < lastStreet && <span aria-hidden className="absolute top-5 bottom-0 left-[9px] w-0.5 bg-white/35" />}
-                    <Node edge={i === 0 || i === lastStreet} />
-                    <span className="font-display text-base leading-tight tracking-wide sm:text-lg">
-                      <TwoTone text={street} />
-                    </span>
-                  </Reveal>
-                ))}
-              </ol>
-            </div>
-
-            <div>
-              <Reveal>
-                <p className="mb-5 text-xs font-semibold tracking-wide text-gold uppercase">Checkpoint</p>
-              </Reveal>
-              <ol>
-                {route.checkpoints.map((cp, i) => (
-                  <Reveal as="li" key={`${cp.label}-${cp.km}`} delay={i * 0.06} className="relative flex gap-4 pb-5 last:pb-0">
-                    {i < lastCheckpoint && <span aria-hidden className="absolute top-5 bottom-0 left-[9px] w-0.5 bg-white/35" />}
-                    <Node edge={i === 0 || i === lastCheckpoint} />
-                    <div className="-mt-0.5">
-                      <p className="font-display text-base tracking-wide uppercase sm:text-lg">
-                        <span className="text-brand-yellow">{cp.label}</span>
-                        {/* "1 KM" dan seterusnya sudah memuat jaraknya sendiri */}
-                        {!/km/i.test(cp.label) && <span className="text-white"> km {cp.km.toLocaleString("id-ID")}</span>}
-                      </p>
-                      <p className="text-sm text-white/75">{cp.place}</p>
-                    </div>
-                  </Reveal>
-                ))}
-              </ol>
-            </div>
+          {/* Urutan jalan bergaya linimasa konsep; di layar lebar titik-titiknya dibagi rata setinggi peta. */}
+          <div className="flex flex-col rounded-[20px] border border-glass-border bg-card p-6 sm:p-8 lg:col-start-2 lg:row-start-1">
+            <Reveal>
+              <h3 className="font-display mb-6 text-2xl text-brand-yellow uppercase">Urutan jalan</h3>
+            </Reveal>
+            <ol className="flex flex-1 flex-col">
+              {route.streets.map((street, i) => (
+                <Reveal
+                  as="li"
+                  key={`${street}-${i}`}
+                  delay={i * 0.04}
+                  className={`relative flex gap-4 ${i < lastStreet ? "pb-4 lg:flex-1 lg:pb-0" : ""}`}
+                >
+                  {i < lastStreet && <span aria-hidden className="absolute top-5 bottom-0 left-[9px] w-0.5 bg-white/35" />}
+                  <Node edge={i === 0 || i === lastStreet} />
+                  <span className="font-display text-base leading-5 tracking-wide sm:text-lg sm:leading-5">
+                    <TwoTone text={street} />
+                  </span>
+                </Reveal>
+              ))}
+            </ol>
           </div>
         </div>
       </div>

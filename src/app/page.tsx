@@ -3,6 +3,7 @@ import Navbar from "@/components/sections/Navbar";
 import Hero from "@/components/sections/Hero";
 import RouteDetail from "@/components/sections/RouteDetail";
 import DateBanner from "@/components/sections/DateBanner";
+import Schedule from "@/components/sections/Schedule";
 import Sponsors from "@/components/sections/Sponsors";
 import CtaBanner from "@/components/sections/CtaBanner";
 import NewsletterFaq from "@/components/sections/NewsletterFaq";
@@ -33,6 +34,7 @@ export default async function Home() {
         <Hero stats={stats} />
         <RouteDetail />
         <DateBanner />
+        <Schedule />
         <Sponsors />
         <CtaBanner />
         <NewsletterFaq />

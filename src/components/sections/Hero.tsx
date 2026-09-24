@@ -6,6 +6,7 @@ import { eventData, route } from "@/lib/event-data";
 import Counter from "@/components/Counter";
 import JerseyTexture from "@/components/JerseyTexture";
 import ArrowCircle from "@/components/ArrowCircle";
+import Countdown from "@/components/Countdown";
 
 const wordVariants = {
   hidden: { y: 30, opacity: 0, clipPath: "inset(100% 0 0 0)" },
@@ -104,18 +105,16 @@ export default function Hero({ stats }: { stats: { paid: number; remaining: numb
             transition={{ duration: 0.5, delay: 0.3 }}
             className="mt-6 max-w-xl text-white/80"
           >
-            Fun run 5K di {eventData.city}. Daftar dan bayar online, e-ticket langsung muncul setelah pembayaran lunas.
+            Fun run 5K di {eventData.city}. Diselenggarakan oleh {eventData.host}.
           </motion.p>
-          <motion.p
+          <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.5, delay: 0.4 }}
-            className="mt-4 flex items-center gap-3 text-sm text-white/80"
+            className="mt-8"
           >
-            Diselenggarakan oleh
-            {/* eslint-disable-next-line @next/next/no-img-element -- SVG statis */}
-            <img src="/logo-dpro.svg" alt="D'Production Event Organizer" width={322} height={163} className="h-12 w-auto" />
-          </motion.p>
+            <Countdown to={eventData.startIso} label="Menuju hari lomba" />
+          </motion.div>
         </div>
 
         {/* Tiga kolom bertingkat seperti konsep: kolom tengah paling tinggi. */}

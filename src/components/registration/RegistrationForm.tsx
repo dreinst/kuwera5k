@@ -9,6 +9,7 @@ import {
 } from "@/lib/registration";
 import { trackPixel } from "@/lib/meta-pixel";
 import Turnstile, { TURNSTILE_SITE_KEY } from "@/components/registration/Turnstile";
+import { KAB_KOTA } from "@/lib/wilayah";
 
 type Category = { id: string; name: string; price: number; saleEnd: string; remaining: number };
 type Props = { categories: Category[]; fees: Record<PaymentMethodId, number>; methods: PaymentMethodId[]; paymentMode: "mock" | "off" | "midtrans"; trackCheckout: boolean };
@@ -96,8 +97,8 @@ export default function RegistrationForm({ categories, fees, methods, paymentMod
     if (res.success) return {};
     return Object.fromEntries(Object.entries(issuesToMap(res.error.issues)).filter(([k]) => t[k]));
   };
-  const set = (k: keyof ParticipantForm, v: string) => {
-    const nextP = { ...participant, [k]: v };
+  const set = (k: keyof ParticipantForm, v: string, extra: Partial<ParticipantForm> = {}) => {
+    const nextP = { ...participant, ...extra, [k]: v };
     setParticipant(nextP);
     if (touched[k]) setErrors(visibleErrors(nextP, touched));
   };
@@ -233,10 +234,16 @@ export default function RegistrationForm({ categories, fees, methods, paymentMod
                   <input className={inputCls} value={participant.address} onChange={(e) => set("address", e.target.value)} onBlur={() => blur("address")} autoComplete="street-address" placeholder="Nama jalan, nomor rumah, RT/RW, kelurahan" />
                 </Field>
                 <Field label="Provinsi" error={errors["province"]}>
-                  <Select value={participant.province} onChange={(v) => set("province", v)} onBlur={() => blur("province")} placeholder="Pilih provinsi" options={PROVINCES.map((p) => [p, p])} autoComplete="address-level1" />
+                  <Select value={participant.province} onChange={(v) => set("province", v, v !== participant.province ? { city: "" } : {})} onBlur={() => blur("province")} placeholder="Pilih provinsi" options={PROVINCES.map((p) => [p, p])} autoComplete="address-level1" />
                 </Field>
                 <Field label="Kota/kabupaten" error={errors["city"]}>
-                  <input className={inputCls} value={participant.city} onChange={(e) => set("city", e.target.value)} onBlur={() => blur("city")} autoComplete="address-level2" placeholder="Contoh: Kota Malang" />
+                  {/* Daftar kabupaten/kota mengikuti provinsi yang dipilih; kosong sampai provinsi dipilih. */}
+                  <Select
+                    value={participant.city} onChange={(v) => set("city", v)} onBlur={() => blur("city")}
+                    placeholder={participant.province ? "Pilih kota/kabupaten" : "Pilih provinsi dulu"}
+                    options={(KAB_KOTA[participant.province] ?? []).map((c) => [c, c])} autoComplete="address-level2"
+                    disabled={!participant.province}
+                  />
                 </Field>
                 <Field label="Kode pos" error={errors["postalCode"]}>
                   <input inputMode="numeric" maxLength={5} className={inputCls} value={participant.postalCode} onChange={(e) => set("postalCode", e.target.value.replace(/\D/g, ""))} onBlur={() => blur("postalCode")} autoComplete="postal-code" placeholder="5 angka" />
@@ -391,15 +398,15 @@ function Line({ k, v, muted = false }: { k: string; v: string; muted?: boolean }
   return (<div className="flex items-center justify-between py-1"><span className="text-white/70">{k}</span><span className={muted ? "text-white/75" : "text-white"}>{v}</span></div>);
 }
 
-function Select({ value, onChange, onBlur, placeholder, options, autoComplete }: {
+function Select({ value, onChange, onBlur, placeholder, options, autoComplete, disabled = false }: {
   value: string; onChange: (v: string) => void; onBlur: () => void; placeholder: string;
-  options: readonly (readonly [string, string])[]; autoComplete?: string;
+  options: readonly (readonly [string, string])[]; autoComplete?: string; disabled?: boolean;
 }) {
   return (
     <div className="relative">
       <select
-        className={`${inputCls} appearance-none pr-10 ${value ? "" : "text-white/40"} [&>option]:bg-green-deep [&>option]:text-white`}
-        value={value} onChange={(e) => onChange(e.target.value)} onBlur={onBlur} autoComplete={autoComplete}
+        className={`${inputCls} appearance-none pr-10 disabled:cursor-not-allowed disabled:opacity-60 ${value ? "" : "text-white/40"} [&>option]:bg-green-deep [&>option]:text-white`}
+        value={value} onChange={(e) => onChange(e.target.value)} onBlur={onBlur} autoComplete={autoComplete} disabled={disabled}
       >
         <option value="" disabled>{placeholder}</option>
         {options.map(([v, l]) => <option key={v} value={v}>{l}</option>)}

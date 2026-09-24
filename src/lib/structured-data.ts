@@ -10,6 +10,8 @@ export function homeJsonLd(remaining: number | null) {
   const lowestFee = Math.min(...Object.values(DEFAULT_FEES));
   const v = eventData.venue;
   const start = new Date(eventData.startIso);
+  // Penyelenggara acara dan EO pelaksananya; situs ini diterbitkan oleh EO.
+  const host = { "@type": "Organization", name: eventData.host };
   const organizer = { "@type": "Organization", name: eventData.organizer, url: eventData.organizerUrl };
   const event = {
     "@type": "SportsEvent",
@@ -40,7 +42,7 @@ export function homeJsonLd(remaining: number | null) {
       geo: { "@type": "GeoCoordinates", latitude: v.lat, longitude: v.lng },
     },
     image: [`${siteUrl}/opengraph-image.jpg`, `${siteUrl}/images/hero-runners.jpg`],
-    organizer,
+    organizer: [host, organizer],
     offers: {
       "@type": "Offer",
       url: `${siteUrl}/daftar`,

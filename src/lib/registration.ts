@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { KAB_KOTA } from "@/lib/wilayah";
 
 // Keputusan sementara (lihat docs/PRD.md bagian 12): usia minimal dan biaya layanan per metode
 // bisa diubah panitia lewat tabel Setting tanpa deploy ulang.
@@ -77,7 +78,7 @@ export const participantSchema = z.object({
   idNumber: z.string().trim().regex(/^\d{16}$/, "Nomor identitas (NIK) harus 16 angka"),
   address: z.string().trim().min(10, "Alamat minimal 10 huruf").max(200, "Alamat maksimal 200 huruf"),
   province: z.enum(PROVINCES, { message: "Pilih provinsi" }),
-  city: z.string().trim().min(3, "Kota/kabupaten minimal 3 huruf").max(60, "Maksimal 60 huruf"),
+  city: z.string().trim().min(1, "Pilih kota/kabupaten"),
   postalCode: z.string().trim().regex(/^\d{5}$/, "Kode pos harus 5 angka"),
   bloodType: z.enum(BLOOD_TYPES, { message: "Pilih golongan darah" }),
   birthDate: z
@@ -93,6 +94,11 @@ export const participantSchema = z.object({
   emergencyName: z.string().trim().min(3, "Nama kontak darurat minimal 3 huruf").max(80),
   emergencyPhone: phone("Nomor kontak darurat"),
   community: z.string().trim().max(80, "Maksimal 80 huruf").optional().or(z.literal("")),
+}).superRefine((p, ctx) => {
+  // Kota/kabupaten harus salah satu wilayah di provinsi yang dipilih (daftar di src/lib/wilayah.ts).
+  if (p.city && !(KAB_KOTA[p.province] ?? []).includes(p.city)) {
+    ctx.addIssue({ code: "custom", path: ["city"], message: "Pilih kota/kabupaten dari daftar provinsi yang dipilih" });
+  }
 });
 export type ParticipantInput = z.infer<typeof participantSchema>;
 // Isian form sebelum divalidasi (pilihan yang belum dipilih = string kosong).
