@@ -5,17 +5,29 @@ import { z } from "zod";
 export const MIN_AGE = 12;
 export const RACE_DATE = "2026-10-24";
 
-// Size chart sementara dari Donny (24 Sep 2026), dalam cm: A lingkar dada, B panjang badan, C panjang lengan.
-export const JERSEY_SIZES = ["XS", "S", "M", "L", "XL", "XXL", "3XL", "4XL"] as const;
-export const JERSEY_CHART: Record<(typeof JERSEY_SIZES)[number], { chest: number; length: number; sleeve: number }> = {
-  XS: { chest: 90, length: 64, sleeve: 31 },
-  S: { chest: 95, length: 66, sleeve: 32 },
-  M: { chest: 100, length: 68, sleeve: 33 },
-  L: { chest: 105, length: 70, sleeve: 34 },
-  XL: { chest: 110, length: 72, sleeve: 35 },
-  XXL: { chest: 115, length: 74, sleeve: 36 },
-  "3XL": { chest: 120, length: 76, sleeve: 37 },
-  "4XL": { chest: 125, length: 78, sleeve: 38 },
+// Size chart O-neck reguler dari Donny (24 Sep 2026), dalam cm. Jersey berlengan pendek,
+// jadi kolom lengan panjang dari tabel vendor tidak dipakai.
+export const JERSEY_SIZES = ["XS", "S", "M", "L", "XL", "2XL", "3XL", "4XL", "5XL"] as const;
+export const JERSEY_CHART_COLUMNS = [
+  { key: "width", label: "Lebar" },
+  { key: "length", label: "Panjang" },
+  { key: "shoulderWidth", label: "Lebar bahu" },
+  { key: "sleeveLength", label: "Panjang lengan" },
+  { key: "sleeveCirc", label: "Lingkar lengan" },
+  { key: "collar", label: "Lingkar kerah" },
+  { key: "shoulderCirc", label: "Lingkar bahu" },
+] as const;
+type JerseyMeasure = Record<(typeof JERSEY_CHART_COLUMNS)[number]["key"], number>;
+export const JERSEY_CHART: Record<(typeof JERSEY_SIZES)[number], JerseyMeasure> = {
+  XS: { width: 48, length: 66, shoulderWidth: 14.2, sleeveLength: 18, sleeveCirc: 17, collar: 41, shoulderCirc: 20 },
+  S: { width: 50, length: 68, shoulderWidth: 15.2, sleeveLength: 19, sleeveCirc: 17.5, collar: 42, shoulderCirc: 21 },
+  M: { width: 52, length: 70, shoulderWidth: 16.2, sleeveLength: 19, sleeveCirc: 18, collar: 43, shoulderCirc: 21 },
+  L: { width: 54, length: 72, shoulderWidth: 17.2, sleeveLength: 20, sleeveCirc: 18.5, collar: 44, shoulderCirc: 22 },
+  XL: { width: 56, length: 74, shoulderWidth: 18.2, sleeveLength: 20, sleeveCirc: 19, collar: 45, shoulderCirc: 22 },
+  "2XL": { width: 58, length: 76, shoulderWidth: 19.2, sleeveLength: 21, sleeveCirc: 19.5, collar: 45.5, shoulderCirc: 23 },
+  "3XL": { width: 60, length: 78, shoulderWidth: 20.2, sleeveLength: 22, sleeveCirc: 20, collar: 46.5, shoulderCirc: 24 },
+  "4XL": { width: 62, length: 80, shoulderWidth: 21.2, sleeveLength: 23, sleeveCirc: 20.5, collar: 47.5, shoulderCirc: 25 },
+  "5XL": { width: 64, length: 82, shoulderWidth: 22.2, sleeveLength: 24, sleeveCirc: 21, collar: 48.5, shoulderCirc: 26 },
 };
 
 export const PROVINCES = [

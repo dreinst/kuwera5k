@@ -1,11 +1,10 @@
 "use client";
 
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import {
-  BLOOD_TYPES, JERSEY_CHART, JERSEY_SIZES, PAYMENT_METHODS, PROVINCES, formatRupiah, fullNameOf, issuesToMap,
+  BLOOD_TYPES, JERSEY_CHART, JERSEY_CHART_COLUMNS, JERSEY_SIZES, PAYMENT_METHODS, PROVINCES, formatRupiah, fullNameOf, issuesToMap,
   participantSchema, type ParticipantForm, type PaymentMethodId,
 } from "@/lib/registration";
 import { trackPixel } from "@/lib/meta-pixel";
@@ -67,7 +66,9 @@ export default function RegistrationForm({ categories, fees, methods, paymentMod
         const d = JSON.parse(raw) as Draft;
         if (Date.now() - d.savedAt < DRAFT_TTL) {
           if (categories.some((c) => c.id === d.categoryId)) setCategoryId(d.categoryId);
-          setParticipant({ ...emptyParticipant, ...d.participant });
+          const p = { ...emptyParticipant, ...d.participant };
+          if (p.jerseySize === "XXL") p.jerseySize = "2XL"; // draf lama, ukuran XXL sekarang bernama 2XL
+          setParticipant(p);
           setStep(Math.min(Math.max(d.step, 1), 3));
         } else localStorage.removeItem(DRAFT_KEY);
       }
@@ -410,36 +411,36 @@ function Select({ value, onChange, onBlur, placeholder, options, autoComplete }:
   );
 }
 
-// Size chart sementara dari panitia (cm): A lingkar dada, B panjang badan, C panjang lengan.
+// Size chart O-neck reguler (cm), sumbernya di src/lib/registration.ts.
 function SizeChart() {
+  const cm = (n: number) => n.toLocaleString("id-ID");
   return (
     <details className="mt-3 rounded-2xl border border-glass-border bg-white/5 p-4 text-sm text-white/85 open:pb-5">
       <summary className="cursor-pointer font-medium text-brand-yellow">Lihat size chart</summary>
-      <div className="mt-4 grid gap-4">
-        <div className="relative mx-auto aspect-[640/551] w-full max-w-[200px] overflow-hidden rounded-xl bg-white">
-          <Image src="/images/size-chart-jersey.webp" alt="Cara mengukur jersey: A lingkar dada, B panjang badan, C panjang lengan" fill sizes="200px" loading="eager" className="object-contain p-2" />
-        </div>
-        <table className="w-full text-center">
-          <thead>
-            <tr className="text-xs text-white/75">
-              <th className="py-2 text-left font-semibold">Ukuran</th>
-              <th className="py-2 font-semibold">Lingkar dada (A)</th>
-              <th className="py-2 font-semibold">Panjang badan (B)</th>
-              <th className="py-2 font-semibold">Lengan (C)</th>
-            </tr>
-          </thead>
-          <tbody>
-            {JERSEY_SIZES.map((s) => (
-              <tr key={s} className="border-t border-white/10">
-                <th scope="row" className="py-1.5 text-left font-semibold text-white">{s}</th>
-                <td className="py-1.5">{JERSEY_CHART[s].chest}</td>
-                <td className="py-1.5">{JERSEY_CHART[s].length}</td>
-                <td className="py-1.5">{JERSEY_CHART[s].sleeve}</td>
+      <div className="mt-4 grid gap-3">
+        <div className="overflow-x-auto rounded-xl border border-white/10" tabIndex={0} role="region" aria-label="Tabel size chart jersey, geser ke samping untuk melihat semua kolom">
+          <table className="w-full min-w-[560px] text-center">
+            <thead>
+              <tr className="text-xs text-white/75">
+                <th scope="col" className="sticky left-0 bg-green-deep px-3 py-2 text-left font-semibold">Ukuran</th>
+                {JERSEY_CHART_COLUMNS.map((c) => (
+                  <th key={c.key} scope="col" className="px-2 py-2 font-semibold">{c.label}</th>
+                ))}
               </tr>
-            ))}
-          </tbody>
-        </table>
-        <p className="text-xs text-white/75">Semua ukuran dalam cm.</p>
+            </thead>
+            <tbody>
+              {JERSEY_SIZES.map((s) => (
+                <tr key={s} className="border-t border-white/10">
+                  <th scope="row" className="sticky left-0 bg-green-deep px-3 py-1.5 text-left font-semibold text-white">{s}</th>
+                  {JERSEY_CHART_COLUMNS.map((c) => (
+                    <td key={c.key} className="px-2 py-1.5 tabular-nums">{cm(JERSEY_CHART[s][c.key])}</td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <p className="text-xs text-white/75">Semua ukuran dalam cm. Di layar kecil, geser tabel ke samping untuk melihat semua kolom.</p>
       </div>
     </details>
   );
