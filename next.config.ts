@@ -20,6 +20,8 @@ const csp = [
 ].join("; ");
 
 const nextConfig: NextConfig = {
+  // Build Docker untuk VPS (lihat Dockerfile) memakai output standalone; build Vercel tidak terpengaruh.
+  output: process.env.NEXT_OUTPUT === "standalone" ? "standalone" : undefined,
   poweredByHeader: false,
   async headers() {
     return [
@@ -31,6 +33,8 @@ const nextConfig: NextConfig = {
           { key: "X-Content-Type-Options", value: "nosniff" },
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
           { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
+          // Salinan uji di alamat sementara tidak boleh diindeks (dibaca saat build).
+          ...(process.env.SITE_NOINDEX === "1" ? [{ key: "X-Robots-Tag", value: "noindex, nofollow" }] : []),
         ],
       },
     ];

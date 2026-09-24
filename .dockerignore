@@ -1,0 +1,9 @@
+.git
+.next
+node_modules
+.env*
+.vercel
+docs/design-reference
+tools/cache
+Dockerfile
+.dockerignore
