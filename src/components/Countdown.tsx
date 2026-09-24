@@ -20,9 +20,9 @@ export default function Countdown({ to, label }: { to: string; label: string }) 
         {UNITS.map((u) => (
           <div
             key={u.label}
-            className="flex w-[4.5rem] flex-col items-center rounded-2xl border border-glass-border bg-glass py-3 backdrop-blur-md sm:w-20"
+            className="flex w-[4.5rem] flex-col items-center rounded-2xl border border-glass-border bg-glass py-3 backdrop-blur-md sm:w-20 lg:w-[4.5rem] xl:w-20"
           >
-            <span className={`font-display text-4xl leading-none text-brand-yellow tabular-nums sm:text-5xl ${now === null ? "invisible" : ""}`}>
+            <span className={`font-display text-4xl leading-none text-brand-yellow tabular-nums sm:text-5xl lg:text-4xl xl:text-5xl ${now === null ? "invisible" : ""}`}>
               {String(u.of(left)).padStart(2, "0")}
             </span>
             <span className="mt-1.5 text-[11px] font-semibold tracking-wide text-white uppercase">{u.label}</span>
