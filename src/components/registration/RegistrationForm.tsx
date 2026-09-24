@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import {
@@ -31,11 +31,42 @@ const slide = {
   exit: { x: -40, opacity: 0, transition: { duration: 0.25 } },
 };
 
-export default function RegistrationForm({ categories, fees, methods, paymentMode, trackCheckout }: Props) {
+// Draf 24 jam terakhir dari localStorage; null kalau tidak ada, rusak, atau kedaluwarsa.
+function readDraft(): Draft | null {
+  try {
+    const raw = localStorage.getItem(DRAFT_KEY);
+    const d = raw ? (JSON.parse(raw) as Draft) : null;
+    return d && Date.now() - d.savedAt < DRAFT_TTL ? d : null;
+  } catch {
+    return null;
+  }
+}
+
+const noSubscribe = () => () => {};
+
+// Draf hanya ada di browser. Form dirender dulu tanpa draf (sama dengan HTML server), lalu dipasang ulang
+// sekali dengan isi draf begitu berjalan di browser. Hanya pasangan browser yang menyimpan draf.
+export default function RegistrationForm(props: Props) {
+  const inBrowser = useSyncExternalStore(noSubscribe, () => true, () => false);
+  const { categories } = props;
+  useEffect(() => {
+    trackPixel("ViewContent", { content_name: "Pendaftaran KUWERA Fun Run 5K", value: categories[0]?.price ?? 0, currency: "IDR" });
+  }, [categories]);
+  return <FormSteps key={inBrowser ? "browser" : "server"} {...props} draft={inBrowser ? readDraft() : null} saveDraft={inBrowser} />;
+}
+
+function FormSteps({ categories, fees, methods, paymentMode, trackCheckout, draft, saveDraft }: Props & { draft: Draft | null; saveDraft: boolean }) {
   const router = useRouter();
-  const [step, setStep] = useState(1);
-  const [categoryId, setCategoryId] = useState(categories[0]?.id ?? "");
-  const [participant, setParticipant] = useState<ParticipantForm>(emptyParticipant);
+  const [step, setStep] = useState(() => (draft ? Math.min(Math.max(draft.step, 1), 3) : 1));
+  const [categoryId, setCategoryId] = useState(() =>
+    draft && categories.some((c) => c.id === draft.categoryId) ? draft.categoryId : categories[0]?.id ?? "",
+  );
+  const [participant, setParticipant] = useState<ParticipantForm>(() => {
+    if (!draft) return emptyParticipant;
+    const p = { ...emptyParticipant, ...draft.participant };
+    if (p.jerseySize === "XXL") p.jerseySize = "2XL"; // draf lama, ukuran XXL sekarang bernama 2XL
+    return p;
+  });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [touched, setTouched] = useState<Record<string, boolean>>({});
   const [promoInput, setPromoInput] = useState("");
@@ -46,7 +77,6 @@ export default function RegistrationForm({ categories, fees, methods, paymentMod
   const available = PAYMENT_METHODS.filter((m) => methods.includes(m.id));
   const [submitting, setSubmitting] = useState(false);
   const [serverError, setServerError] = useState("");
-  const [hydrated, setHydrated] = useState(false);
   const [turnstileToken, setTurnstileToken] = useState("");
   const [turnstileReset, setTurnstileReset] = useState(0);
 
@@ -57,31 +87,10 @@ export default function RegistrationForm({ categories, fees, methods, paymentMod
   const total = Math.max(0, subtotal - discount) + fee;
 
   useEffect(() => {
-    trackPixel("ViewContent", { content_name: "Pendaftaran KUWERA Fun Run 5K", value: categories[0]?.price ?? 0, currency: "IDR" });
-  }, [categories]);
-
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem(DRAFT_KEY);
-      if (raw) {
-        const d = JSON.parse(raw) as Draft;
-        if (Date.now() - d.savedAt < DRAFT_TTL) {
-          if (categories.some((c) => c.id === d.categoryId)) setCategoryId(d.categoryId);
-          const p = { ...emptyParticipant, ...d.participant };
-          if (p.jerseySize === "XXL") p.jerseySize = "2XL"; // draf lama, ukuran XXL sekarang bernama 2XL
-          setParticipant(p);
-          setStep(Math.min(Math.max(d.step, 1), 3));
-        } else localStorage.removeItem(DRAFT_KEY);
-      }
-    } catch {}
-    setHydrated(true);
-  }, [categories]);
-
-  useEffect(() => {
-    if (!hydrated) return;
+    if (!saveDraft) return;
     const d: Draft = { step, categoryId, participant, savedAt: Date.now() };
     localStorage.setItem(DRAFT_KEY, JSON.stringify(d));
-  }, [hydrated, step, categoryId, participant]);
+  }, [saveDraft, step, categoryId, participant]);
 
   const validateParticipant = () => {
     const res = participantSchema.safeParse(participant);

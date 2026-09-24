@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { PAYMENT_METHODS, formatRupiah } from "@/lib/registration";
 import { waLink, waText } from "@/lib/whatsapp";
 import { trackPixel } from "@/lib/meta-pixel";
+import { useNow } from "@/lib/use-now";
 
 type Order = {
   id: string; status: string; total: number; subtotal: number; discount: number; fee: number;
@@ -36,7 +37,7 @@ function loadSnap({ clientKey, scriptUrl }: SnapConfig) {
 export default function PaymentWaiting({ order, paymentMode, snap, trackCheckout }: { order: Order; paymentMode: "mock" | "off" | "midtrans"; snap?: SnapConfig; trackCheckout: boolean }) {
   const router = useRouter();
   // Waktu diisi di klien saja supaya HTML server dan klien sama (hindari hydration mismatch).
-  const [now, setNow] = useState<number | null>(null);
+  const now = useNow();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [snapNote, setSnapNote] = useState("");
@@ -54,12 +55,6 @@ export default function PaymentWaiting({ order, paymentMode, snap, trackCheckout
   useEffect(() => {
     live.current = { checking, canBePaidLate };
   }, [checking, canBePaidLate]);
-
-  useEffect(() => {
-    setNow(Date.now());
-    const t = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(t);
-  }, []);
 
   // Polling status: begitu webhook Midtrans menandai PAID, langsung ke e-ticket. Tiap 30 detik (dan
   // terus-menerus saat masa cek setelah timer habis) server diminta mengecek langsung ke Midtrans.
