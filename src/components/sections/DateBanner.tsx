@@ -50,7 +50,7 @@ export default function DateBanner() {
               </h2>
             </div>
             <p className="mt-5 max-w-md text-sm font-medium text-green-deep">
-              Pendaftaran ditutup {eventData.registrationCloseLabel}. Datang lebih awal untuk pemanasan bersama.
+              Datang lebih awal untuk pemanasan bersama. Jadwal pendaftaran dan race pack ada di bawah.
             </p>
           </div>
         </div>

@@ -1,20 +1,24 @@
 // Data dummy sesuai docs/PRD.md bagian 1. Ganti begitu panitia konfirmasi data final.
+const racePackDates = "Kamis dan Jumat, 22 sampai 23 Oktober 2026"; // H-2 dan H-1
+
 export const eventData = {
   name: "KUWERA Fun Run 5K 2026",
   city: "Malang, Jawa Timur",
   dateLabel: "Sabtu, 24 Oktober 2026",
   timeLabel: "06.00 WIB",
   startPoint: "Lapangan Rampal",
-  quotaTotal: 1000,
+  quotaTotal: 1500,
   paidCount: 214,
-  registrationCloseLabel: "Jumat, 23 Oktober 2026 pukul 23.59 WIB", // sama dengan registrationCloseIso
+  // Tutup H-1 minggu (ukuran jersey dikirim ke vendor untuk dicetak), atau lebih awal kalau kuota penuh.
+  registrationCloseLabel: "Sabtu, 17 Oktober 2026 pukul 23.59 WIB", // sama dengan registrationCloseIso
   price: 125000,
-  racePackLabel: "Jumat, 23 Oktober 2026, 10.00 sampai 18.00 WIB", // H-1, sesuai FAQ
+  racePackDates,
+  racePackLabel: `${racePackDates} (jam menyusul)`,
   racePackPlace: "Lapangan Rampal (tenda panitia)",
   // Untuk data terstruktur (schema.org) dan metadata; sumber koordinat: OpenStreetMap way 295948065.
   startIso: "2026-10-24T06:00:00+07:00",
   registrationOpenIso: "2026-09-01T00:00:00+07:00", // jendela jual kategori di seed
-  registrationCloseIso: "2026-10-23T23:59:59+07:00",
+  registrationCloseIso: "2026-10-17T23:59:59+07:00",
   venue: {
     name: "Lapangan Rampal",
     street: "Jl. Jenderal Urip Sumoharjo",
@@ -24,7 +28,8 @@ export const eventData = {
     lat: -7.97357,
     lng: 112.64017,
   },
-  organizer: "D'Production Event Organizer",
+  host: "Keuangan Angkatan Darat Malang",
+  organizer: "D'Production Event Organizer", // EO pelaksana
   organizerUrl: "https://www.dpro.events",
 };
 
@@ -86,7 +91,7 @@ export const faqs = [
   },
   {
     q: "Kapan dan di mana pengambilan race pack?",
-    a: `Race pack diambil ${eventData.racePackLabel} di ${eventData.racePackPlace}. Bawa KTP atau KIA asli dan tunjukkan QR di e-ticket.`,
+    a: `Race pack diambil ${eventData.racePackDates} di ${eventData.racePackPlace}. Jamnya diumumkan menyusul. Bawa KTP atau KIA asli dan tunjukkan QR di e-ticket.`,
   },
   {
     q: "Apakah ada kategori kelompok atau komunitas?",
