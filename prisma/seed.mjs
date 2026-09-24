@@ -1,9 +1,17 @@
 // Data awal pendaftaran (dummy sampai panitia konfirmasi). Aman dijalankan berulang.
 import "dotenv/config";
+import tls from "node:tls";
 import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 
-const prisma = new PrismaClient({ adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL }) });
+// TLS sama dengan src/lib/db.ts: DB_SSL_CA (CA) dan DB_SSL_SERVERNAME (nama di sertifikat) kalau lewat IP.
+const dbSsl = () => {
+  const ca = process.env.DB_SSL_CA?.replace(/\\n/g, "\n").trim();
+  if (!ca) return undefined;
+  const name = process.env.DB_SSL_SERVERNAME;
+  return { ca, rejectUnauthorized: true, ...(name ? { checkServerIdentity: (_h, cert) => tls.checkServerIdentity(name, cert) } : {}) };
+};
+const prisma = new PrismaClient({ adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL, ssl: dbSsl() }) });
 
 // Satu kategori, harga Rp125.000 (keputusan Donny 2026-09-22). Acara Sabtu 24 Oktober 2026 pukul 06.00,
 // jadi penjualan ditutup H-1 pukul 23.59 WIB. Baris "Early Bird 5K" lama
