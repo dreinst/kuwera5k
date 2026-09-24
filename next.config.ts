@@ -33,6 +33,8 @@ const nextConfig: NextConfig = {
           { key: "X-Content-Type-Options", value: "nosniff" },
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
           { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
+          // Vercel menambahkan HSTS sendiri; di VPS (Traefik) header ini harus dari aplikasi.
+          { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains" },
           // Salinan uji di alamat sementara tidak boleh diindeks (dibaca saat build).
           ...(process.env.SITE_NOINDEX === "1" ? [{ key: "X-Robots-Tag", value: "noindex, nofollow" }] : []),
         ],
