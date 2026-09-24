@@ -2,6 +2,7 @@
 // Mencetak link sekali pakai (berlaku 24 jam) untuk mengatur kata sandi sendiri, jadi kata sandi
 // tidak pernah lewat chat. Reset juga mengeluarkan semua sesi lama akun itu.
 import "dotenv/config";
+import tls from "node:tls";
 import { createHash, randomBytes } from "node:crypto";
 import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
@@ -11,7 +12,14 @@ if (!/^[a-z0-9._-]{3,32}$/.test(username) || !["admin", "panitia"].includes(role
   console.error("Pakai: npm run admin:user -- <username huruf kecil> <admin|panitia>");
   process.exit(1);
 }
-const prisma = new PrismaClient({ adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL }) });
+// TLS sama dengan src/lib/db.ts: DB_SSL_CA (CA) dan DB_SSL_SERVERNAME (nama di sertifikat) kalau lewat IP.
+const dbSsl = () => {
+  const ca = process.env.DB_SSL_CA?.replace(/\\n/g, "\n").trim();
+  if (!ca) return undefined;
+  const name = process.env.DB_SSL_SERVERNAME;
+  return { ca, rejectUnauthorized: true, ...(name ? { checkServerIdentity: (_h, cert) => tls.checkServerIdentity(name, cert) } : {}) };
+};
+const prisma = new PrismaClient({ adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL, ssl: dbSsl() }) });
 const token = randomBytes(32).toString("base64url");
 const data = {
   role, passwordHash: null, failedLogins: 0, lockedUntil: null,
