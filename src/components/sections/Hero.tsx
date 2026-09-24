@@ -74,17 +74,8 @@ export default function Hero({ stats }: { stats: { paid: number; remaining: numb
 
       <div className="relative mx-auto w-full max-w-6xl">
         <div className="flex flex-col items-center text-center">
-          <motion.span
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-            className="rounded-lg border border-glass-border bg-glass px-4 py-2 text-xs font-semibold tracking-[0.2em] text-white uppercase backdrop-blur-md"
-          >
-            Fun Run 5K Malang 2026
-          </motion.span>
-
           {/* Judul dan hitung mundur sebaris di layar lebar; di HP hitung mundur turun ke bawah judul. */}
-          <div className="mt-6 flex flex-col items-center gap-8 lg:flex-row lg:gap-8 xl:gap-10">
+          <div className="flex flex-col items-center gap-8 lg:flex-row lg:gap-8 xl:gap-10">
             <h1 className="font-display flex flex-wrap justify-center gap-x-4 text-5xl leading-none uppercase sm:gap-x-6 sm:text-7xl lg:shrink-0 xl:text-8xl">
               {HEADLINE.map((w, i) => (
                 <motion.span
@@ -110,14 +101,15 @@ export default function Hero({ stats }: { stats: { paid: number; remaining: numb
             </motion.div>
           </div>
 
-          <motion.p
+          <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.3 }}
-            className="mt-8 max-w-xl text-white/80"
+            className="mt-8 max-w-xl"
           >
-            Fun run 5K yang diselenggarakan oleh {eventData.host}, dengan start dan finish di {eventData.startPoint}.
-          </motion.p>
+            <p className="text-lg font-semibold text-balance text-white sm:text-xl">Kejar garis finish, bawa pulang medalinya!</p>
+            <p className="mt-2 text-balance text-white/80">Diselenggarakan oleh {eventData.host}.</p>
+          </motion.div>
         </div>
 
         {/* Tiga kolom bertingkat seperti konsep: kolom tengah paling tinggi. */}
