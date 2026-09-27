@@ -3,11 +3,11 @@
 import { useState, useTransition } from "react";
 import { racepackAction } from "@/app/admin/actions";
 
-export default function RacepackButton({ orderId, collected, canUndo }: { orderId: string; collected: boolean; canUndo: boolean }) {
+export default function RacepackButton({ ticketCode, collected, canUndo }: { ticketCode: string; collected: boolean; canUndo: boolean }) {
   const [message, setMessage] = useState("");
   const [pending, start] = useTransition();
   const run = (undo: boolean) => start(async () => {
-    const r = await racepackAction(orderId, undo);
+    const r = await racepackAction(ticketCode, undo);
     setMessage(r.error ?? r.ok ?? "");
   });
   return (

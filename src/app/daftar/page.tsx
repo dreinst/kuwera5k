@@ -10,12 +10,13 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
   title: "Pendaftaran Online",
   description:
-    "Daftar online KUWERA Fun Run 5K Malang. Rp125.000 di luar biaya layanan, bayar lewat QRIS, virtual account, atau e-wallet, e-ticket muncul setelah lunas.",
+    "Daftar online KUWERA Fun Run 5K Malang. Rp125.000 per tiket, bisa beli beberapa tiket sekaligus, bayar lewat QRIS, e-ticket terbit setelah pembayaran dikonfirmasi.",
   ...pageMeta("/daftar"),
 };
 
 export default async function DaftarPage() {
   const [categories, settings] = await Promise.all([getOpenCategories(), getSettings()]);
+  const mode = paymentMode();
   return (
     <div className="relative flex flex-1 flex-col">
       <Navbar />
@@ -28,7 +29,10 @@ export default async function DaftarPage() {
           Empat langkah, sekitar tiga menit. Isianmu tersimpan otomatis di perangkat ini selama 24 jam.
         </p>
         <div className="mt-8">
-          <RegistrationForm categories={categories} fees={settings.fees} methods={settings.methods} paymentMode={paymentMode()} trackCheckout={trackCheckout()} />
+          <RegistrationForm
+            categories={categories} fees={settings.fees} methods={settings.methods} paymentMode={mode} trackCheckout={trackCheckout()}
+            maxTickets={settings.maxTickets} holdMinutes={mode === "manual" ? settings.manualHoldMinutes : settings.holdMinutes}
+          />
         </div>
       </main>
       <Footer />

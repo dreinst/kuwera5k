@@ -5,7 +5,7 @@ import { fullNameOf, orderInputSchema, issuesToMap } from "@/lib/registration";
 import { verifyTurnstile } from "@/lib/turnstile";
 import { rateLimit, tooMany } from "@/lib/rate-limit";
 import {
-  ORDER_LOCK_KEY, activeOrderWhere, getSettings, heldCount, newOrderId, paymentMode, syncOrderWithMidtrans, validatePromo,
+  ORDER_LOCK_KEY, activeOrderWhere, getSettings, heldCount, newOrderId, paymentMode, pickUniqueCode, syncOrderWithMidtrans, validatePromo,
 } from "@/lib/orders";
 
 type Refusal = { error: string; status: number; fields?: Record<string, string> };
@@ -38,20 +38,32 @@ export async function POST(req: Request) {
   if (!category) return NextResponse.json({ error: "Kategori tidak tersedia atau pendaftaran sudah ditutup" }, { status: 400 });
 
   const settings = await getSettings();
-  if (!settings.methods.includes(input.paymentMethod)) {
+  const mode = paymentMode();
+  const manual = mode === "manual";
+  // Bayar manual hanya lewat QRIS; pilihan metode dari klien diabaikan.
+  const paymentMethod = manual ? "qris" : input.paymentMethod;
+  const people = input.participants;
+  const quantity = people.length;
+  if (quantity > settings.maxTickets) {
+    return NextResponse.json({ error: `Maksimal ${settings.maxTickets} tiket per pembelian` }, { status: 400 });
+  }
+  if (!manual && !settings.methods.includes(input.paymentMethod)) {
     const message = "Metode pembayaran ini sedang tidak tersedia, pilih metode lain";
     return NextResponse.json({ error: message, fields: { paymentMethod: message } }, { status: 400 });
   }
 
-  const p = input.participant;
-  // Satu orang satu pendaftaran: email, nomor HP, atau NIK yang sama dianggap peserta yang sama.
-  const sameContact = { OR: [{ buyerEmail: p.email }, { buyerPhone: p.phone }, { participant: { is: { idNumber: p.idNumber } } }] };
+  const p = people[0]; // peserta 1 = pemesan
+  const niks = people.map((x) => x.idNumber);
+  // Satu NIK satu tiket. Email dan HP boleh sama antar peserta (misalnya orang tua mendaftarkan anak).
+  const sameNik = { participants: { some: { idNumber: { in: niks } } } };
+  // Order lama milik pemesan yang sama (email/HP/NIK), dipakai untuk cek ulang ke Midtrans di bawah.
+  const sameContact = { OR: [{ buyerEmail: p.email }, { buyerPhone: p.phone }, sameNik] };
 
   // Order lama dengan email/HP yang sama yang pernah membuka Snap dan belum lunas (hold sudah habis,
   // atau gagal): pastikan dulu ke Midtrans. Bisa jadi sudah dibayar dan notifikasinya telat, jadi
   // jangan sampai peserta bayar dua kali. Pesan sengaja tidak menyebut nomor order, karena nomor
   // order juga kode tiket dan siapa pun bisa mengisi email atau HP orang lain.
-  if (paymentMode() === "midtrans") {
+  if (mode === "midtrans") {
     const stale = await prisma.order.findMany({
       where: {
         categoryId: category.id, snapToken: { not: null }, ...sameContact,
@@ -71,9 +83,9 @@ export async function POST(req: Request) {
     }
   }
 
-  const fee = settings.fees[input.paymentMethod] ?? 0;
-  const subtotal = category.price;
-  const expiresAt = new Date(now.getTime() + settings.holdMinutes * 60_000);
+  const fee = manual ? 0 : settings.fees[paymentMethod] ?? 0;
+  const subtotal = category.price * quantity;
+  const expiresAt = new Date(now.getTime() + (manual ? settings.manualHoldMinutes : settings.holdMinutes) * 60_000);
 
   for (let attempt = 0; attempt < 5; attempt++) {
     const id = newOrderId(now.getFullYear());
@@ -87,44 +99,55 @@ export async function POST(req: Request) {
         await tx.$executeRaw`SELECT pg_advisory_xact_lock(${ORDER_LOCK_KEY})`;
 
         const duplicate = await tx.order.findFirst({
-          where: { categoryId: category.id, AND: [activeOrderWhere(now), sameContact] },
-          select: { id: true, status: true },
+          where: { categoryId: category.id, AND: [activeOrderWhere(now), sameNik] },
+          select: { id: true, status: true, participants: { select: { idNumber: true } } },
         });
         if (duplicate) {
-          return {
-            error: duplicate.status === "PAID"
-              ? "Email, nomor HP, atau nomor identitas ini sudah terdaftar"
-              : "Email, nomor HP, atau nomor identitas ini sedang dalam proses pembayaran. Selesaikan dulu atau tunggu sampai waktunya habis.",
-            status: 409,
-          };
+          const nik = duplicate.participants.find((x) => x.idNumber && niks.includes(x.idNumber))?.idNumber;
+          const i = niks.indexOf(nik ?? "");
+          const who = quantity > 1 && i >= 0 ? `NIK peserta ${i + 1}` : "Nomor identitas (NIK) ini";
+          const message = duplicate.status === "PAID"
+            ? `${who} sudah terdaftar`
+            : `${who} sedang dalam proses pembayaran. Selesaikan dulu atau tunggu sampai waktunya habis.`;
+          return { error: message, status: 409, ...(i >= 0 ? { fields: { [`participants.${i}.idNumber`]: message } } : {}) };
         }
 
         const held = await heldCount(category.id, now, tx);
         const totalHeld = await heldCount(null, now, tx);
-        if (held >= category.quota || totalHeld >= settings.quotaTotal) return { error: "Kuota sudah penuh", status: 409 };
+        const left = Math.min(category.quota - held, settings.quotaTotal - totalHeld);
+        if (left <= 0) return { error: "Kuota sudah penuh", status: 409 };
+        if (left < quantity) return { error: `Sisa kuota tinggal ${left} tiket`, status: 409 };
 
         let discount = 0;
         let promoCode: string | null = null;
         if (input.promoCode) {
-          const res = await validatePromo(input.promoCode, category.price, now, tx);
+          const res = await validatePromo(input.promoCode, subtotal, now, tx);
           if (!res.ok) return { error: res.message, fields: { promoCode: res.message }, status: 400 };
           discount = res.discount;
           promoCode = res.promo.code;
         }
-        const total = Math.max(0, subtotal - discount) + fee;
+        const base = Math.max(0, subtotal - discount) + fee;
+        let uniqueCode = 0;
+        if (manual) {
+          const code = await pickUniqueCode(base, now, tx);
+          if (code === null) return { error: "Pendaftaran sedang ramai, coba lagi beberapa menit lagi", status: 503 };
+          uniqueCode = code;
+        }
+        const total = base + uniqueCode;
 
         const created = await tx.order.create({
           data: {
-            id, categoryId: category.id, status: "PENDING", subtotal, discount, fee, total, promoCode,
-            paymentMethod: input.paymentMethod, buyerEmail: p.email, buyerPhone: p.phone, expiresAt,
-            participant: {
-              create: {
-                fullName: fullNameOf(p), firstName: p.firstName, lastName: p.lastName || null, idNumber: p.idNumber,
-                address: p.address, province: p.province, city: p.city, postalCode: p.postalCode, bloodType: p.bloodType,
-                birthDate: new Date(`${p.birthDate}T00:00:00+07:00`), gender: p.gender,
-                phone: p.phone, email: p.email, jerseySize: p.jerseySize,
-                emergencyName: p.emergencyName, emergencyPhone: p.emergencyPhone, community: p.community || null,
-              },
+            id, categoryId: category.id, status: "PENDING", subtotal, discount, fee, total, promoCode, quantity, uniqueCode,
+            paymentMethod, buyerEmail: p.email, buyerPhone: p.phone, expiresAt,
+            participants: {
+              create: people.map((x, i) => ({
+                position: i + 1,
+                fullName: fullNameOf(x), firstName: x.firstName, lastName: x.lastName || null, idNumber: x.idNumber,
+                address: x.address, province: x.province, city: x.city, postalCode: x.postalCode, bloodType: x.bloodType,
+                birthDate: new Date(`${x.birthDate}T00:00:00+07:00`), gender: x.gender,
+                phone: x.phone, email: x.email, jerseySize: x.jerseySize,
+                emergencyName: x.emergencyName, emergencyPhone: x.emergencyPhone, community: x.community || null,
+              })),
             },
           },
         });
@@ -135,7 +158,7 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: result.error, ...(result.fields ? { fields: result.fields } : {}) }, { status: result.status });
       }
       return NextResponse.json({
-        orderId: result.orderId, total: result.total, expiresAt: result.expiresAt, paymentMode: paymentMode(), next: `/bayar/${result.orderId}`,
+        orderId: result.orderId, total: result.total, expiresAt: result.expiresAt, paymentMode: mode, next: `/bayar/${result.orderId}`,
       });
     } catch (e) {
       if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") continue;

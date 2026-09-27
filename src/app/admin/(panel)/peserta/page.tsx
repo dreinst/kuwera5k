@@ -67,18 +67,18 @@ export default async function PesertaPage({ searchParams }: { searchParams: Prom
               <tr key={o.id} className="border-t border-white/10 hover:bg-white/5">
                 <td className="px-4 py-3 font-mono"><Link href={`/admin/peserta/${o.id}`} className="text-brand-yellow hover:underline">{o.id}</Link></td>
                 <td className="px-4 py-3">
-                  <p className="font-medium text-white">{o.participant?.fullName ?? "-"}</p>
+                  <p className="font-medium text-white">{o.participants[0]?.fullName ?? "-"}{o.quantity > 1 && <span className="ml-2 rounded-full bg-brand-yellow/15 px-2 py-0.5 text-xs text-brand-yellow">{o.quantity} tiket</span>}</p>
                   <p className="text-xs text-white/70">{o.buyerEmail} &middot; {o.buyerPhone}</p>
                 </td>
-                <td className="px-4 py-3 font-mono text-white/85">{maskNik(o.participant?.idNumber)}</td>
+                <td className="px-4 py-3 font-mono text-white/85">{maskNik(o.participants[0]?.idNumber)}</td>
                 <td className="px-4 py-3">
                   <StatusBadge status={o.status} />
-                  {o.payments.some((p) => p.gateway !== "midtrans") && o.status === "PAID" && <p className="mt-1 text-[10px] text-gold uppercase">{o.payments[0]?.gateway}</p>}
+                  {o.status === "PAID" && o.payments[0] && o.payments[0].gateway !== "midtrans" && <p className="mt-1 text-[10px] text-gold uppercase">{o.payments[0].gateway}</p>}
                 </td>
-                <td className="px-4 py-3 text-white">{o.participant?.jerseySize ?? "-"}</td>
+                <td className="px-4 py-3 text-white">{o.participants.map((p) => p.jerseySize).join(", ") || "-"}</td>
                 <td className="px-4 py-3 text-white">{formatRupiah(o.total)}</td>
                 <td className="px-4 py-3 text-white/80">{fmtDateTime(o.createdAt)}</td>
-                <td className="px-4 py-3 text-white/85">{o.ticket?.racepackCollectedAt ? "Sudah" : o.status === "PAID" ? "Belum" : "-"}</td>
+                <td className="px-4 py-3 text-white/85">{o.status !== "PAID" ? "-" : o.quantity > 1 ? `${o.tickets.filter((t) => t.racepackCollectedAt).length}/${o.tickets.length}` : o.tickets[0]?.racepackCollectedAt ? "Sudah" : "Belum"}</td>
               </tr>
             ))}
           </tbody>

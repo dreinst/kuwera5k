@@ -55,7 +55,7 @@ const HEADLINE = [
   { word: "5K", outline: true },
 ];
 
-export default function Hero({ stats }: { stats: { paid: number; remaining: number } | null }) {
+export default function Hero({ stats, noFee = false }: { stats: { paid: number; remaining: number } | null; noFee?: boolean }) {
   return (
     <section id="hero" className="relative overflow-hidden px-6 pt-32 pb-20">
       {/* Latar hero memudar di bagian bawah ke tekstur halaman, jadi tidak ada garis batas saat digulir. */}
@@ -144,7 +144,7 @@ export default function Hero({ stats }: { stats: { paid: number; remaining: numb
               <p className="text-xs font-semibold tracking-wide text-green-deep uppercase">Biaya pendaftaran</p>
               <p className="font-display mt-1 text-5xl text-green-deep">Rp{eventData.price.toLocaleString("id-ID")}</p>
               <p className="mt-2 text-sm font-medium text-green-deep">
-                Sudah termasuk jersey, BIB, dan medali finisher. Belum termasuk biaya layanan pembayaran.
+                Sudah termasuk jersey, BIB, dan medali finisher. {noFee ? "Bayar lewat QRIS tanpa biaya layanan." : "Belum termasuk biaya layanan pembayaran."}
               </p>
             </motion.div>
           </div>

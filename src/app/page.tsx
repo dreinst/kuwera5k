@@ -10,8 +10,7 @@ import NewsletterFaq from "@/components/sections/NewsletterFaq";
 import Footer from "@/components/sections/Footer";
 import { homeJsonLd } from "@/lib/structured-data";
 import { pageMeta } from "@/lib/site";
-import { midtrans } from "@/lib/midtrans";
-import { getPublicStats } from "@/lib/orders";
+import { getPublicStats, isLive, paymentMode } from "@/lib/orders";
 import { eventData, remainingQuota } from "@/lib/event-data";
 
 export const metadata: Metadata = pageMeta("/");
@@ -20,18 +19,19 @@ export const metadata: Metadata = pageMeta("/");
 export const revalidate = 60;
 
 export default async function Home() {
-  // Sebelum Midtrans production aktif, hero memakai angka contoh. Begitu MIDTRANS_IS_PRODUCTION=true (go-live),
-  // angkanya dari database: data uji sudah dihapus, jadi hitungan mulai dari nol. Kalau database gangguan,
-  // hero tetap tampil tanpa angka.
-  const stats = midtrans.isProduction
+  // Sebelum pendaftaran menerima uang sungguhan, hero memakai angka contoh. Setelah go-live (Midtrans
+  // production atau bayar manual QRIS) angkanya dari database: data uji sudah dihapus, jadi hitungan mulai
+  // dari nol. Kalau database gangguan, hero tetap tampil tanpa angka.
+  const live = isLive();
+  const stats = live
     ? await getPublicStats().catch(() => null)
     : { paid: eventData.paidCount, remaining: remainingQuota };
   return (
     <div className="flex flex-1 flex-col">
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: homeJsonLd(midtrans.isProduction ? stats?.remaining ?? null : null) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: homeJsonLd(live ? stats?.remaining ?? null : null) }} />
       <Navbar />
       <main className="flex flex-1 flex-col">
-        <Hero stats={stats} />
+        <Hero stats={stats} noFee={paymentMode() === "manual"} />
         <RouteDetail />
         <DateBanner />
         <Schedule />
