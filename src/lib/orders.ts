@@ -43,7 +43,7 @@ export async function getSettings(): Promise<RegistrationSettings> {
     quotaTotal: v.quotaTotal ?? 1500,
     fees: { ...DEFAULT_FEES, ...(v.fees ?? {}) },
     methods: methods.length ? methods : [...PAYMENT_METHOD_IDS],
-    maxTickets: Math.min(MAX_TICKETS_HARD, Math.max(1, v.maxTickets ?? 10)),
+    maxTickets: Math.min(MAX_TICKETS_HARD, Math.max(1, v.maxTickets ?? 5)),
     manualHoldMinutes: v.manualHoldMinutes ?? 180,
   };
 }
