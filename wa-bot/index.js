@@ -1,14 +1,16 @@
 // Bot WhatsApp KUWERA 5K untuk bayar manual QRIS.
 //
 // 1. Pemesan menekan "Konfirmasi pembayaran via WhatsApp" di /bayar, lalu mengirim pesan berisi nomor order
-//    ke nomor kantor. Bot membalas dengan kartu bayar (QRIS bernominal total pembelian, satu gambar untuk
-//    semua tiket) dan mengabari superadmin lewat Telegram supaya pembayaran dicek di GoPay Merchant.
-// 2. Setelah admin menandai lunas di /admin, bot mengirim tautan e-ticket ke nomor pemesan dan mengabari
-//    superadmin bahwa pembayaran sudah terverifikasi, lengkap dengan total pemasukan KUWERA.
+//    (dan bukti bayar) ke nomor kantor. Bot TIDAK membalas dulu: superadmin dikabari lewat Telegram
+//    (@dproagentbot) untuk mengecek uang masuk di GoPay Merchant.
+// 2. Superadmin membalas chatbot Hermes "setujui KWR-..." (tool kuwera_setujui, lihat hermes-plugin/) atau
+//    admin menandai lunas di /admin. Setelah order lunas, bot mengirim tautan e-ticket ke WhatsApp pemesan
+//    dan mengabari superadmin total pemasukan KUWERA yang sudah terverifikasi.
+// 3. "tolak KWR-... alasan" (tool kuwera_tolak) menaruh pesan di /data/outbox; bot mengirimkannya ke pemesan.
 //
-// Bot hanya membalas chat yang memuat nomor order (pembeli yang menghubungi lebih dulu), jadi tidak ada
-// pesan massal. Nomor yang sama dipakai bot Pet Blessing sebagai perangkat tertaut lain; bot itu tidak
-// membaca pesan masuk, jadi keduanya tidak saling bentrok.
+// Bot hanya menghubungi pemesan yang sudah chat lebih dulu, jadi tidak ada pesan massal. Nomor kantor yang
+// sama juga dipakai bot Pet Blessing dan Hermes sebagai perangkat tertaut lain; keduanya tidak membalas
+// chat berisi nomor order, jadi tidak bentrok.
 
 const fs = require('node:fs');
 const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, fetchLatestBaileysVersion } = require('@whiskeysockets/baileys');
@@ -25,6 +27,7 @@ const TG_CHAT = process.env.TELEGRAM_CHAT_ID || '';
 const REAL_GATEWAYS = ['qris-manual', 'midtrans'];
 const ORDER_RE = /KWR-\d{4}-[A-Z0-9]{6}/i;
 const CONFIRM_FILE = '/data/konfirmasi.json';
+const OUTBOX = '/data/outbox';
 
 const caFile = process.env.DB_SSL_CA_FILE;
 const pool = new Pool({
@@ -85,7 +88,12 @@ async function incomeSummary() {
 
 let sock = null;
 let connected = false;
-const lastReply = new Map(); // "{chat}|{order}" -> waktu balasan terakhir, supaya pesan beruntun tidak dibalas berulang
+const lastNotice = new Map(); // "{chat}|{order}[|bukti]" -> waktu notifikasi terakhir, supaya pesan beruntun tidak dikabarkan berulang
+const recent = (key) => {
+  if (Date.now() - (lastNotice.get(key) || 0) < 10 * 60_000) return true;
+  lastNotice.set(key, Date.now());
+  return false;
+};
 
 async function reply(jid, content, quoted) {
   await sock.presenceSubscribe(jid).catch(() => {});
@@ -103,18 +111,29 @@ function textOf(msg) {
 async function handleIncoming(msg) {
   const jid = msg.key.remoteJid || '';
   if (msg.key.fromMe || !jid || jid.endsWith('@g.us') || jid === 'status@broadcast' || jid.endsWith('@newsletter')) return;
+  const hasProof = !!(msg.message && (msg.message.imageMessage || msg.message.documentMessage));
   const match = textOf(msg).match(ORDER_RE);
-  if (!match) return; // chat biasa dibalas admin manusia
+  if (!match) {
+    // Screenshot bukti bayar yang dikirim menyusul (tanpa nomor order) di chat yang sudah konfirmasi.
+    const pending = hasProof && Object.keys(confirmChats).find((id) => confirmChats[id] === jid);
+    if (pending && !recent(`${jid}|${pending}|bukti`)) {
+      const o = await loadOrder(pending);
+      if (o && o.status !== 'PAID') {
+        await telegram([
+          `KUWERA 5K: bukti bayar masuk untuk order ${o.id}`,
+          `Nominal yang harus masuk: ${rupiah(o.total)}`,
+          'Lihat gambarnya di chat WA kantor, cek GoPay Merchant, lalu balas:',
+          `setujui ${o.id}`,
+        ].join('\n'));
+      }
+    }
+    return; // chat biasa dibalas admin manusia
+  }
   const orderId = match[0].toUpperCase();
-  const key = `${jid}|${orderId}`;
-  if (Date.now() - (lastReply.get(key) || 0) < 10 * 60_000) return;
-  lastReply.set(key, Date.now());
+  if (recent(`${jid}|${orderId}`)) return;
 
   const order = await loadOrder(orderId);
-  if (!order) {
-    await reply(jid, { text: `Nomor order ${orderId} tidak kami temukan. Cek lagi nomornya di halaman pembayaran, atau tunggu admin membalas chat ini.` }, msg);
-    return;
-  }
+  if (!order) return logger.warn({ orderId }, 'nomor order di chat tidak ditemukan');
   if (order.status === 'PAID') {
     await reply(jid, { text: `Pembayaran order ${order.id} sudah terkonfirmasi. E-ticket kamu: ${SITE_URL}/tiket/${order.id}` }, msg);
     return;
@@ -123,32 +142,34 @@ async function handleIncoming(msg) {
   confirmChats[order.id] = jid;
   saveConfirmChats();
   const expired = order.status !== 'PENDING' || (order.expiresAt && new Date(order.expiresAt) <= new Date());
-  if (order.status === 'PENDING' && !expired) {
-    const res = await fetch(`${SITE_URL}/api/orders/${order.id}/qris`, { signal: AbortSignal.timeout(20000) });
-    const caption = [
-      `Terima kasih, konfirmasi order ${order.id} sudah kami terima.`,
-      '',
-      `Jumlah tiket: ${order.quantity}`,
-      `Total bayar: ${rupiah(order.total)}`,
-      '',
-      'Kalau belum bayar, scan QRIS di gambar ini (nominal sudah terisi otomatis) lalu kirim screenshot bukti bayarnya di chat ini.',
-      'Admin akan mengecek pembayaran, lalu tautan e-ticket kami kirim ke WhatsApp ini.',
-    ].join('\n');
-    if (res.ok) await reply(jid, { image: Buffer.from(await res.arrayBuffer()), caption }, msg);
-    else await reply(jid, { text: caption.replace('scan QRIS di gambar ini (nominal sudah terisi otomatis)', `scan QRIS di halaman ${SITE_URL}/bayar/${order.id}`) }, msg);
-  } else {
-    await reply(jid, { text: `Waktu bayar order ${order.id} sudah habis. Kalau kamu sudah membayar, kirim screenshot bukti bayarnya di chat ini dan admin akan mengeceknya.` }, msg);
-  }
   await telegram([
     'KUWERA 5K: konfirmasi bayar masuk',
     `Order ${order.id}${expired ? ' (waktu bayar sudah habis)' : ''}`,
     `Pemesan: ${order.buyer || '-'}`,
     `Jumlah tiket: ${order.quantity}`,
     `Nominal yang harus masuk: ${rupiah(order.total)}`,
+    `Bukti bayar: ${hasProof ? 'ada gambar di chat WA kantor' : 'belum ada gambar, cek chat WA kantor'}`,
     '',
-    'Cek riwayat GoPay Merchant, lalu tandai lunas di:',
-    `${SITE_URL}/admin/peserta/${order.id}`,
-  ].join('\n')).catch((e) => logger.error({ err: e.message }, 'Telegram konfirmasi gagal'));
+    'Cek riwayat GoPay Merchant. Kalau uangnya sudah masuk dengan nominal persis, balas ke bot ini:',
+    `setujui ${order.id}`,
+    `Kalau belum ada: tolak ${order.id} <alasan>`,
+    `Detail: ${SITE_URL}/admin/peserta/${order.id}`,
+  ].join('\n'));
+}
+
+// Pesan penolakan dari tool kuwera_tolak (cli.js) menunggu di /data/outbox sebagai file JSON.
+async function processOutbox() {
+  if (!connected) return;
+  fs.mkdirSync(OUTBOX, { recursive: true });
+  for (const f of fs.readdirSync(OUTBOX).filter((x) => x.endsWith('.json')).sort()) {
+    const file = `${OUTBOX}/${f}`;
+    const item = JSON.parse(fs.readFileSync(file, 'utf8'));
+    const targets = new Set([phoneJid(item.phone), confirmChats[item.orderId]].filter(Boolean));
+    for (const jid of targets) {
+      try { await reply(jid, { text: item.text }); } catch (e) { logger.error({ jid, err: e.message }, 'gagal kirim pesan outbox'); }
+    }
+    fs.unlinkSync(file);
+  }
 }
 
 // Order yang baru ditandai lunas: kirim tautan tiket ke pemesan, lalu kabari superadmin.
@@ -188,7 +209,8 @@ async function processPaid() {
         'KUWERA 5K: pembayaran terverifikasi',
         `Order ${o.id}, ${o.quantity} tiket, ${rupiah(o.total)}`,
         `Pemesan: ${o.buyer || '-'}`,
-        `Dikonfirmasi: ${o.gateway === 'qris-manual' ? o.verified_by || 'admin' : o.gateway}, ${wib(o.paidAt)}`,
+        `Disetujui: ${o.gateway === 'qris-manual' ? o.verified_by || 'admin' : o.gateway}, ${wib(o.paidAt)}`,
+        'Tautan e-ticket dikirim ke WhatsApp pemesan.',
         '',
         `Total pemasukan terverifikasi: ${rupiah(sum.total)}`,
         `${sum.tickets} tiket dari ${sum.orders} pembelian`,
@@ -201,6 +223,7 @@ async function processPaid() {
 async function paidLoop() {
   for (;;) {
     try { await processPaid(); } catch (e) { logger.error({ err: e.message }, 'proses order lunas gagal'); }
+    try { await processOutbox(); } catch (e) { logger.error({ err: e.message }, 'proses outbox gagal'); }
     await sleep(20000);
   }
 }
