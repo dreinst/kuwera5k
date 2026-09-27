@@ -119,7 +119,7 @@ export default async function DashboardPage() {
                 {s.recent.map((o) => (
                   <tr key={o.id} className="border-t border-white/10 first:border-0">
                     <td className="py-2 pr-4 font-mono"><Link href={`/admin/peserta/${o.id}`} className="text-brand-yellow hover:underline">{o.id}</Link></td>
-                    <td className="py-2 pr-4 text-white">{o.participant?.fullName ?? "-"}</td>
+                    <td className="py-2 pr-4 text-white">{o.participants[0]?.fullName ?? "-"}{o.quantity > 1 ? ` +${o.quantity - 1}` : ""}</td>
                     <td className="py-2 pr-4"><StatusBadge status={o.status} /></td>
                     <td className="py-2 text-white/75">{fmtDateTime(o.createdAt)}</td>
                   </tr>

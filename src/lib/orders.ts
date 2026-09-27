@@ -3,18 +3,25 @@ import QRCode from "qrcode";
 import type { OrderStatus, Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { fetchTransactionStatus, mapTransactionStatus, midtrans, type LiveStatus, type MidtransNotification } from "@/lib/midtrans";
-import { DEFAULT_FEES, PAYMENT_METHOD_IDS, type PaymentMethodId } from "@/lib/registration";
+import { DEFAULT_FEES, MAX_TICKETS_HARD, PAYMENT_METHOD_IDS, type PaymentMethodId } from "@/lib/registration";
 
 type Db = Prisma.TransactionClient;
 
-export type PaymentMode = "mock" | "off" | "midtrans";
+// manual = QRIS dinamis dari QRIS statis GoPay Merchant, dikonfirmasi admin (lihat src/lib/qris.ts).
+export type PaymentMode = "mock" | "off" | "midtrans" | "manual";
 export const paymentMode = (): PaymentMode => {
   const v = process.env.PAYMENT_MODE;
-  return v === "mock" || v === "midtrans" ? v : "off";
+  return v === "mock" || v === "midtrans" || v === "manual" ? v : "off";
 };
 
 // Event checkout Meta Pixel hanya untuk pembayaran sungguhan, bukan simulasi atau Midtrans sandbox.
-export const trackCheckout = () => paymentMode() === "midtrans" && midtrans.isProduction;
+export const trackCheckout = () => paymentMode() === "manual" || (paymentMode() === "midtrans" && midtrans.isProduction);
+
+export const MANUAL_GATEWAY = "qris-manual";
+// Pendaftaran menerima uang sungguhan: Midtrans production atau bayar manual QRIS.
+export const isLive = () => paymentMode() === "manual" || (paymentMode() === "midtrans" && midtrans.isProduction);
+// Pembayaran uang sungguhan; selain ini (mock, midtrans-sandbox) berarti tiket simulasi.
+export const isRealGateway = (gateway: string) => gateway === "midtrans" || gateway === MANUAL_GATEWAY;
 
 export type RegistrationSettings = {
   holdMinutes: number;
@@ -23,6 +30,8 @@ export type RegistrationSettings = {
   // Metode yang ditampilkan di langkah 4. Kosong/tidak diisi = semua metode. Diatur lewat tabel
   // Setting supaya metode yang belum aktif di merchant Midtrans bisa disembunyikan tanpa deploy.
   methods: PaymentMethodId[];
+  maxTickets: number; // tiket maksimal per pembelian
+  manualHoldMinutes: number; // lama kuota ditahan untuk bayar manual (admin perlu waktu mengecek)
 };
 
 export async function getSettings(): Promise<RegistrationSettings> {
@@ -34,6 +43,8 @@ export async function getSettings(): Promise<RegistrationSettings> {
     quotaTotal: v.quotaTotal ?? 1500,
     fees: { ...DEFAULT_FEES, ...(v.fees ?? {}) },
     methods: methods.length ? methods : [...PAYMENT_METHOD_IDS],
+    maxTickets: Math.min(MAX_TICKETS_HARD, Math.max(1, v.maxTickets ?? 10)),
+    manualHoldMinutes: v.manualHoldMinutes ?? 180,
   };
 }
 
@@ -42,15 +53,17 @@ export function activeOrderWhere(now: Date) {
   return { OR: [{ status: "PAID" as const }, { status: "PENDING" as const, expiresAt: { gt: now } }] };
 }
 
+// Kuota dihitung per tiket (satu order bisa beberapa tiket).
 export async function heldCount(categoryId: string | null, now = new Date(), db: Db = prisma) {
-  return db.order.count({ where: { ...(categoryId ? { categoryId } : {}), ...activeOrderWhere(now) } });
+  const r = await db.order.aggregate({ where: { ...(categoryId ? { categoryId } : {}), ...activeOrderWhere(now) }, _sum: { quantity: true } });
+  return r._sum.quantity ?? 0;
 }
 
 // Angka di hero dan data terstruktur: peserta lunas dan sisa kuota total.
 export async function getPublicStats(now = new Date()) {
   const [settings, paid, held] = await Promise.all([
     getSettings(),
-    prisma.order.count({ where: { status: "PAID" } }),
+    prisma.order.aggregate({ where: { status: "PAID" }, _sum: { quantity: true } }).then((r) => r._sum.quantity ?? 0),
     heldCount(null, now),
   ]);
   return { paid, remaining: Math.max(0, settings.quotaTotal - held) };
@@ -98,15 +111,19 @@ export async function validatePromo(code: string, price: number, now = new Date(
   return { ok: true as const, discount, label, promo };
 }
 
-// Tandai order lunas, catat pembayaran, buat tiket. Idempoten dan aman dipanggil bersamaan: update
-// bersyarat status != PAID mengunci baris, jadi notifikasi ganda tidak membuat payment atau tiket kedua.
-// Order yang lunas setelah hold habis tetap dilunasi karena uangnya sudah diterima.
+// Tandai order lunas, catat pembayaran, buat satu tiket per peserta. Idempoten dan aman dipanggil
+// bersamaan: update bersyarat status != PAID mengunci baris, jadi notifikasi ganda tidak membuat payment
+// atau tiket kedua. Order yang lunas setelah hold habis tetap dilunasi karena uangnya sudah diterima.
+// Mengembalikan nomor order, yang juga alamat halaman e-ticket (/tiket/{nomor order}).
 export async function markOrderPaid(orderId: string, pay: { gateway: string; gatewayRef?: string | null; method?: string | null; amount: number; rawPayload: unknown }) {
-  const order = await prisma.order.findUnique({ where: { id: orderId }, include: { ticket: true } });
+  const order = await prisma.order.findUnique({ where: { id: orderId }, include: { participants: { include: { ticket: true } } } });
   if (!order) return null;
-  if (order.status === "PAID" && order.ticket) return order.ticket.code;
-  const code = order.id;
-  const qrSvg = await QRCode.toString(code, { type: "svg", margin: 1, color: { dark: "#0B4A2C", light: "#FFFFFF" } });
+  if (order.status === "PAID" && order.participants.every((p) => p.ticket)) return order.id;
+  const tickets = await Promise.all(order.participants.map(async (p) => {
+    const code = `${order.id}-${p.position}`;
+    const qrSvg = await QRCode.toString(code, { type: "svg", margin: 1, color: { dark: "#0B4A2C", light: "#FFFFFF" } });
+    return { participantId: p.id, code, qrSvg };
+  }));
   await prisma.$transaction(async (tx) => {
     const flipped = await tx.order.updateMany({ where: { id: orderId, status: { not: "PAID" } }, data: { status: "PAID", paidAt: new Date() } });
     if (flipped.count === 1) {
@@ -115,9 +132,21 @@ export async function markOrderPaid(orderId: string, pay: { gateway: string; gat
       });
       if (order.promoCode) await tx.promoCode.updateMany({ where: { code: order.promoCode }, data: { usedCount: { increment: 1 } } });
     }
-    await tx.ticket.upsert({ where: { orderId }, create: { orderId, code, qrSvg }, update: {} });
+    for (const t of tickets) {
+      await tx.ticket.upsert({ where: { participantId: t.participantId }, create: { orderId, ...t }, update: {} });
+    }
   });
-  return code;
+  return order.id;
+}
+
+// Kode unik 1..999 supaya setiap order PENDING punya nominal yang berbeda; admin mencocokkan uang masuk
+// di GoPay Merchant dari nominalnya. Dipanggil di dalam kunci pembuatan order.
+export async function pickUniqueCode(base: number, now: Date, db: Db) {
+  const rows = await db.order.findMany({ where: { status: "PENDING", expiresAt: { gt: now }, uniqueCode: { gt: 0 } }, select: { total: true } });
+  const taken = new Set(rows.map((r) => r.total));
+  const free = [];
+  for (let c = 1; c <= 999; c++) if (!taken.has(base + c)) free.push(c);
+  return free.length ? free[randomInt(free.length)] : null;
 }
 
 type SyncOrder = { id: string; total: number; status: OrderStatus; paymentMethod: string | null; expiresAt: Date | null };

@@ -12,7 +12,7 @@ export async function GET(req: Request) {
   const rows = await prisma.order.findMany({
     where: registrantWhere(q, status),
     orderBy: { createdAt: "asc" },
-    include: { participant: true, ticket: true },
+    include: { participants: { orderBy: { position: "asc" }, include: { ticket: true } } },
   });
 
   // Sel yang diawali = + - @ bisa dijalankan Excel sebagai rumus; diberi tanda kutip tunggal di depan.
@@ -22,20 +22,22 @@ export async function GET(req: Request) {
     return `"${s.replace(/"/g, '""')}"`;
   };
   const header = [
-    "Nomor order", "Status", "Didaftarkan", "Lunas", "Nama lengkap", "Nama depan", "Nama belakang", "NIK", "Email", "HP",
+    "Nomor order", "Peserta ke", "Jumlah tiket", "Status", "Didaftarkan", "Lunas", "Nama lengkap", "Nama depan", "Nama belakang", "NIK", "Email", "HP",
     "Tanggal lahir", "Jenis kelamin", "Golongan darah", "Alamat", "Kota/kabupaten", "Provinsi", "Kode pos", "Ukuran jersey",
-    "Kontak darurat", "HP kontak darurat", "Komunitas", "Metode bayar", "Harga tiket", "Diskon", "Kode promo", "Biaya layanan",
+    "Kontak darurat", "HP kontak darurat", "Komunitas", "Metode bayar", "Subtotal order", "Diskon", "Kode promo", "Biaya layanan",
     "Total", "Kode tiket", "Race pack diambil", "Dicatat oleh",
   ];
-  const lines = rows.map((o) => {
-    const p = o.participant;
+  // Satu baris per peserta; kolom harga dan total milik order, jadi hanya diisi di baris peserta 1.
+  const lines = rows.flatMap((o) => o.participants.map((p) => {
+    const first = p.position === 1;
     return [
-      o.id, STATUS_LABEL[o.status], o.createdAt, o.paidAt, p?.fullName, p?.firstName, p?.lastName, p?.idNumber, p?.email, p?.phone,
+      o.id, p.position, o.quantity, STATUS_LABEL[o.status], o.createdAt, o.paidAt, p?.fullName, p?.firstName, p?.lastName, p?.idNumber, p?.email, p?.phone,
       p?.birthDate.toISOString().slice(0, 10), p?.gender, p?.bloodType, p?.address, p?.city, p?.province, p?.postalCode, p?.jerseySize,
-      p?.emergencyName, p?.emergencyPhone, p?.community, o.paymentMethod, o.subtotal, o.discount, o.promoCode, o.fee,
-      o.total, o.ticket?.code, o.ticket?.racepackCollectedAt, o.ticket?.collectedBy,
+      p?.emergencyName, p?.emergencyPhone, p?.community, o.paymentMethod,
+      first ? o.subtotal : null, first ? o.discount : null, o.promoCode, first ? o.fee : null, first ? o.total : null,
+      p.ticket?.code, p.ticket?.racepackCollectedAt, p.ticket?.collectedBy,
     ].map(cell).join(",");
-  });
+  }));
   await logAdmin(admin.username, "ekspor_csv", `${rows.length} baris`);
   const date = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Jakarta" });
   return new Response("﻿" + [header.map(cell).join(","), ...lines].join("\r\n"), {

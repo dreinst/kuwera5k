@@ -1,0 +1,16 @@
+# Dipasang di VPS dreinst (/root/kuwera-wa-bot). Nilai rahasia ada di .env di server, bukan di repo.
+services:
+  wa-bot:
+    build: .
+    container_name: kuwera-wa-bot
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      - ./data:/data
+      - /data/coolify/ssl/coolify-ca.crt:/certs/coolify-ca.crt:ro
+    networks:
+      - coolify
+
+networks:
+  coolify:
+    external: true

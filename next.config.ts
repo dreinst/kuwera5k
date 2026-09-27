@@ -21,6 +21,14 @@ const csp = [
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
+  // Font dan logo dibaca dari disk saat menggambar kartu bayar QRIS.
+  outputFileTracingIncludes: {
+    "/api/orders/[id]/qris": [
+      "./src/assets/fonts/Anton-Regular.ttf",
+      "./node_modules/next/dist/compiled/@vercel/og/Geist-Regular.ttf",
+      "./public/brand/kuwera-logo-funrun.png",
+    ],
+  },
   async headers() {
     return [
       {

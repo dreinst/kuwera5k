@@ -6,7 +6,7 @@ import { prisma } from "@/lib/db";
 import { LOGIN_ERROR, attemptLogin, clientIp, endSession, getAdmin, hashPassword, logAdmin, sha256 } from "@/lib/admin-auth";
 import { rateLimit } from "@/lib/rate-limit";
 import { checkOrderWithMidtrans, type MidtransCheck } from "@/lib/admin-data";
-import { syncOrderWithMidtrans } from "@/lib/orders";
+import { MANUAL_GATEWAY, markOrderPaid, syncOrderWithMidtrans } from "@/lib/orders";
 import { verifyTurnstile } from "@/lib/turnstile";
 
 // Server action = endpoint publik: setiap aksi memeriksa sesi dan perannya sendiri.
@@ -79,19 +79,19 @@ export async function syncMidtransAction(orderId: string): Promise<{ ok?: string
   return { ok: `Status sekarang: ${r.status}` };
 }
 
-export async function racepackAction(orderId: string, undo = false): Promise<{ ok?: string; error?: string }> {
+export async function racepackAction(ticketCode: string, undo = false): Promise<{ ok?: string; error?: string }> {
   const admin = await getAdmin();
   if (!admin) return { error: "Sesi habis, masuk lagi" };
   if (undo && admin.role !== "admin") return { error: "Hanya admin yang bisa membatalkan" };
-  const ticket = await prisma.ticket.findUnique({ where: { orderId }, include: { order: { select: { status: true } } } });
+  const ticket = await prisma.ticket.findUnique({ where: { code: ticketCode }, include: { order: { select: { status: true } } } });
   if (!ticket || ticket.order.status !== "PAID") return { error: "Order ini belum lunas atau belum punya tiket" };
   if (!undo && ticket.racepackCollectedAt) return { error: "Race pack sudah diambil sebelumnya" };
   await prisma.ticket.update({
-    where: { orderId },
+    where: { code: ticketCode },
     data: undo ? { racepackCollectedAt: null, collectedBy: null } : { racepackCollectedAt: new Date(), collectedBy: admin.username },
   });
-  await logAdmin(admin.username, undo ? "racepack_batal" : "racepack_ambil", orderId);
-  revalidatePath(`/admin/peserta/${orderId}`);
+  await logAdmin(admin.username, undo ? "racepack_batal" : "racepack_ambil", ticketCode);
+  revalidatePath(`/admin/peserta/${ticket.orderId}`);
   return { ok: undo ? "Tanda ambil race pack dibatalkan" : "Race pack ditandai sudah diambil" };
 }
 
@@ -110,4 +110,24 @@ export async function verifyAllAction(): Promise<{ results?: MidtransCheck[]; er
   }
   await logAdmin(admin.username, "verifikasi_massal", `${orders.length} order`);
   return { results };
+}
+
+// Konfirmasi bayar manual (QRIS GoPay Merchant): admin sudah melihat uang masuk dengan nominal persis
+// sama di aplikasi GoPay Merchant. Khusus peran admin. Tiket terbit, lalu bot WA mengirim tautannya ke
+// pemesan dan superadmin dikabari lewat Telegram (worker di VPS membaca kolom waNotifiedAt/adminNotifiedAt).
+export async function markManualPaidAction(orderId: string, confirmTotal: number): Promise<{ ok?: string; error?: string }> {
+  const admin = await getAdmin();
+  if (!admin || admin.role !== "admin") return { error: "Hanya admin yang bisa menandai lunas" };
+  const order = await prisma.order.findUnique({ where: { id: orderId }, select: { status: true, total: true, paymentMethod: true } });
+  if (!order) return { error: "Order tidak ditemukan" };
+  if (order.status === "PAID") return { error: "Order ini sudah lunas" };
+  if (order.status !== "PENDING" && order.status !== "EXPIRED") return { error: "Hanya order yang menunggu bayar atau kedaluwarsa yang bisa ditandai lunas" };
+  if (confirmTotal !== order.total) return { error: "Nominal yang dikonfirmasi berbeda dengan total order" };
+  await markOrderPaid(orderId, {
+    gateway: MANUAL_GATEWAY, gatewayRef: null, method: "qris", amount: order.total,
+    rawPayload: { verifiedBy: admin.username, verifiedAt: new Date().toISOString(), previousStatus: order.status },
+  });
+  await logAdmin(admin.username, "tandai_lunas_manual", `${orderId} Rp${order.total}`);
+  revalidatePath(`/admin/peserta/${orderId}`);
+  return { ok: "Order ditandai lunas, tiket sudah terbit" };
 }

@@ -79,11 +79,11 @@ export const sponsors = [
 export const faqs = [
   {
     q: "Bagaimana cara mendaftar KUWERA 5K?",
-    a: "Klik tombol Daftar, isi data peserta, pilih metode bayar, lalu selesaikan pembayaran. E-ticket langsung muncul setelah pembayaran lunas; simpan tautannya untuk ambil race pack.",
+    a: "Klik tombol Daftar, pilih jumlah tiket, isi data setiap peserta, lalu bayar dengan QRIS. E-ticket terbit setelah pembayaran dikonfirmasi; simpan tautannya untuk ambil race pack.",
   },
   {
     q: "Metode pembayaran apa saja yang tersedia?",
-    a: "QRIS, virtual account (BCA, BNI, BRI, Mandiri, Permata, CIMB), GoPay, ShopeePay, dan kartu kredit/debit.",
+    a: "QRIS, bisa dibayar dari aplikasi m-banking atau e-wallet apa pun yang mendukung QRIS. Nominalnya terisi otomatis saat QR di-scan.",
   },
   {
     q: "Apakah biaya pendaftaran bisa dikembalikan?",
@@ -95,7 +95,7 @@ export const faqs = [
   },
   {
     q: "Apakah ada kategori kelompok atau komunitas?",
-    a: "Pendaftaran hanya perorangan, satu peserta per transaksi. Nama komunitasmu tetap bisa dicantumkan di form pendaftaran.",
+    a: "Tidak ada kategori khusus, tapi satu pembelian bisa berisi beberapa tiket sekaligus, misalnya untuk keluarga atau komunitas. Setiap tiket diisi data pesertanya masing-masing, dan nama komunitas bisa dicantumkan di form.",
   },
   {
     q: "Apa yang saya dapatkan sebagai peserta?",

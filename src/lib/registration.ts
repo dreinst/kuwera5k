@@ -105,9 +105,21 @@ export type ParticipantInput = z.infer<typeof participantSchema>;
 export type ParticipantForm = Record<keyof ParticipantInput, string>;
 export const fullNameOf = (p: { firstName: string; lastName?: string | null }) => `${p.firstName} ${p.lastName ?? ""}`.trim();
 
+// Batas atas teknis; batas yang berlaku diatur panitia lewat Setting registration.maxTickets.
+export const MAX_TICKETS_HARD = 20;
+
 export const orderInputSchema = z.object({
   categoryId: z.string().min(1, "Pilih kategori"),
-  participant: participantSchema,
+  // Satu pembelian bisa beberapa tiket; peserta pertama sekaligus pemesan.
+  participants: z.array(participantSchema).min(1, "Isi data minimal satu peserta").max(MAX_TICKETS_HARD).superRefine((list, ctx) => {
+    // Satu NIK satu tiket, termasuk di dalam pembelian yang sama.
+    const seen = new Map<string, number>();
+    list.forEach((p, i) => {
+      const first = seen.get(p.idNumber);
+      if (first !== undefined) ctx.addIssue({ code: "custom", path: [i, "idNumber"], message: `NIK ini sama dengan peserta ${first + 1}` });
+      else seen.set(p.idNumber, i);
+    });
+  }),
   promoCode: z.string().trim().toUpperCase().max(30).optional().or(z.literal("")),
   paymentMethod: z.enum(PAYMENT_METHOD_IDS, { message: "Pilih metode pembayaran" }),
   agreeTerms: z.literal(true, { message: "Wajib menyetujui syarat dan ketentuan" }),

@@ -12,13 +12,13 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   const sync = new URL(req.url).searchParams.get("sync") === "1";
   const order = await prisma.order.findUnique({
     where: { id },
-    select: { id: true, status: true, total: true, expiresAt: true, paymentMethod: true, snapToken: true, ticket: { select: { code: true } } },
+    select: { id: true, status: true, total: true, expiresAt: true, paymentMethod: true, snapToken: true },
   });
   if (!order) return NextResponse.json({ error: "Order tidak ditemukan" }, { status: 404 });
 
   const now = new Date();
   let status = order.status;
-  let ticketCode = order.ticket?.code ?? null;
+  let ticketCode = order.status === "PAID" ? order.id : null;
   let live: SyncResult["live"] | null = null;
   if (sync && needsSync(order)) {
     const r = await syncOrderWithMidtrans(order, now);

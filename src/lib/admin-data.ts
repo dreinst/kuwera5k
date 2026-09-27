@@ -1,7 +1,7 @@
 import type { OrderStatus, Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { fetchTransactionStatus, mapTransactionStatus, midtrans } from "@/lib/midtrans";
-import { getSettings, heldCount } from "@/lib/orders";
+import { MANUAL_GATEWAY, getSettings, heldCount } from "@/lib/orders";
 import { JERSEY_SIZES } from "@/lib/registration";
 import { STATUS_LABEL, type MidtransCheck } from "@/lib/admin-shared";
 
@@ -26,14 +26,15 @@ export async function dashboardStats(now = new Date()) {
     prisma.participant.groupBy({ by: ["bloodType"], where: { order: { status: "PAID" } }, _count: { _all: true } }),
     prisma.participant.groupBy({ by: ["city"], where: { order: { status: "PAID" } }, _count: { _all: true }, orderBy: { _count: { city: "desc" } }, take: 5 }),
     prisma.ticket.count({ where: { racepackCollectedAt: { not: null } } }),
-    prisma.order.findMany({ orderBy: { createdAt: "desc" }, take: 8, include: { participant: { select: { fullName: true } } } }),
+    prisma.order.findMany({ orderBy: { createdAt: "desc" }, take: 8, include: { participants: { where: { position: 1 }, select: { fullName: true } } } }),
   ]);
   const count = (s: OrderStatus) => byStatus.find((b) => b.status === s)?._count._all ?? 0;
-  const paid = count("PAID");
+  // Peserta lunas dihitung per tiket (satu order bisa beberapa tiket).
+  const paid = await prisma.participant.count({ where: { order: { status: "PAID" } } });
 
   // Pendaftar lunas per hari (WIB), 14 hari terakhir.
   const since = new Date(now.getTime() - 13 * 86400_000);
-  const paidRecent = await prisma.order.findMany({ where: { status: "PAID", paidAt: { gte: since } }, select: { paidAt: true } });
+  const paidRecent = await prisma.order.findMany({ where: { status: "PAID", paidAt: { gte: since } }, select: { paidAt: true, quantity: true } });
   const dayKey = (d: Date) => d.toLocaleDateString("en-CA", { timeZone: "Asia/Jakarta" });
   const daily = Array.from({ length: 14 }, (_, i) => {
     const d = new Date(since.getTime() + i * 86400_000);
@@ -41,7 +42,7 @@ export async function dashboardStats(now = new Date()) {
   });
   for (const o of paidRecent) {
     const slot = daily.find((x) => x.key === dayKey(o.paidAt!));
-    if (slot) slot.count++;
+    if (slot) slot.count += o.quantity;
   }
 
   return {
@@ -74,8 +75,8 @@ export function registrantWhere(q: string, status: string): Prisma.OrderWhereInp
       { id: { contains: term.toUpperCase() } },
       { buyerEmail: { contains: term.toLowerCase() } },
       { buyerPhone: { contains: term } },
-      { participant: { is: { fullName: { contains: term, mode: "insensitive" } } } },
-      { participant: { is: { idNumber: { contains: term } } } },
+      { participants: { some: { fullName: { contains: term, mode: "insensitive" } } } },
+      { participants: { some: { idNumber: { contains: term } } } },
     ];
   }
   return where;
@@ -87,7 +88,10 @@ export async function listRegistrants(q: string, status: string, page: number) {
     prisma.order.count({ where }),
     prisma.order.findMany({
       where, orderBy: { createdAt: "desc" }, skip: (page - 1) * PAGE_SIZE, take: PAGE_SIZE,
-      include: { participant: true, ticket: { select: { racepackCollectedAt: true } }, payments: { select: { gateway: true } } },
+      include: {
+        participants: { orderBy: { position: "asc" }, select: { fullName: true, idNumber: true, jerseySize: true } },
+        tickets: { select: { racepackCollectedAt: true } }, payments: { select: { gateway: true } },
+      },
     }),
   ]);
   return { total, rows };
@@ -96,6 +100,9 @@ export async function listRegistrants(q: string, status: string, page: number) {
 
 export async function checkOrderWithMidtrans(order: { id: string; status: OrderStatus; total: number; payments: { gateway: string }[] }): Promise<MidtransCheck> {
   const base = { orderId: order.id, dbStatus: order.status, total: order.total };
+  if (order.payments.some((p) => p.gateway === MANUAL_GATEWAY)) {
+    return { ...base, verdict: "simulasi", note: "Dibayar lewat QRIS manual (dikonfirmasi admin), bukan transaksi Midtrans" };
+  }
   if (order.payments.length && order.payments.every((p) => p.gateway !== "midtrans" && p.gateway !== "midtrans-sandbox")) {
     return { ...base, verdict: "simulasi", note: "Dibayar lewat simulasi (mode pratinjau), tidak ada transaksi Midtrans" };
   }
