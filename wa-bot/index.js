@@ -1,8 +1,9 @@
 // Bot WhatsApp KUWERA 5K untuk bayar manual QRIS.
 //
-// 1. Pemesan menekan "Konfirmasi pembayaran via WhatsApp" di /bayar, lalu mengirim pesan berisi nomor order
-//    (dan bukti bayar) ke nomor kantor. Bot TIDAK membalas dulu: superadmin dikabari lewat Telegram
-//    (@dproagentbot) untuk mengecek uang masuk di GoPay Merchant.
+// 1. Pemesan menekan "Minta QRIS via WhatsApp" di /bayar dan mengirim pesan berisi nomor order ke nomor
+//    kantor. Bot membalas dengan kartu bayar (QRIS dinamis bernominal total, dari /api/orders/{id}/qris).
+//    Setelah pemesan mengirim screenshot bukti bayar, superadmin dikabari lewat Telegram (@dproagentbot)
+//    untuk mengecek uang masuk di GoPay Merchant.
 // 2. Superadmin membalas chatbot Hermes "setujui KWR-..." (tool kuwera_setujui, lihat hermes-plugin/) atau
 //    admin menandai lunas di /admin. Setelah order lunas, bot mengirim tautan e-ticket ke WhatsApp pemesan
 //    dan mengabari superadmin total pemasukan KUWERA yang sudah terverifikasi.
@@ -118,19 +119,12 @@ async function handleIncoming(msg) {
     const pending = hasProof && Object.keys(confirmChats).find((id) => confirmChats[id] === jid);
     if (pending && !recent(`${jid}|${pending}|bukti`)) {
       const o = await loadOrder(pending);
-      if (o && o.status !== 'PAID') {
-        await telegram([
-          `KUWERA 5K: bukti bayar masuk untuk order ${o.id}`,
-          `Nominal yang harus masuk: ${rupiah(o.total)}`,
-          'Lihat gambarnya di chat WA kantor, cek GoPay Merchant, lalu balas:',
-          `setujui ${o.id}`,
-        ].join('\n'));
-      }
+      if (o && o.status !== 'PAID') await notifyProof(o, o.status !== 'PENDING' || (o.expiresAt && new Date(o.expiresAt) <= new Date()));
     }
     return; // chat biasa dibalas admin manusia
   }
   const orderId = match[0].toUpperCase();
-  if (recent(`${jid}|${orderId}`)) return;
+  if (recent(`${jid}|${orderId}${hasProof ? '|bukti' : ''}`)) return;
 
   const order = await loadOrder(orderId);
   if (!order) return logger.warn({ orderId }, 'nomor order di chat tidak ditemukan');
@@ -142,15 +136,47 @@ async function handleIncoming(msg) {
   confirmChats[order.id] = jid;
   saveConfirmChats();
   const expired = order.status !== 'PENDING' || (order.expiresAt && new Date(order.expiresAt) <= new Date());
+  if (!hasProof) {
+    if (expired) {
+      await reply(jid, { text: `Waktu bayar order ${order.id} sudah habis. Silakan daftar ulang di ${SITE_URL}/daftar` }, msg);
+    } else {
+      await sendQris(jid, order, msg);
+    }
+    return;
+  }
+  await notifyProof(order, expired);
+}
+
+// Kartu bayar dibuat website (QRIS dinamis bernominal total order), bot tinggal meneruskannya sebagai gambar.
+async function sendQris(jid, order, quoted) {
+  const res = await fetch(`${SITE_URL}/api/orders/${order.id}/qris`, { signal: AbortSignal.timeout(20000) });
+  if (!res.ok) {
+    logger.error({ orderId: order.id, status: res.status }, 'gagal mengambil kartu QRIS');
+    await telegram(`KUWERA 5K: kartu QRIS order ${order.id} gagal dibuat (HTTP ${res.status}). Balas pemesan manual di WA kantor.`);
+    return;
+  }
+  const image = Buffer.from(await res.arrayBuffer());
+  const deadline = order.expiresAt
+    ? new Date(order.expiresAt).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })
+    : null;
+  const caption = [
+    `QRIS pembayaran order ${order.id}`,
+    `Nominal: ${rupiah(order.total)} (${order.quantity} tiket)`,
+    '',
+    'Scan dari aplikasi bank atau e-wallet apa pun. Nominal sudah terisi otomatis, bayar persis sesuai angka itu.',
+    `Setelah bayar, kirim screenshot bukti bayar di chat ini.${deadline ? ` Batas bayar ${deadline} WIB.` : ''}`,
+  ].join('\n');
+  await reply(jid, { image, caption }, quoted);
+}
+
+async function notifyProof(order, expired) {
   await telegram([
-    'KUWERA 5K: konfirmasi bayar masuk',
+    'KUWERA 5K: bukti bayar masuk',
     `Order ${order.id}${expired ? ' (waktu bayar sudah habis)' : ''}`,
     `Pemesan: ${order.buyer || '-'}`,
     `Jumlah tiket: ${order.quantity}`,
     `Nominal yang harus masuk: ${rupiah(order.total)}`,
-    `Bukti bayar: ${hasProof ? 'ada gambar di chat WA kantor' : 'belum ada gambar, cek chat WA kantor'}`,
-    '',
-    'Cek riwayat GoPay Merchant. Kalau uangnya sudah masuk dengan nominal persis, balas ke bot ini:',
+    'Lihat gambarnya di chat WA kantor, cek riwayat GoPay Merchant. Kalau uangnya sudah masuk dengan nominal persis, balas ke bot ini:',
     `setujui ${order.id}`,
     `Kalau belum ada: tolak ${order.id} <alasan>`,
     `Detail: ${SITE_URL}/admin/peserta/${order.id}`,
@@ -253,6 +279,7 @@ async function start() {
     }
     if (connection === 'close') {
       connected = false;
+      pairingRequested = false; // kode lama kedaluwarsa, sambungan berikutnya meminta kode baru
       const code = new Boom(lastDisconnect && lastDisconnect.error).output.statusCode;
       const again = code !== DisconnectReason.loggedOut;
       logger.warn({ statusCode: code, reconnect: again }, 'koneksi WhatsApp terputus');

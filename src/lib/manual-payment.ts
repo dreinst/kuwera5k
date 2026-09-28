@@ -14,22 +14,17 @@ export const qrisPayloadFor = (total: number) => {
   return s ? dynamicQris(s, total) : null;
 };
 
-export async function qrisSvgFor(total: number) {
-  const payload = qrisPayloadFor(total);
-  return payload ? QRCode.toString(payload, { type: "svg", margin: 2, errorCorrectionLevel: "M" }) : null;
-}
-
 export async function qrisPngFor(total: number, width = 720) {
   const payload = qrisPayloadFor(total);
   return payload ? QRCode.toDataURL(payload, { margin: 2, width, errorCorrectionLevel: "M" }) : null;
 }
 
-// Pesan WhatsApp yang otomatis terisi saat pemesan menekan tombol konfirmasi. Nomor order di baris kedua
-// dikenali bot WA untuk membalas dengan kartu bayar.
+// Pesan WhatsApp yang otomatis terisi saat pemesan menekan tombol di /bayar. Nomor order di dalamnya
+// dikenali bot WA, yang lalu membalas dengan kartu bayar (QRIS bernominal).
 export function confirmText(o: OrderForManual) {
   const people = [...o.participants].sort((a, b) => a.position - b.position);
   return [
-    "Halo Admin KUWERA 5K, saya mau konfirmasi pembayaran.",
+    "Halo Admin KUWERA 5K, saya mau bayar pendaftaran. Mohon kirim QRIS-nya.",
     "",
     `No. order: ${o.id}`,
     `Nama pemesan: ${people[0]?.fullName ?? "-"}`,
@@ -38,8 +33,6 @@ export function confirmText(o: OrderForManual) {
     "",
     "Peserta:",
     ...people.map((p) => `${p.position}. ${p.fullName} (jersey ${p.jerseySize})`),
-    "",
-    "Bukti bayar saya lampirkan di chat ini.",
   ].join("\n");
 }
 

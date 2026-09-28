@@ -12,7 +12,7 @@ type Order = {
   expiresAt: string | null; paymentMethod: string | null; category: string; name: string; email: string;
   hasSnap: boolean; quantity: number;
 };
-type Manual = { qrSvg: string | null; waText: string; lines: [string, string][] } | null;
+type Manual = { waText: string; lines: [string, string][] } | null;
 
 // Setelah timer habis, order yang sudah membuka Snap masih dicek ke Midtrans selama ini sebelum
 // dinyatakan habis, karena pembayaran di detik terakhir bisa baru dikonfirmasi sesudahnya.
@@ -215,23 +215,14 @@ export default function PaymentWaiting({ order, paymentMode, snap, trackCheckout
         )}
         {!expired && paymentMode === "manual" && manual && (
           <div className="mt-6">
-            {manual.qrSvg ? (
-              <>
-                <p className="text-sm text-white/80">Scan QRIS ini dari aplikasi bank atau e-wallet. Nominal <span className="font-semibold text-brand-yellow">{formatRupiah(order.total)}</span> terisi otomatis, bayar persis sesuai angka itu.</p>
-                <div className="mx-auto mt-4 w-full max-w-xs rounded-2xl bg-white p-3" dangerouslySetInnerHTML={{ __html: manual.qrSvg }} />
-                <a href={`/api/orders/${order.id}/qris`} download={`QRIS-${order.id}.png`} className="mt-3 block text-center text-sm text-brand-yellow underline">Simpan QRIS ke galeri</a>
-              </>
-            ) : (
-              <p className="text-sm text-yellow-lime">QRIS belum siap. Hubungi panitia lewat tombol di bawah.</p>
-            )}
-            <ol className="mt-5 list-decimal space-y-1 pl-5 text-sm text-white/80">
-              <li>Bayar QRIS di atas sesuai total.</li>
-              <li>Tekan tombol di bawah. WhatsApp terbuka dengan pesan konfirmasi yang sudah terisi.</li>
-              <li>Kirim pesan itu bersama screenshot bukti bayar ke nomor panitia +{WA_ADMIN}.</li>
+            <ol className="list-decimal space-y-1 pl-5 text-sm text-white/80">
+              <li>Tekan tombol di bawah. WhatsApp terbuka dengan pesan pesanan yang sudah terisi.</li>
+              <li>Kirim pesan itu ke nomor panitia +{WA_ADMIN}. Chatbot membalas dengan QRIS berisi nominal <span className="font-semibold text-brand-yellow">{formatRupiah(order.total)}</span>.</li>
+              <li>Bayar QRIS itu persis sesuai nominal, lalu kirim screenshot bukti bayar di chat yang sama.</li>
               <li>Admin mengecek pembayaran, lalu e-ticket dikirim ke WhatsApp kamu dan halaman ini ikut berubah.</li>
             </ol>
             <a href={waLink(manual.waText)} target="_blank" rel="noopener noreferrer" className="mt-5 flex w-full items-center justify-center rounded-full bg-brand-yellow px-6 py-3 text-center text-sm font-semibold text-green-deep">
-              Konfirmasi pembayaran via WhatsApp
+              Minta QRIS via WhatsApp
             </a>
             <p className="mt-3 text-xs text-white/75">Pembayaran dicek manual oleh admin pada jam kerja. Kuota kamu ditahan sampai timer habis.</p>
           </div>
