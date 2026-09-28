@@ -3,6 +3,7 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { fullNameOf, orderInputSchema, issuesToMap } from "@/lib/registration";
 import { verifyTurnstile } from "@/lib/turnstile";
+import { currentPrice, getPricing, isOpen } from "@/lib/pricing";
 import { rateLimit, tooMany } from "@/lib/rate-limit";
 import {
   ORDER_LOCK_KEY, activeOrderWhere, getSettings, heldCount, newOrderId, paymentMode, pickUniqueCode, syncOrderWithMidtrans, validatePromo,
@@ -36,6 +37,9 @@ export async function POST(req: Request) {
     where: { id: input.categoryId, isActive: true, saleStart: { lte: now }, saleEnd: { gte: now } },
   });
   if (!category) return NextResponse.json({ error: "Kategori tidak tersedia atau pendaftaran sudah ditutup" }, { status: 400 });
+  const pricing = await getPricing();
+  if (!isOpen(pricing, now)) return NextResponse.json({ error: "Pendaftaran sedang ditutup sementara" }, { status: 400 });
+  const unitPrice = currentPrice(pricing, now).price;
 
   const settings = await getSettings();
   const mode = paymentMode();
@@ -84,7 +88,7 @@ export async function POST(req: Request) {
   }
 
   const fee = manual ? 0 : settings.fees[paymentMethod] ?? 0;
-  const subtotal = category.price * quantity;
+  const subtotal = unitPrice * quantity;
   const expiresAt = new Date(now.getTime() + (manual ? settings.manualHoldMinutes : settings.holdMinutes) * 60_000);
 
   for (let attempt = 0; attempt < 5; attempt++) {

@@ -12,6 +12,7 @@ import { homeJsonLd } from "@/lib/structured-data";
 import { pageMeta } from "@/lib/site";
 import { getPublicStats, isLive, paymentMode } from "@/lib/orders";
 import { eventData, remainingQuota } from "@/lib/event-data";
+import { DEFAULT_PRICING, currentPrice, getPricing } from "@/lib/pricing";
 
 export const metadata: Metadata = pageMeta("/");
 
@@ -26,17 +27,18 @@ export default async function Home() {
   const stats = live
     ? await getPublicStats().catch(() => null)
     : { paid: eventData.paidCount, remaining: remainingQuota };
+  const price = currentPrice(await getPricing().catch(() => DEFAULT_PRICING));
   return (
     <div className="flex flex-1 flex-col">
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: homeJsonLd(live ? stats?.remaining ?? null : null) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: homeJsonLd(live ? stats?.remaining ?? null : null, price.price) }} />
       <Navbar />
       <main className="flex flex-1 flex-col">
-        <Hero stats={stats} noFee={paymentMode() === "manual"} />
+        <Hero stats={stats} price={price} noFee={paymentMode() === "manual"} />
         <RouteDetail />
         <DateBanner />
         <Schedule />
         <Sponsors />
-        <CtaBanner />
+        <CtaBanner price={price.price} />
         <NewsletterFaq />
       </main>
       <Footer />

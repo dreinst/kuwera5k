@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { validatePromo } from "@/lib/orders";
 import { rateLimit } from "@/lib/rate-limit";
+import { currentPrice, getPricing } from "@/lib/pricing";
 import { MAX_TICKETS_HARD } from "@/lib/registration";
 
 const schema = z.object({
@@ -16,7 +17,7 @@ export async function POST(req: Request) {
   if (!parsed.success) return NextResponse.json({ valid: false, message: "Masukkan kode promo" }, { status: 400 });
   const category = await prisma.category.findUnique({ where: { id: parsed.data.categoryId } });
   if (!category) return NextResponse.json({ valid: false, message: "Kategori tidak ditemukan" }, { status: 400 });
-  const res = await validatePromo(parsed.data.code, category.price * parsed.data.quantity);
+  const res = await validatePromo(parsed.data.code, currentPrice(await getPricing()).price * parsed.data.quantity);
   if (!res.ok) return NextResponse.json({ valid: false, message: res.message });
   return NextResponse.json({ valid: true, code: res.promo.code, discount: res.discount, label: res.label });
 }
