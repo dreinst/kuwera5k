@@ -32,6 +32,8 @@ const ORDER_RE = /KWR-\d{4}-[A-Z0-9]{6}/i;
 const CONFIRM_FILE = '/data/konfirmasi.json';
 const OUTBOX = '/data/outbox';
 const PROOF_FILE = '/data/telegram-bukti.json'; // order -> message_id foto bukti di Telegram
+// Arsip per order (bukti bayar, invoice, info.json) plus riwayat.csv; disalin ke NAS oleh kuwera-arsip-nas di VPS.
+const ARCHIVE = '/data/arsip';
 // Sama dengan src/lib/event-data.ts (racePackDates, racePackPlace, jadwal lomba).
 const RACE_PACK = 'Kamis dan Jumat, 22 dan 23 Oktober 2026 di Lapangan Rampal (tenda panitia)';
 const RACE_DAY = 'Sabtu, 24 Oktober 2026, 06.00 WIB di Lapangan Rampal';
@@ -89,6 +91,65 @@ async function telegramFile(kind, buffer, filename, caption) {
   return (await res.json()).result.message_id;
 }
 
+const stampWib = () => new Date().toLocaleString('sv-SE', { timeZone: 'Asia/Jakarta' }).replace(' ', '_').replace(/:/g, '');
+const csv = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+
+// Unduh media sekali per pesan, dipakai arsip dan Telegram.
+async function mediaOf(msg) {
+  if (msg._media !== undefined) return msg._media;
+  const doc = msg.message?.documentMessage;
+  const kind = msg.message?.imageMessage ? 'photo' : doc ? 'document' : null;
+  msg._media = null;
+  if (kind) {
+    try {
+      const buffer = await downloadMediaMessage(msg, 'buffer', {});
+      const name = kind === 'document' ? (doc.fileName || 'dokumen').replace(/[^\w.\- ]/g, '_') : 'bukti.jpg';
+      msg._media = { kind, buffer, name };
+    } catch (e) { logger.error({ err: e.message }, 'gagal mengunduh media'); }
+  }
+  return msg._media;
+}
+
+// Simpan kejadian satu order ke arsip: file (kalau ada), info.json terbaru, dan satu baris riwayat.csv.
+// Kegagalan arsip tidak boleh menghentikan alur bayar, jadi errornya hanya dicatat.
+async function archive(orderId, kejadian, file, dari) {
+  try {
+    const { rows } = await pool.query(
+      `SELECT o.id, o.status, o.total, o.quantity, o."uniqueCode", o."buyerPhone", o."buyerEmail", o."createdAt", o."paidAt",
+              (SELECT p."rawPayload"->>'verifiedBy' FROM "Payment" p WHERE p."orderId" = o.id ORDER BY p."receivedAt" DESC LIMIT 1) AS disetujui_oleh,
+              (SELECT p."rawPayload"->>'via' FROM "Payment" p WHERE p."orderId" = o.id ORDER BY p."receivedAt" DESC LIMIT 1) AS lewat,
+              (SELECT json_agg(json_build_object('urutan', p.position, 'nama', p."fullName", 'jersey', p."jerseySize", 'hp', p.phone, 'email', p.email,
+                                                 'tiket', (SELECT t.code FROM "Ticket" t WHERE t."participantId" = p.id)) ORDER BY p.position)
+                 FROM "Participant" p WHERE p."orderId" = o.id) AS peserta
+         FROM "Order" o WHERE o.id = $1`,
+      [orderId],
+    );
+    const o = rows[0];
+    if (!o) return;
+    const dir = `${ARCHIVE}/${o.id}`;
+    fs.mkdirSync(dir, { recursive: true });
+    const stamp = stampWib();
+    const saved = file ? `${stamp}-${file.name}` : '';
+    if (file) fs.writeFileSync(`${dir}/${saved}`, file.buffer);
+    let events = [];
+    try { events = JSON.parse(fs.readFileSync(`${dir}/info.json`, 'utf8')).riwayat || []; } catch { events = []; }
+    events.push({ waktu: stamp, kejadian, file: saved || undefined, dari: dari || undefined });
+    const peserta = o.peserta || [];
+    fs.writeFileSync(`${dir}/info.json`, JSON.stringify({
+      order: o.id, status: o.status, total: Number(o.total), kodeUnik: o.uniqueCode, jumlahTiket: o.quantity,
+      pemesan: peserta[0]?.nama || '-', hpPemesan: o.buyerPhone, emailPemesan: o.buyerEmail,
+      dibuat: o.createdAt, lunas: o.paidAt, disetujuiOleh: o.disetujui_oleh, lewat: o.lewat, peserta, riwayat: events,
+    }, null, 2));
+    const line = [stamp, o.id, kejadian, o.status, Number(o.total), peserta[0]?.nama || '-', peserta.map((p) => p.nama).join('; '), o.buyerPhone, dari || '', saved]
+      .map(csv).join(',') + '\n';
+    const index = `${ARCHIVE}/riwayat.csv`;
+    if (!fs.existsSync(index)) fs.writeFileSync(index, 'waktu_wib,order,kejadian,status,total,pemesan,peserta,hp_pemesan,chat_wa,file\n');
+    fs.appendFileSync(index, line);
+  } catch (e) {
+    logger.error({ orderId, kejadian, err: e.message }, 'gagal menulis arsip');
+  }
+}
+
 async function loadOrder(id) {
   const { rows } = await pool.query(
     `SELECT o.id, o.status, o.total, o.quantity, o."expiresAt", o."buyerPhone",
@@ -137,6 +198,10 @@ async function handleIncoming(msg) {
   if (msg.key.fromMe || !jid || jid.endsWith('@g.us') || jid === 'status@broadcast' || jid.endsWith('@newsletter')) return;
   const hasProof = !!(msg.message && (msg.message.imageMessage || msg.message.documentMessage));
   const match = textOf(msg).match(ORDER_RE);
+  // Semua file dari pemesan yang terkait order diarsipkan, termasuk kiriman ulang yang tidak dikabarkan lagi.
+  const archiveId = match ? match[0].toUpperCase() : hasProof && Object.keys(confirmChats).find((id) => confirmChats[id] === jid);
+  if (hasProof && archiveId) await archive(archiveId, 'bukti bayar dari pemesan', await mediaOf(msg), jid);
+  else if (match && !hasProof) await archive(archiveId, 'pesan pesanan masuk (minta QRIS)', null, jid);
   if (!match) {
     // Screenshot bukti bayar yang dikirim menyusul (tanpa nomor order) di chat yang sudah konfirmasi.
     const pending = hasProof && Object.keys(confirmChats).find((id) => confirmChats[id] === jid);
@@ -197,6 +262,7 @@ async function sendQris(jid, order, quoted) {
     `Setelah bayar, kirim screenshot bukti bayar di chat ini.${deadline ? ` Batas bayar ${deadline} WIB.` : ''}`,
   ].join('\n');
   await reply(jid, { image, caption }, quoted);
+  await archive(order.id, 'QRIS/invoice dikirim ke pemesan', { buffer: image, name: 'invoice-qris.png' }, jid);
 }
 
 // Ke Telegram superadmin: kartu invoice yang sama dengan milik pemesan, lalu foto bukti bayarnya. Nomor order
@@ -213,14 +279,9 @@ async function notifyProof(order, expired, msg) {
     'Kalau belum ada, reply dengan: tolak <alasan>',
     `Bisa juga lewat ${SITE_URL}/kuweraadmin/peserta/${order.id}`,
   ].join('\n');
-  const media = msg.message?.imageMessage ? 'photo' : msg.message?.documentMessage ? 'document' : null;
-  let buffer = null;
-  if (media) {
-    try { buffer = await downloadMediaMessage(msg, 'buffer', {}); } catch (e) { logger.error({ orderId: order.id, err: e.message }, 'gagal mengunduh bukti bayar'); }
-  }
-  const name = media === 'document' ? msg.message.documentMessage.fileName || `bukti-${order.id}` : `bukti-${order.id}.jpg`;
-  const messageId = buffer
-    ? await telegramFile(media, buffer, name, caption)
+  const media = await mediaOf(msg);
+  const messageId = media
+    ? await telegramFile(media.kind, media.buffer, `${order.id}-${media.name}`, caption)
     : await telegram(`${caption}\n\n(Gambar bukti gagal diteruskan, lihat di chat WA kantor.)`).then(() => null);
   if (messageId) {
     proofMessages[order.id] = messageId;
@@ -240,6 +301,7 @@ async function processOutbox() {
       try { await reply(jid, { text: item.text }); } catch (e) { logger.error({ jid, err: e.message }, 'gagal kirim pesan outbox'); }
     }
     fs.unlinkSync(file);
+    await archive(item.orderId, `ditolak oleh ${item.oleh || 'superadmin'}, pesan dikirim ke pemesan`);
   }
 }
 
@@ -289,6 +351,7 @@ async function processPaid() {
         } catch (e) { logger.error({ id: o.id, jid, err: e.message }, 'gagal kirim tiket'); }
       }
       await pool.query(`UPDATE "Order" SET "waNotifiedAt" = timezone('UTC', now()) WHERE id = $1`, [o.id]);
+      await archive(o.id, `lunas, e-ticket dan QR registrasi ulang dikirim (${tickets.map((t) => t.code).join(', ')})`);
       delete confirmChats[o.id];
       saveConfirmChats();
     }
