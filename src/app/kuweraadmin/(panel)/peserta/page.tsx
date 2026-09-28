@@ -17,7 +17,7 @@ export default async function PesertaPage({ searchParams }: { searchParams: Prom
   const page = Math.max(1, Number.parseInt(pageRaw, 10) || 1);
   const { total, rows } = await listRegistrants(q, status, page);
   const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
-  const link = (p: number) => `/admin/peserta?${new URLSearchParams({ ...(q ? { q } : {}), ...(status ? { status } : {}), page: String(p) })}`;
+  const link = (p: number) => `/kuweraadmin/peserta?${new URLSearchParams({ ...(q ? { q } : {}), ...(status ? { status } : {}), page: String(p) })}`;
 
   return (
     <div>
@@ -26,7 +26,7 @@ export default async function PesertaPage({ searchParams }: { searchParams: Prom
         <AutoRefresh />
       </div>
 
-      <form className="mt-6 flex flex-wrap gap-3" action="/admin/peserta">
+      <form className="mt-6 flex flex-wrap gap-3" action="/kuweraadmin/peserta">
         <input
           name="q" defaultValue={q} placeholder="Cari nama, email, HP, NIK, atau nomor order"
           className="min-w-[260px] flex-1 rounded-full border border-glass-border bg-card px-5 py-3 text-sm text-white placeholder:text-white/60 focus:border-brand-yellow focus:outline-none"
@@ -37,7 +37,7 @@ export default async function PesertaPage({ searchParams }: { searchParams: Prom
         </select>
         <button type="submit" className="rounded-full bg-brand-yellow px-6 py-3 text-sm font-semibold text-green-deep">Cari</button>
         {admin.role === "admin" && (
-          <a href={`/admin/export?${new URLSearchParams({ ...(q ? { q } : {}), ...(status ? { status } : {}) })}`} className="rounded-full border border-brand-yellow px-6 py-3 text-sm font-semibold text-brand-yellow">
+          <a href={`/kuweraadmin/export?${new URLSearchParams({ ...(q ? { q } : {}), ...(status ? { status } : {}) })}`} className="rounded-full border border-brand-yellow px-6 py-3 text-sm font-semibold text-brand-yellow">
             Unduh CSV
           </a>
         )}
@@ -65,7 +65,7 @@ export default async function PesertaPage({ searchParams }: { searchParams: Prom
             )}
             {rows.map((o) => (
               <tr key={o.id} className="border-t border-white/10 hover:bg-white/5">
-                <td className="px-4 py-3 font-mono"><Link href={`/admin/peserta/${o.id}`} className="text-brand-yellow hover:underline">{o.id}</Link></td>
+                <td className="px-4 py-3 font-mono"><Link href={`/kuweraadmin/peserta/${o.id}`} className="text-brand-yellow hover:underline">{o.id}</Link></td>
                 <td className="px-4 py-3">
                   <p className="font-medium text-white">{o.participants[0]?.fullName ?? "-"}{o.quantity > 1 && <span className="ml-2 rounded-full bg-brand-yellow/15 px-2 py-0.5 text-xs text-brand-yellow">{o.quantity} tiket</span>}</p>
                   <p className="text-xs text-white/70">{o.buyerEmail} &middot; {o.buyerPhone}</p>

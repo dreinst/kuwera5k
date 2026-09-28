@@ -32,4 +32,4 @@ else await prisma.adminUser.create({ data: { username, ...data } });
 await prisma.$disconnect();
 const site = (process.env.NEXT_PUBLIC_SITE_URL || "https://kuwera5k.vercel.app").replace(/\/$/, "");
 console.log(`${existing ? "Akun direset" : "Akun dibuat"}: ${username} (${role})`);
-console.log(`Link atur kata sandi (sekali pakai, berlaku 24 jam):\n${site}/admin/setup?token=${token}`);
+console.log(`Link atur kata sandi (sekali pakai, berlaku 24 jam):\n${site}/kuweraadmin/setup?token=${token}`);

@@ -2,12 +2,12 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { logoutAction } from "@/app/admin/actions";
+import { logoutAction } from "@/app/kuweraadmin/actions";
 
 const LINKS = [
-  { href: "/admin", label: "Dashboard" },
-  { href: "/admin/peserta", label: "Peserta" },
-  { href: "/admin/verifikasi", label: "Verifikasi Midtrans", adminOnly: true },
+  { href: "/kuweraadmin", label: "Dashboard" },
+  { href: "/kuweraadmin/peserta", label: "Peserta" },
+  { href: "/kuweraadmin/verifikasi", label: "Verifikasi Midtrans", adminOnly: true },
 ];
 
 export default function AdminNav({ username, role }: { username: string; role: "admin" | "panitia" }) {
@@ -15,14 +15,14 @@ export default function AdminNav({ username, role }: { username: string; role: "
   return (
     <header className="sticky top-0 z-40 border-b border-glass-border bg-green-deep/85 px-6 backdrop-blur-md">
       <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-x-6 gap-y-3 py-3">
-        <Link href="/admin" className="flex items-center gap-3">
+        <Link href="/kuweraadmin" className="flex items-center gap-3">
           {/* eslint-disable-next-line @next/next/no-img-element -- logo SVG statis */}
           <img src="/brand/kuwera-logo-light.svg" alt="KUWERA Fun Run" width={2400} height={853} className="h-8 w-auto" />
           <span className="rounded-md bg-brand-yellow px-2 py-0.5 text-[10px] font-bold tracking-widest text-green-deep uppercase">Admin</span>
         </Link>
         <nav className="flex flex-wrap items-center gap-1 text-sm">
           {LINKS.filter((l) => !l.adminOnly || role === "admin").map((l) => {
-            const active = l.href === "/admin" ? path === "/admin" : path.startsWith(l.href);
+            const active = l.href === "/kuweraadmin" ? path === "/kuweraadmin" : path.startsWith(l.href);
             return (
               <Link key={l.href} href={l.href} className={`rounded-full px-4 py-1.5 transition ${active ? "bg-brand-yellow font-semibold text-green-deep" : "text-white/80 hover:text-brand-yellow"}`}>
                 {l.label}

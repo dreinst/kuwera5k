@@ -54,7 +54,7 @@ export default async function PesertaDetailPage({ params }: { params: Promise<{ 
 
   return (
     <div className="space-y-6">
-      <Link href="/admin/peserta" className="text-sm text-brand-yellow hover:underline">Kembali ke daftar peserta</Link>
+      <Link href="/kuweraadmin/peserta" className="text-sm text-brand-yellow hover:underline">Kembali ke daftar peserta</Link>
       <div className="flex flex-wrap items-center gap-4">
         <h1 className="font-display text-4xl text-white uppercase">{buyer?.fullName ?? order.id}</h1>
         <StatusBadge status={order.status} />

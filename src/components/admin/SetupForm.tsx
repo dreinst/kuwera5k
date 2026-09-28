@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useActionState } from "react";
-import { setupPasswordAction, type FormState } from "@/app/admin/actions";
+import { setupPasswordAction, type FormState } from "@/app/kuweraadmin/actions";
 import { inputCls } from "@/components/admin/LoginForm";
 
 export default function SetupForm({ token }: { token: string }) {
@@ -11,7 +11,7 @@ export default function SetupForm({ token }: { token: string }) {
     return (
       <div className="mt-6">
         <p className="text-white/85">{state.ok}</p>
-        <Link href="/admin/login" className="mt-5 inline-block rounded-full bg-brand-yellow px-6 py-3 text-sm font-semibold text-green-deep">Ke halaman masuk</Link>
+        <Link href="/kuweraadmin/login" className="mt-5 inline-block rounded-full bg-brand-yellow px-6 py-3 text-sm font-semibold text-green-deep">Ke halaman masuk</Link>
       </div>
     );
   }

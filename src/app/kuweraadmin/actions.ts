@@ -25,14 +25,14 @@ export async function loginAction(_prev: FormState, form: FormData): Promise<For
   if (!/^[a-z0-9._-]{3,32}$/.test(username) || password.length > 200) return { error: LOGIN_ERROR };
   const res = await attemptLogin(username, password);
   if (!res.ok) return { error: res.message };
-  redirect("/admin");
+  redirect("/kuweraadmin");
 }
 
 export async function logoutAction() {
   const admin = await getAdmin();
   if (admin) await logAdmin(admin.username, "logout");
   await endSession(admin?.id);
-  redirect("/admin/login");
+  redirect("/kuweraadmin/login");
 }
 
 export async function setupPasswordAction(_prev: FormState, form: FormData): Promise<FormState> {
@@ -73,7 +73,7 @@ export async function syncMidtransAction(orderId: string): Promise<{ ok?: string
   if (order.status !== "PENDING" && order.status !== "FAILED") return { error: "Hanya order yang menunggu bayar atau gagal yang bisa disinkronkan" };
   const r = await syncOrderWithMidtrans(order);
   await logAdmin(admin.username, "sinkron_midtrans", `${orderId} ${order.status}->${r.status}`);
-  revalidatePath(`/admin/peserta/${orderId}`);
+  revalidatePath(`/kuweraadmin/peserta/${orderId}`);
   if (r.live === "error") return { error: `Midtrans tidak bisa dihubungi: ${r.detail ?? ""}` };
   if (r.mismatch) return { error: "Nominal di Midtrans berbeda dengan total order, status tidak diubah" };
   return { ok: `Status sekarang: ${r.status}` };
@@ -91,7 +91,7 @@ export async function racepackAction(ticketCode: string, undo = false): Promise<
     data: undo ? { racepackCollectedAt: null, collectedBy: null } : { racepackCollectedAt: new Date(), collectedBy: admin.username },
   });
   await logAdmin(admin.username, undo ? "racepack_batal" : "racepack_ambil", ticketCode);
-  revalidatePath(`/admin/peserta/${ticket.orderId}`);
+  revalidatePath(`/kuweraadmin/peserta/${ticket.orderId}`);
   return { ok: undo ? "Tanda ambil race pack dibatalkan" : "Race pack ditandai sudah diambil" };
 }
 
@@ -128,6 +128,6 @@ export async function markManualPaidAction(orderId: string, confirmTotal: number
     rawPayload: { verifiedBy: admin.username, verifiedAt: new Date().toISOString(), previousStatus: order.status },
   });
   await logAdmin(admin.username, "tandai_lunas_manual", `${orderId} Rp${order.total}`);
-  revalidatePath(`/admin/peserta/${orderId}`);
+  revalidatePath(`/kuweraadmin/peserta/${orderId}`);
   return { ok: "Order ditandai lunas, tiket sudah terbit" };
 }

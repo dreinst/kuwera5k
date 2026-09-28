@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { racepackAction } from "@/app/admin/actions";
+import { racepackAction } from "@/app/kuweraadmin/actions";
 
 export default function RacepackButton({ ticketCode, collected, canUndo }: { ticketCode: string; collected: boolean; canUndo: boolean }) {
   const [message, setMessage] = useState("");
