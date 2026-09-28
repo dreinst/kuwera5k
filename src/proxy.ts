@@ -1,31 +1,13 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-// /admin disembunyikan: tanpa cookie pintu, semua alamat /admin tampil sebagai 404. Cookie pintu hanya
-// didapat lewat alamat rahasia /masuk/{ADMIN_GATE_KEY} (env), yang lalu mengarah ke /admin/login.
-// Autentikasi tetap di requireAdmin(); ini hanya menyembunyikan halamannya dari orang yang iseng mencoba.
-const GATE_COOKIE = "kw_gate";
-
-const notFound = (req: NextRequest) => NextResponse.rewrite(new URL("/_tidak-ada", req.url));
+// Halaman admin selain login dan atur sandi tampil sebagai 404 kalau belum login, jadi orang yang iseng
+// mencoba /admin tidak melihat isinya. Cookie di sini hanya dicek ada atau tidak; keabsahan sesi tetap
+// diperiksa requireAdmin() di setiap halaman dan aksi admin.
+const PUBLIC = ["/admin/login", "/admin/setup"];
 
 export function proxy(req: NextRequest) {
-  const key = process.env.ADMIN_GATE_KEY;
-  const { pathname } = req.nextUrl;
-
-  if (pathname.startsWith("/masuk/")) {
-    if (!key || pathname !== `/masuk/${key}`) return notFound(req);
-    const res = NextResponse.redirect(new URL("/admin/login", req.url));
-    res.cookies.set(GATE_COOKIE, key, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      path: "/",
-      maxAge: 30 * 24 * 3600,
-    });
-    return res;
-  }
-
-  if (!key || req.cookies.get(GATE_COOKIE)?.value !== key) return notFound(req);
-  return NextResponse.next();
+  if (PUBLIC.includes(req.nextUrl.pathname) || req.cookies.has("kw_admin")) return NextResponse.next();
+  return NextResponse.rewrite(new URL("/_tidak-ada", req.url));
 }
 
-export const config = { matcher: ["/admin", "/admin/:path*", "/masuk/:path*"] };
+export const config = { matcher: ["/admin", "/admin/:path*"] };
