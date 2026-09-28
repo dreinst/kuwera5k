@@ -5,7 +5,7 @@ import { siteUrl } from "@/lib/site";
 // membaca noindex kalau halaman boleh di-crawl.
 export default function robots(): MetadataRoute.Robots {
   return {
-    rules: { userAgent: "*", allow: "/", disallow: ["/api/", "/admin"] },
+    rules: { userAgent: "*", allow: "/", disallow: ["/api/"] },
     sitemap: `${siteUrl}/sitemap.xml`,
   };
 }
