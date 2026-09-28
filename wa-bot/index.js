@@ -35,6 +35,12 @@ const ORDER_RE = /KWR-\d{4}-[A-Z0-9]{6}/i;
 const CONFIRM_FILE = '/data/konfirmasi.json';
 const OUTBOX = '/data/outbox';
 const PROOF_FILE = '/data/telegram-bukti.json'; // order -> id pesan bukti (angka = Telegram, teks = Discord)
+// Layanan pelanggan: chat biasa dari pemesan ditaruh di INBOX untuk worker CS (bot D'Pro Ops di VPS, Kimi),
+// balasannya kembali lewat OUTBOX dengan field jid.
+const INBOX = '/data/inbox';
+const humanAt = new Map(); // jid -> waktu terakhir admin membalas dari HP
+// ponytail: pesan kiriman Baileys ber-ID "3EB0...", dari HP tidak. Cukup untuk membedakan admin dari bot.
+const byHuman = (msg) => msg.key.fromMe && !String(msg.key.id || '').startsWith('3EB0');
 // Arsip per order (bukti bayar, invoice, info.json) plus riwayat.csv; disalin ke NAS oleh kuwera-arsip-nas di VPS.
 const ARCHIVE = '/data/arsip';
 // Sama dengan src/lib/event-data.ts (racePackDates, racePackPlace, jadwal lomba).
@@ -246,7 +252,8 @@ async function handleIncoming(msg) {
       const o = await loadOrder(pending);
       if (o && o.status !== 'PAID') await notifyProof(o, o.status !== 'PENDING' || (o.expiresAt && new Date(o.expiresAt) <= new Date()), msg);
     }
-    return; // chat biasa dibalas admin manusia
+    if (!hasProof) await csInbox(msg);
+    return; // chat biasa: worker CS yang memutuskan dibalas atau diserahkan ke admin
   }
   const orderId = match[0].toUpperCase();
   if (recent(`${jid}|${orderId}${hasProof ? '|bukti' : ''}`)) return;
@@ -270,6 +277,28 @@ async function handleIncoming(msg) {
     return;
   }
   await notifyProof(order, expired, msg);
+}
+
+// Chat biasa dari nomor yang pernah memesan KUWERA diteruskan ke worker CS, kecuali admin baru membalas.
+async function csInbox(msg) {
+  const jid = msg.key.remoteJid;
+  const text = textOf(msg).trim();
+  if (!text || Date.now() - (humanAt.get(jid) || 0) < 30 * 60_000) return;
+  const phone = String(msg.key.senderPn || msg.key.remoteJidAlt || jid).replace(/@.*/, '').replace(/\D/g, '');
+  const known = Object.keys(confirmChats).filter((id) => confirmChats[id] === jid);
+  const { rows } = await pool.query(
+    `SELECT o.id, o.status, o.total, o.quantity FROM "Order" o
+      WHERE o.id = ANY($2)
+         OR (length($1) >= 10 AND (right(regexp_replace(o."buyerPhone", '\\D', '', 'g'), 10) = right($1, 10)
+         OR EXISTS (SELECT 1 FROM "Participant" p WHERE p."orderId" = o.id AND right(regexp_replace(p.phone, '\\D', '', 'g'), 10) = right($1, 10))))
+      ORDER BY o."createdAt" DESC LIMIT 3`,
+    [phone, known],
+  );
+  if (!rows.length) return; // bukan pelanggan KUWERA
+  fs.mkdirSync(INBOX, { recursive: true });
+  const item = { id: msg.key.id, bot: 'kuwera', jid, phone, nama: msg.pushName || '', text: text.slice(0, 1000), waktu: Date.now(),
+    order: rows.map((o) => ({ id: o.id, status: o.status, total: rupiah(o.total), tiket: o.quantity })) };
+  fs.writeFileSync(`${INBOX}/${msg.key.id}.json`, JSON.stringify(item));
 }
 
 // Kartu bayar dibuat website (QRIS dinamis bernominal total order), bot tinggal meneruskannya sebagai gambar.
@@ -349,6 +378,12 @@ async function processOutbox() {
   for (const f of fs.readdirSync(OUTBOX).filter((x) => x.endsWith('.json')).sort()) {
     const file = `${OUTBOX}/${f}`;
     const item = JSON.parse(fs.readFileSync(file, 'utf8'));
+    if (item.jid) { // balasan worker CS
+      try { await reply(item.jid, { text: item.text }); } catch (e) { logger.error({ jid: item.jid, err: e.message }, 'gagal kirim balasan CS'); }
+      fs.unlinkSync(file);
+      logger.info({ jid: item.jid, topik: item.topik }, 'balasan CS terkirim');
+      continue;
+    }
     const targets = new Set([phoneJid(item.phone), confirmChats[item.orderId]].filter(Boolean));
     for (const jid of targets) {
       try { await reply(jid, { text: item.text }); } catch (e) { logger.error({ jid, err: e.message }, 'gagal kirim pesan outbox'); }
@@ -474,6 +509,7 @@ async function start() {
     }
   });
   s.ev.on('messages.upsert', async ({ messages, type }) => {
+    for (const m of messages) if (byHuman(m)) humanAt.set(m.key.remoteJid, Date.now());
     if (type !== 'notify') return;
     for (const msg of messages) {
       try { await handleIncoming(msg); } catch (e) { logger.error({ err: e.message }, 'gagal memproses pesan masuk'); }
