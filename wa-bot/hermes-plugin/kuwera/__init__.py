@@ -60,14 +60,17 @@ SETUJUI_SCHEMA = {
     "name": "kuwera_setujui",
     "description": ("Setujui pembayaran QRIS manual satu order KUWERA 5K setelah superadmin memastikan uangnya masuk di GoPay "
                     "Merchant dengan nominal persis. Menandai lunas, menerbitkan e-ticket, dan bot mengirim tautan e-ticket ke "
-                    "WhatsApp pemesan. Hanya panggil kalau superadmin jelas menyetujui order itu (misalnya 'setujui KWR-2026-ABC123'). "
-                    "Jangan pernah menebak nomor order."),
+                    "WhatsApp pemesan. Panggil kalau superadmin jelas menyetujui order itu: menulis 'setujui KWR-2026-ABC123', atau "
+                    "me-reply foto bukti bayar KUWERA (konteks reply berisi 'KUWERA 5K: bukti bayar order KWR-...') dengan kata "
+                    "persetujuan seperti ok, oke, acc, setuju, sip, lunas, atau ✅. Untuk reply, ambil nomor order dari teks yang "
+                    "di-reply itu, bukan dari pesan lain. Jangan pernah menebak nomor order."),
     "parameters": {"type": "object", "properties": {"order_id": _ORDER}, "required": ["order_id"]}}
 
 TOLAK_SCHEMA = {
     "name": "kuwera_tolak",
     "description": ("Beri tahu pemesan KUWERA 5K lewat WhatsApp bahwa pembayaran order-nya belum ditemukan, dengan alasan dari "
-                    "superadmin. Order tetap menunggu, jadi masih bisa disetujui nanti."),
+                    "superadmin. Order tetap menunggu, jadi masih bisa disetujui nanti. Juga dipakai kalau superadmin me-reply foto "
+                    "bukti bayar KUWERA dengan 'tolak <alasan>'; nomor order diambil dari teks yang di-reply."),
     "parameters": {"type": "object", "properties": {
         "order_id": _ORDER,
         "alasan": {"type": "string", "description": "alasan singkat dari superadmin, maks 200 karakter (opsional)"}},

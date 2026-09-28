@@ -2,10 +2,12 @@
 //
 // 1. Pemesan menekan "Minta QRIS via WhatsApp" di /bayar dan mengirim pesan berisi nomor order ke nomor
 //    kantor. Bot membalas dengan kartu bayar (QRIS dinamis bernominal total, dari /api/orders/{id}/qris).
-//    Setelah pemesan mengirim screenshot bukti bayar, superadmin dikabari lewat Telegram (@dproagentbot)
-//    untuk mengecek uang masuk di GoPay Merchant.
-// 2. Superadmin membalas chatbot Hermes "setujui KWR-..." (tool kuwera_setujui, lihat hermes-plugin/) atau
-//    admin menandai lunas di /admin. Setelah order lunas, bot mengirim tautan e-ticket ke WhatsApp pemesan
+//    Setelah pemesan mengirim screenshot bukti bayar, bot meneruskan ke Telegram superadmin (@dproagentbot)
+//    kartu invoice yang sama dengan milik pemesan plus foto bukti bayarnya. Keterangan foto bukti memuat nomor
+//    order, jadi superadmin cukup me-reply foto itu dengan "ok" (Hermes membaca keterangan foto yang di-reply).
+// 2. Superadmin me-reply foto bukti dengan "ok" atau menulis "setujui KWR-..." ke Hermes (tool kuwera_setujui,
+//    lihat hermes-plugin/), atau admin menandai lunas di /admin. Keduanya mengubah order yang sama di database,
+//    dan kabar "terverifikasi" dikirim sebagai reply ke foto bukti di Telegram, dari jalur mana pun. Setelah order lunas, bot mengirim tautan e-ticket ke WhatsApp pemesan
 //    dan mengabari superadmin total pemasukan KUWERA yang sudah terverifikasi.
 // 3. "tolak KWR-... alasan" (tool kuwera_tolak) menaruh pesan di /data/outbox; bot mengirimkannya ke pemesan.
 //
@@ -14,7 +16,7 @@
 // chat berisi nomor order, jadi tidak bentrok.
 
 const fs = require('node:fs');
-const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, fetchLatestBaileysVersion } = require('@whiskeysockets/baileys');
+const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, fetchLatestBaileysVersion, downloadMediaMessage } = require('@whiskeysockets/baileys');
 const { Boom } = require('@hapi/boom');
 const { Pool } = require('pg');
 const pino = require('pino');
@@ -29,6 +31,7 @@ const REAL_GATEWAYS = ['qris-manual', 'midtrans'];
 const ORDER_RE = /KWR-\d{4}-[A-Z0-9]{6}/i;
 const CONFIRM_FILE = '/data/konfirmasi.json';
 const OUTBOX = '/data/outbox';
+const PROOF_FILE = '/data/telegram-bukti.json'; // order -> message_id foto bukti di Telegram
 
 const caFile = process.env.DB_SSL_CA_FILE;
 const pool = new Pool({
@@ -54,16 +57,33 @@ const phoneJid = (phone) => {
 let confirmChats = {};
 try { confirmChats = JSON.parse(fs.readFileSync(CONFIRM_FILE, 'utf8')); } catch { confirmChats = {}; }
 const saveConfirmChats = () => fs.writeFileSync(CONFIRM_FILE, JSON.stringify(confirmChats));
+let proofMessages = {};
+try { proofMessages = JSON.parse(fs.readFileSync(PROOF_FILE, 'utf8')); } catch { proofMessages = {}; }
+const saveProofMessages = () => fs.writeFileSync(PROOF_FILE, JSON.stringify(proofMessages));
 
-async function telegram(text) {
+async function telegram(text, replyTo) {
   if (!TG_TOKEN || !TG_CHAT) return logger.warn('Telegram belum diatur, notifikasi dilewati');
+  const extra = replyTo ? { reply_parameters: { message_id: replyTo, allow_sending_without_reply: true } } : {};
   const res = await fetch(`https://api.telegram.org/bot${TG_TOKEN}/sendMessage`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ chat_id: TG_CHAT, text, disable_web_page_preview: true }),
+    body: JSON.stringify({ chat_id: TG_CHAT, text, disable_web_page_preview: true, ...extra }),
     signal: AbortSignal.timeout(15000),
   });
   if (!res.ok) throw new Error(`Telegram ${res.status}: ${await res.text()}`);
+}
+
+// Kirim foto atau dokumen ke Telegram superadmin; mengembalikan message_id supaya bisa di-reply nanti.
+async function telegramFile(kind, buffer, filename, caption) {
+  if (!TG_TOKEN || !TG_CHAT) return logger.warn('Telegram belum diatur, notifikasi dilewati');
+  const form = new FormData();
+  form.append('chat_id', TG_CHAT);
+  form.append('caption', caption);
+  form.append(kind, new Blob([buffer]), filename);
+  const method = kind === 'photo' ? 'sendPhoto' : 'sendDocument';
+  const res = await fetch(`https://api.telegram.org/bot${TG_TOKEN}/${method}`, { method: 'POST', body: form, signal: AbortSignal.timeout(30000) });
+  if (!res.ok) throw new Error(`Telegram ${res.status}: ${await res.text()}`);
+  return (await res.json()).result.message_id;
 }
 
 async function loadOrder(id) {
@@ -119,7 +139,7 @@ async function handleIncoming(msg) {
     const pending = hasProof && Object.keys(confirmChats).find((id) => confirmChats[id] === jid);
     if (pending && !recent(`${jid}|${pending}|bukti`)) {
       const o = await loadOrder(pending);
-      if (o && o.status !== 'PAID') await notifyProof(o, o.status !== 'PENDING' || (o.expiresAt && new Date(o.expiresAt) <= new Date()));
+      if (o && o.status !== 'PAID') await notifyProof(o, o.status !== 'PENDING' || (o.expiresAt && new Date(o.expiresAt) <= new Date()), msg);
     }
     return; // chat biasa dibalas admin manusia
   }
@@ -144,18 +164,25 @@ async function handleIncoming(msg) {
     }
     return;
   }
-  await notifyProof(order, expired);
+  await notifyProof(order, expired, msg);
 }
 
 // Kartu bayar dibuat website (QRIS dinamis bernominal total order), bot tinggal meneruskannya sebagai gambar.
-async function sendQris(jid, order, quoted) {
-  const res = await fetch(`${SITE_URL}/api/orders/${order.id}/qris`, { signal: AbortSignal.timeout(20000) });
+async function qrisCard(orderId) {
+  const res = await fetch(`${SITE_URL}/api/orders/${orderId}/qris`, { signal: AbortSignal.timeout(20000) });
   if (!res.ok) {
-    logger.error({ orderId: order.id, status: res.status }, 'gagal mengambil kartu QRIS');
-    await telegram(`KUWERA 5K: kartu QRIS order ${order.id} gagal dibuat (HTTP ${res.status}). Balas pemesan manual di WA kantor.`);
+    logger.error({ orderId, status: res.status }, 'gagal mengambil kartu QRIS');
+    return null;
+  }
+  return Buffer.from(await res.arrayBuffer());
+}
+
+async function sendQris(jid, order, quoted) {
+  const image = await qrisCard(order.id);
+  if (!image) {
+    await telegram(`KUWERA 5K: kartu QRIS order ${order.id} gagal dibuat. Balas pemesan manual di WA kantor.`);
     return;
   }
-  const image = Buffer.from(await res.arrayBuffer());
   const deadline = order.expiresAt
     ? new Date(order.expiresAt).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })
     : null;
@@ -169,18 +196,33 @@ async function sendQris(jid, order, quoted) {
   await reply(jid, { image, caption }, quoted);
 }
 
-async function notifyProof(order, expired) {
-  await telegram([
-    'KUWERA 5K: bukti bayar masuk',
-    `Order ${order.id}${expired ? ' (waktu bayar sudah habis)' : ''}`,
-    `Pemesan: ${order.buyer || '-'}`,
-    `Jumlah tiket: ${order.quantity}`,
+// Ke Telegram superadmin: kartu invoice yang sama dengan milik pemesan, lalu foto bukti bayarnya. Nomor order
+// ada di keterangan foto bukti, jadi cukup reply foto itu dengan "ok" untuk menyetujui.
+async function notifyProof(order, expired, msg) {
+  const card = order.status === 'PENDING' ? await qrisCard(order.id) : null;
+  if (card) await telegramFile('photo', card, `invoice-${order.id}.png`, `Invoice yang dikirim ke pemesan, order ${order.id}`);
+  const caption = [
+    `KUWERA 5K: bukti bayar order ${order.id}${expired ? ' (waktu bayar sudah habis)' : ''}`,
+    `Pemesan: ${order.buyer || '-'}, ${order.quantity} tiket`,
     `Nominal yang harus masuk: ${rupiah(order.total)}`,
-    'Lihat gambarnya di chat WA kantor, cek riwayat GoPay Merchant. Kalau uangnya sudah masuk dengan nominal persis, balas ke bot ini:',
-    `setujui ${order.id}`,
-    `Kalau belum ada: tolak ${order.id} <alasan>`,
-    `Detail: ${SITE_URL}/admin/peserta/${order.id}`,
-  ].join('\n'));
+    '',
+    'Cek riwayat GoPay Merchant. Kalau nominalnya persis masuk, reply foto ini dengan: ok',
+    'Kalau belum ada, reply dengan: tolak <alasan>',
+    `Bisa juga lewat ${SITE_URL}/admin/peserta/${order.id}`,
+  ].join('\n');
+  const media = msg.message?.imageMessage ? 'photo' : msg.message?.documentMessage ? 'document' : null;
+  let buffer = null;
+  if (media) {
+    try { buffer = await downloadMediaMessage(msg, 'buffer', {}); } catch (e) { logger.error({ orderId: order.id, err: e.message }, 'gagal mengunduh bukti bayar'); }
+  }
+  const name = media === 'document' ? msg.message.documentMessage.fileName || `bukti-${order.id}` : `bukti-${order.id}.jpg`;
+  const messageId = buffer
+    ? await telegramFile(media, buffer, name, caption)
+    : await telegram(`${caption}\n\n(Gambar bukti gagal diteruskan, lihat di chat WA kantor.)`).then(() => null);
+  if (messageId) {
+    proofMessages[order.id] = messageId;
+    saveProofMessages();
+  }
 }
 
 // Pesan penolakan dari tool kuwera_tolak (cli.js) menunggu di /data/outbox sebagai file JSON.
@@ -204,6 +246,7 @@ async function processPaid() {
     `SELECT o.id, o.total, o.quantity, o."paidAt", o."buyerPhone", o."waNotifiedAt", o."adminNotifiedAt",
             (SELECT p."fullName" FROM "Participant" p WHERE p."orderId" = o.id ORDER BY p.position LIMIT 1) AS buyer,
             (SELECT p."rawPayload"->>'verifiedBy' FROM "Payment" p WHERE p."orderId" = o.id ORDER BY p."receivedAt" DESC LIMIT 1) AS verified_by,
+            (SELECT p."rawPayload"->>'via' FROM "Payment" p WHERE p."orderId" = o.id ORDER BY p."receivedAt" DESC LIMIT 1) AS verified_via,
             (SELECT p.gateway FROM "Payment" p WHERE p."orderId" = o.id ORDER BY p."receivedAt" DESC LIMIT 1) AS gateway
        FROM "Order" o
       WHERE o.status = 'PAID' AND (o."waNotifiedAt" IS NULL OR o."adminNotifiedAt" IS NULL)
@@ -235,13 +278,15 @@ async function processPaid() {
         'KUWERA 5K: pembayaran terverifikasi',
         `Order ${o.id}, ${o.quantity} tiket, ${rupiah(o.total)}`,
         `Pemesan: ${o.buyer || '-'}`,
-        `Disetujui: ${o.gateway === 'qris-manual' ? o.verified_by || 'admin' : o.gateway}, ${wib(o.paidAt)}`,
+        `Disetujui: ${o.gateway === 'qris-manual' ? `${o.verified_by || 'admin'} lewat ${o.verified_via === 'telegram' ? 'Telegram' : 'halaman admin'}` : o.gateway}, ${wib(o.paidAt)}`,
         'Tautan e-ticket dikirim ke WhatsApp pemesan.',
         '',
         `Total pemasukan terverifikasi: ${rupiah(sum.total)}`,
         `${sum.tickets} tiket dari ${sum.orders} pembelian`,
-      ].join('\n'));
+      ].join('\n'), proofMessages[o.id]);
       await pool.query(`UPDATE "Order" SET "adminNotifiedAt" = timezone('UTC', now()) WHERE id = $1`, [o.id]);
+      delete proofMessages[o.id];
+      saveProofMessages();
     }
   }
 }
