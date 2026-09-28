@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { markManualPaidAction } from "@/app/admin/actions";
+import { markManualPaidAction } from "@/app/kuweraadmin/actions";
 import { formatRupiah } from "@/lib/registration";
 
 // Tandai lunas untuk bayar manual QRIS. Admin wajib mengetik ulang nominal yang terlihat di riwayat

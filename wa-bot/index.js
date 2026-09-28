@@ -6,7 +6,7 @@
 //    kartu invoice yang sama dengan milik pemesan plus foto bukti bayarnya. Keterangan foto bukti memuat nomor
 //    order, jadi superadmin cukup me-reply foto itu dengan "ok" (Hermes membaca keterangan foto yang di-reply).
 // 2. Superadmin me-reply foto bukti dengan "ok" atau menulis "setujui KWR-..." ke Hermes (tool kuwera_setujui,
-//    lihat hermes-plugin/), atau admin menandai lunas di /admin. Keduanya mengubah order yang sama di database,
+//    lihat hermes-plugin/), atau admin menandai lunas di /kuweraadmin. Keduanya mengubah order yang sama di database,
 //    dan kabar "terverifikasi" dikirim sebagai reply ke foto bukti di Telegram, dari jalur mana pun. Setelah order lunas, bot mengirim tautan e-ticket ke WhatsApp pemesan
 //    dan mengabari superadmin total pemasukan KUWERA yang sudah terverifikasi.
 // 3. "tolak KWR-... alasan" (tool kuwera_tolak) menaruh pesan di /data/outbox; bot mengirimkannya ke pemesan.
@@ -32,6 +32,9 @@ const ORDER_RE = /KWR-\d{4}-[A-Z0-9]{6}/i;
 const CONFIRM_FILE = '/data/konfirmasi.json';
 const OUTBOX = '/data/outbox';
 const PROOF_FILE = '/data/telegram-bukti.json'; // order -> message_id foto bukti di Telegram
+// Sama dengan src/lib/event-data.ts (racePackDates, racePackPlace, jadwal lomba).
+const RACE_PACK = 'Kamis dan Jumat, 22 dan 23 Oktober 2026 di Lapangan Rampal (tenda panitia)';
+const RACE_DAY = 'Sabtu, 24 Oktober 2026, 06.00 WIB di Lapangan Rampal';
 
 const caFile = process.env.DB_SSL_CA_FILE;
 const pool = new Pool({
@@ -200,7 +203,7 @@ async function sendQris(jid, order, quoted) {
 // ada di keterangan foto bukti, jadi cukup reply foto itu dengan "ok" untuk menyetujui.
 async function notifyProof(order, expired, msg) {
   const card = order.status === 'PENDING' ? await qrisCard(order.id) : null;
-  if (card) await telegramFile('photo', card, `invoice-${order.id}.png`, `Invoice yang dikirim ke pemesan, order ${order.id}`);
+  if (card) await telegramFile('photo', card, `invoice-${order.id}.png`, `Invoice yang dikirim ke pemesan ${order.buyer || '-'}, order ${order.id}`);
   const caption = [
     `KUWERA 5K: bukti bayar order ${order.id}${expired ? ' (waktu bayar sudah habis)' : ''}`,
     `Pemesan: ${order.buyer || '-'}, ${order.quantity} tiket`,
@@ -208,7 +211,7 @@ async function notifyProof(order, expired, msg) {
     '',
     'Cek riwayat GoPay Merchant. Kalau nominalnya persis masuk, reply foto ini dengan: ok',
     'Kalau belum ada, reply dengan: tolak <alasan>',
-    `Bisa juga lewat ${SITE_URL}/admin/peserta/${order.id}`,
+    `Bisa juga lewat ${SITE_URL}/kuweraadmin/peserta/${order.id}`,
   ].join('\n');
   const media = msg.message?.imageMessage ? 'photo' : msg.message?.documentMessage ? 'document' : null;
   let buffer = null;
@@ -257,16 +260,33 @@ async function processPaid() {
   );
   for (const o of rows) {
     if (!o.waNotifiedAt && connected) {
+      const { rows: tickets } = await pool.query(
+        `SELECT t.code, p."fullName" FROM "Ticket" t JOIN "Participant" p ON p.id = t."participantId"
+          WHERE t."orderId" = $1 ORDER BY p.position`,
+        [o.id],
+      );
       const text = [
-        `Pembayaran order ${o.id} sudah kami terima. Terima kasih!`,
+        `Pembayaran order ${o.id} sebesar ${rupiah(o.total)} sudah kami terima. Terima kasih, ${o.buyer || 'kak'}!`,
         '',
-        `E-ticket (${o.quantity} tiket): ${SITE_URL}/tiket/${o.id}`,
+        'Nomor QR registrasi ulang (tunjukkan saat ambil race pack):',
+        ...tickets.map((t, i) => `${i + 1}. ${t.fullName}: ${t.code}`),
         '',
-        'Simpan tautan ini dan tunjukkan QR tiap peserta saat ambil race pack. Bawa KTP atau KIA asli.',
+        `E-ticket lengkap: ${SITE_URL}/tiket/${o.id}`,
+        '',
+        `Ambil race pack: ${RACE_PACK}. Bawa KTP atau KIA asli tiap peserta.`,
+        `Hari lomba: ${RACE_DAY}.`,
+        '',
+        'QR tiap peserta kami kirim di bawah ini. Simpan baik-baik.',
       ].join('\n');
       const targets = new Set([phoneJid(o.buyerPhone), confirmChats[o.id]].filter(Boolean));
       for (const jid of targets) {
-        try { await reply(jid, { text }); } catch (e) { logger.error({ id: o.id, jid, err: e.message }, 'gagal kirim tiket'); }
+        try {
+          await reply(jid, { text });
+          for (const t of tickets) {
+            const image = await QRCode.toBuffer(t.code, { width: 600, margin: 2, color: { dark: '#0B4A2C', light: '#FFFFFF' } });
+            await reply(jid, { image, caption: `QR registrasi ulang KUWERA 5K\n${t.fullName}\n${t.code}` });
+          }
+        } catch (e) { logger.error({ id: o.id, jid, err: e.message }, 'gagal kirim tiket'); }
       }
       await pool.query(`UPDATE "Order" SET "waNotifiedAt" = timezone('UTC', now()) WHERE id = $1`, [o.id]);
       delete confirmChats[o.id];

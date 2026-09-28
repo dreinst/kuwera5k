@@ -146,10 +146,12 @@ def _send(chat_id, text, reply_to=None):
 
 def _decide(text, reply_text):
     """(aksi, order, alasan) atau None kalau pesan ini bukan urusan KUWERA."""
-    words = text.strip()
+    # Hermes menempelkan catatan "[Replied-to image ...]" ke teks kalau yang di-reply berupa foto.
+    words = re.sub(r"\s*\[Replied-to .*$", "", text, flags=re.S).strip()
     low = words.lower().strip(" .!")
     explicit = _ORDER_RE.search(words)
-    replied = _ORDER_RE.search(reply_text) if "KUWERA 5K" in reply_text else None
+    ours = "KUWERA 5K" in reply_text or reply_text.startswith("Invoice yang dikirim ke pemesan")
+    replied = _ORDER_RE.search(reply_text) if ours else None
     if low.startswith("setujui") and explicit:
         return ("setujui", explicit.group(0).upper(), "")
     if low.startswith("tolak") and explicit:
@@ -173,17 +175,22 @@ def _decide(text, reply_text):
 
 def _run(chat_id, msg_id, who, action, order, alasan):
     if action == "pilih":
-        _send(chat_id, f"Ada beberapa bukti bayar yang menunggu ({order}). Reply foto bukti yang mau disetujui dengan: ok", msg_id)
+        try:
+            names = {r["id"]: r.get("pemesan") or "-" for r in json.loads(_cli("menunggu"))}
+        except Exception:
+            names = {}
+        rows = "\n".join(f"- {o} ({names.get(o, '-')})" for o in order.split(", "))
+        _send(chat_id, f"Ada beberapa bukti bayar yang menunggu:\n{rows}\nReply foto bukti yang mau disetujui dengan: ok", msg_id)
         return
     try:
         res = json.loads(_cli(action, order, who, *([alasan] if action == "tolak" else [])))
     except Exception as e:
         res = {"ok": False, "pesan": str(e)[:200]}
     if action == "setujui":
-        text = (f"✅ Order {order} disetujui. E-ticket dikirim ke WhatsApp pemesan dalam sekitar 20 detik."
+        text = (f"✅ Order {order} atas nama {res.get('pemesan', '-')} disetujui. E-ticket dikirim ke WhatsApp pemesan dalam sekitar 20 detik."
                 if res.get("ok") else f"Order {order} tidak disetujui: {res.get('pesan', 'gagal')}")
     else:
-        text = (f"❌ Penolakan order {order} diteruskan ke WhatsApp pemesan. Order tetap menunggu."
+        text = (f"❌ Penolakan order {order} atas nama {res.get('pemesan', '-')} diteruskan ke WhatsApp pemesan. Order tetap menunggu."
                 if res.get("ok") else f"Penolakan order {order} gagal: {res.get('pesan', 'gagal')}")
     _send(chat_id, text, msg_id)
 

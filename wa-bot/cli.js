@@ -80,7 +80,8 @@ async function setujui(orderId, oleh) {
       );
     }
     await client.query('COMMIT');
-    return { ok: true, pesan: `Order ${o.id} disetujui: ${o.quantity} tiket, ${rupiah(o.total)}. Bot mengirim e-ticket ke WhatsApp pemesan dalam kurang dari satu menit.` };
+    const buyer = await pool.query('SELECT "fullName" FROM "Participant" WHERE "orderId" = $1 ORDER BY position LIMIT 1', [o.id]);
+    return { ok: true, pemesan: buyer.rows[0]?.fullName || '-', pesan: `Order ${o.id} disetujui: ${o.quantity} tiket, ${rupiah(o.total)}. Bot mengirim e-ticket ke WhatsApp pemesan dalam kurang dari satu menit.` };
   } catch (e) {
     await client.query('ROLLBACK').catch(() => {});
     throw e;
@@ -90,7 +91,12 @@ async function setujui(orderId, oleh) {
 }
 
 async function tolak(orderId, oleh, alasan) {
-  const { rows } = await pool.query('SELECT id, status, total, "buyerPhone" FROM "Order" WHERE id = $1', [orderId]);
+  const { rows } = await pool.query(
+    `SELECT o.id, o.status, o.total, o."buyerPhone",
+            (SELECT p."fullName" FROM "Participant" p WHERE p."orderId" = o.id ORDER BY p.position LIMIT 1) AS pemesan
+       FROM "Order" o WHERE o.id = $1`,
+    [orderId],
+  );
   if (!rows.length) return { ok: false, pesan: `Order ${orderId} tidak ditemukan` };
   const o = rows[0];
   if (o.status === 'PAID') return { ok: false, pesan: `Order ${orderId} sudah lunas, tidak bisa ditolak` };
@@ -102,7 +108,7 @@ async function tolak(orderId, oleh, alasan) {
   ].filter((x, i) => x || i === 2).join('\n');
   fs.mkdirSync('/data/outbox', { recursive: true });
   fs.writeFileSync(`/data/outbox/${Date.now()}-${o.id}.json`, JSON.stringify({ orderId: o.id, phone: o.buyerPhone, text, oleh }));
-  return { ok: true, pesan: `Pesan penolakan untuk ${o.id} dikirim bot ke WhatsApp pemesan dalam kurang dari satu menit.` };
+  return { ok: true, pemesan: o.pemesan || '-', pesan: `Pesan penolakan untuk ${o.id} dikirim bot ke WhatsApp pemesan dalam kurang dari satu menit.` };
 }
 
 (async () => {

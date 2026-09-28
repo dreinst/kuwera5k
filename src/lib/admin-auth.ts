@@ -61,14 +61,14 @@ export async function startSession(user: { id: string; sessionVersion: number })
   const payload = b64(JSON.stringify({ u: user.id, v: user.sessionVersion, exp }));
   const token = `${payload}.${sign(payload, await sessionSecret())}`;
   (await cookies()).set(COOKIE, token, {
-    httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax", path: "/admin", maxAge: SESSION_HOURS * 3600,
+    httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax", path: "/kuweraadmin", maxAge: SESSION_HOURS * 3600,
   });
 }
 
 // Keluar = semua sesi akun itu tidak berlaku lagi (juga salinan cookie di perangkat lain).
 export async function endSession(userId?: string) {
   if (userId) await prisma.adminUser.update({ where: { id: userId }, data: { sessionVersion: { increment: 1 } } }).catch(() => null);
-  (await cookies()).delete({ name: COOKIE, path: "/admin" });
+  (await cookies()).delete({ name: COOKIE, path: "/kuweraadmin" });
 }
 
 // Sesi yang sah atau null. Tanda tangan, masa berlaku, dan versi sesi di database semuanya dicek.
@@ -88,11 +88,11 @@ export async function getAdmin(): Promise<AdminSession | null> {
   return { id: user.id, username: user.username, role: user.role === "admin" ? "admin" : "panitia" };
 }
 
-// Untuk halaman: belum login dialihkan ke /admin/login. `role: "admin"` membatasi fitur khusus admin.
+// Untuk halaman: belum login dialihkan ke /kuweraadmin/login. `role: "admin"` membatasi fitur khusus admin.
 export async function requireAdmin(opts: { role?: "admin" } = {}) {
   const admin = await getAdmin();
-  if (!admin) redirect("/admin/login");
-  if (opts.role === "admin" && admin.role !== "admin") redirect("/admin");
+  if (!admin) redirect("/kuweraadmin/login");
+  if (opts.role === "admin" && admin.role !== "admin") redirect("/kuweraadmin");
   return admin;
 }
 

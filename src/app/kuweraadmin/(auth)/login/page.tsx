@@ -7,7 +7,7 @@ export const metadata: Metadata = { title: "Masuk" };
 export const dynamic = "force-dynamic";
 
 export default async function LoginPage() {
-  if (await getAdmin()) redirect("/admin");
+  if (await getAdmin()) redirect("/kuweraadmin");
   return (
     <main className="flex flex-1 items-center justify-center px-6 py-20">
       <div className="w-full max-w-sm rounded-[20px] border border-glass-border bg-card p-8">

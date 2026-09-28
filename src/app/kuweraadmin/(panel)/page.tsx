@@ -118,7 +118,7 @@ export default async function DashboardPage() {
               <tbody>
                 {s.recent.map((o) => (
                   <tr key={o.id} className="border-t border-white/10 first:border-0">
-                    <td className="py-2 pr-4 font-mono"><Link href={`/admin/peserta/${o.id}`} className="text-brand-yellow hover:underline">{o.id}</Link></td>
+                    <td className="py-2 pr-4 font-mono"><Link href={`/kuweraadmin/peserta/${o.id}`} className="text-brand-yellow hover:underline">{o.id}</Link></td>
                     <td className="py-2 pr-4 text-white">{o.participants[0]?.fullName ?? "-"}{o.quantity > 1 ? ` +${o.quantity - 1}` : ""}</td>
                     <td className="py-2 pr-4"><StatusBadge status={o.status} /></td>
                     <td className="py-2 text-white/75">{fmtDateTime(o.createdAt)}</td>
@@ -128,7 +128,7 @@ export default async function DashboardPage() {
             </table>
           </div>
         )}
-        <Link href="/admin/peserta" className="mt-4 inline-block text-sm font-semibold text-brand-yellow hover:underline">Lihat semua peserta</Link>
+        <Link href="/kuweraadmin/peserta" className="mt-4 inline-block text-sm font-semibold text-brand-yellow hover:underline">Lihat semua peserta</Link>
       </Card>
 
       {admin.role === "admin" && (
