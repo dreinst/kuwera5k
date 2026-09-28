@@ -80,7 +80,8 @@ async function setujui(orderId, oleh) {
       );
     }
     await client.query('COMMIT');
-    const buyer = await pool.query('SELECT "fullName" FROM "Participant" WHERE "orderId" = $1 ORDER BY position LIMIT 1', [o.id]);
+    // Pakai client yang sama: pool hanya satu koneksi, pool.query di sini menunggu selamanya.
+    const buyer = await client.query('SELECT "fullName" FROM "Participant" WHERE "orderId" = $1 ORDER BY position LIMIT 1', [o.id]);
     return { ok: true, pemesan: buyer.rows[0]?.fullName || '-', pesan: `Order ${o.id} disetujui: ${o.quantity} tiket, ${rupiah(o.total)}. Bot mengirim e-ticket ke WhatsApp pemesan dalam kurang dari satu menit.` };
   } catch (e) {
     await client.query('ROLLBACK').catch(() => {});
