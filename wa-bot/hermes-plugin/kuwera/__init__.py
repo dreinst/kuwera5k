@@ -5,9 +5,13 @@ yang juga mengirim e-ticket ke WhatsApp pemesan setelah order disetujui. Dikunci
 gatekeeper (roles.USER_LOCKED_TOOLS).
 """
 import json
+import re
 import subprocess
+import threading
+import urllib.request
 
 CONTAINER = "kuwera-wa-bot"
+BOT_DIR = "/root/kuwera-wa-bot"
 NAMES = {"1769749405": "andrew", "705153966": "donny"}
 
 
@@ -97,7 +101,113 @@ def _container_up():
         return False
 
 
+# --- Persetujuan tanpa AI -------------------------------------------------------------------------
+# Pesan superadmin di Telegram dicegat sebelum sampai ke agen (hook pre_gateway_dispatch), supaya "ok" tidak
+# ditafsirkan macam-macam. Order diambil dari foto bukti yang di-reply; kalau tidak me-reply dan hanya ada
+# satu bukti yang menunggu, order itu yang dipakai. Daftar bukti yang menunggu ditulis bot WA ke
+# data/telegram-bukti.json dan dihapus setelah order lunas.
+_OK = {"ok", "oke", "okay", "okey", "acc", "setuju", "setujui", "sip", "lunas", "ya", "y", "✅", "👍", "👌"}
+_ORDER_RE = re.compile(r"KWR-\d{4}-[A-Z0-9]{6}", re.I)
+
+
+def _waiting():
+    try:
+        with open(f"{BOT_DIR}/data/telegram-bukti.json", encoding="utf-8") as f:
+            return list(json.load(f).keys())
+    except Exception:
+        return []
+
+
+def _bot_env(key):
+    try:
+        with open(f"{BOT_DIR}/.env", encoding="utf-8") as f:
+            for line in f:
+                if line.startswith(key + "="):
+                    return line.split("=", 1)[1].strip()
+    except Exception:
+        pass
+    return ""
+
+
+def _send(chat_id, text, reply_to=None):
+    token = _bot_env("TELEGRAM_BOT_TOKEN")
+    if not token:
+        return
+    body = {"chat_id": chat_id, "text": text, "disable_web_page_preview": True}
+    if reply_to:
+        body["reply_parameters"] = {"message_id": int(reply_to), "allow_sending_without_reply": True}
+    req = urllib.request.Request(f"https://api.telegram.org/bot{token}/sendMessage", data=json.dumps(body).encode(),
+                                 headers={"Content-Type": "application/json"})
+    try:
+        urllib.request.urlopen(req, timeout=15).read()
+    except Exception:
+        pass
+
+
+def _decide(text, reply_text):
+    """(aksi, order, alasan) atau None kalau pesan ini bukan urusan KUWERA."""
+    words = text.strip()
+    low = words.lower().strip(" .!")
+    explicit = _ORDER_RE.search(words)
+    replied = _ORDER_RE.search(reply_text) if "KUWERA 5K" in reply_text else None
+    if low.startswith("setujui") and explicit:
+        return ("setujui", explicit.group(0).upper(), "")
+    if low.startswith("tolak") and explicit:
+        return ("tolak", explicit.group(0).upper(), _ORDER_RE.sub("", words[5:]).strip())
+    is_ok = low in _OK
+    is_tolak = low == "tolak" or low.startswith("tolak ")
+    if not (is_ok or is_tolak):
+        return None
+    alasan = words[5:].strip() if is_tolak else ""
+    if replied:
+        return ("setujui" if is_ok else "tolak", replied.group(0).upper(), alasan)
+    if reply_text:
+        return None  # reply ke pesan lain, bukan foto bukti KUWERA
+    waiting = _waiting()
+    if len(waiting) == 1:
+        return ("setujui" if is_ok else "tolak", waiting[0], alasan)
+    if len(waiting) > 1:
+        return ("pilih", ", ".join(waiting), "")
+    return None
+
+
+def _run(chat_id, msg_id, who, action, order, alasan):
+    if action == "pilih":
+        _send(chat_id, f"Ada beberapa bukti bayar yang menunggu ({order}). Reply foto bukti yang mau disetujui dengan: ok", msg_id)
+        return
+    try:
+        res = json.loads(_cli(action, order, who, *([alasan] if action == "tolak" else [])))
+    except Exception as e:
+        res = {"ok": False, "pesan": str(e)[:200]}
+    if action == "setujui":
+        text = (f"✅ Order {order} disetujui. E-ticket dikirim ke WhatsApp pemesan dalam sekitar 20 detik."
+                if res.get("ok") else f"Order {order} tidak disetujui: {res.get('pesan', 'gagal')}")
+    else:
+        text = (f"❌ Penolakan order {order} diteruskan ke WhatsApp pemesan. Order tetap menunggu."
+                if res.get("ok") else f"Penolakan order {order} gagal: {res.get('pesan', 'gagal')}")
+    _send(chat_id, text, msg_id)
+
+
+def pre_gateway_dispatch(event, gateway=None, session_store=None, **kwargs):
+    src = getattr(event, "source", None)
+    platform = getattr(getattr(src, "platform", None), "value", None) or str(getattr(src, "platform", ""))
+    if "telegram" not in str(platform).lower():
+        return None
+    tg = str(getattr(src, "user_id", "") or "")
+    if tg not in NAMES:
+        return None
+    decision = _decide(getattr(event, "text", "") or "", getattr(event, "reply_to_text", "") or "")
+    if not decision:
+        return None
+    action, order, alasan = decision
+    chat_id = str(getattr(src, "chat_id", "") or tg)
+    threading.Thread(target=_run, args=(chat_id, getattr(event, "message_id", None), NAMES[tg], action, order, alasan),
+                     daemon=True).start()
+    return {"action": "skip", "reason": f"kuwera {action} {order}"}
+
+
 def register(ctx):
+    ctx.register_hook("pre_gateway_dispatch", pre_gateway_dispatch)
     for name, schema, handler, emoji in _TOOLS:
         ctx.register_tool(name=name, toolset="kuwera", schema=schema, handler=handler,
                           check_fn=_container_up, description=schema["description"], emoji=emoji)
