@@ -11,7 +11,6 @@ export const eventData = {
   paidCount: 214,
   // Tutup H-1 minggu (ukuran jersey dikirim ke vendor untuk dicetak), atau lebih awal kalau kuota penuh.
   registrationCloseLabel: "Sabtu, 17 Oktober 2026 pukul 23.59 WIB", // sama dengan registrationCloseIso
-  price: 125000,
   racePackDates,
   racePackLabel: `${racePackDates} (jam menyusul)`,
   racePackPlace: "Lapangan Rampal (tenda panitia)",

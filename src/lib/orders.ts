@@ -4,6 +4,7 @@ import type { OrderStatus, Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { fetchTransactionStatus, mapTransactionStatus, midtrans, type LiveStatus, type MidtransNotification } from "@/lib/midtrans";
 import { DEFAULT_FEES, MAX_TICKETS_HARD, PAYMENT_METHOD_IDS, type PaymentMethodId } from "@/lib/registration";
+import { currentPrice, getPricing, isOpen } from "@/lib/pricing";
 
 type Db = Prisma.TransactionClient;
 
@@ -73,7 +74,12 @@ export async function getPublicStats(now = new Date()) {
 // satu per satu supaya pendaftaran bersamaan tidak melewati kuota.
 export const ORDER_LOCK_KEY = 50_052_026;
 
+// Harga dan nama yang tampil mengikuti pengaturan harga admin (src/lib/pricing.ts), bukan kolom Category.price.
+// Pendaftaran yang ditutup admin mengembalikan daftar kosong.
 export async function getOpenCategories(now = new Date()) {
+  const pricing = await getPricing();
+  if (!isOpen(pricing, now)) return [];
+  const { label, price } = currentPrice(pricing, now);
   const cats = await prisma.category.findMany({
     where: { isActive: true, saleStart: { lte: now }, saleEnd: { gte: now } },
     orderBy: { price: "asc" },
@@ -84,7 +90,7 @@ export async function getOpenCategories(now = new Date()) {
   for (const c of cats) {
     const held = await heldCount(c.id, now);
     const remaining = Math.max(0, Math.min(c.quota - held, settings.quotaTotal - totalHeld));
-    out.push({ id: c.id, name: c.name, price: c.price, saleEnd: c.saleEnd.toISOString(), remaining });
+    out.push({ id: c.id, name: label, price, saleEnd: c.saleEnd.toISOString(), remaining });
   }
   return out;
 }

@@ -4,18 +4,21 @@ import Navbar from "@/components/sections/Navbar";
 import Footer from "@/components/sections/Footer";
 import RegistrationForm from "@/components/registration/RegistrationForm";
 import { getOpenCategories, getSettings, paymentMode, trackCheckout } from "@/lib/orders";
+import { getPricing, isOpen } from "@/lib/pricing";
 
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Pendaftaran Online",
   description:
-    "Daftar online KUWERA Fun Run 5K Malang. Rp125.000 per tiket, bisa beli beberapa tiket sekaligus, bayar lewat QRIS, e-ticket terbit setelah pembayaran dikonfirmasi.",
+    "Daftar online KUWERA Fun Run 5K Malang. Harga tiket sudah termasuk jersey, BIB, dan medali, bisa beli beberapa tiket sekaligus, bayar lewat QRIS, e-ticket terbit setelah pembayaran dikonfirmasi.",
   ...pageMeta("/daftar"),
 };
 
 export default async function DaftarPage() {
-  const [categories, settings] = await Promise.all([getOpenCategories(), getSettings()]);
+  const [categories, settings, pricing] = await Promise.all([getOpenCategories(), getSettings(), getPricing()]);
+  const closed = !isOpen(pricing);
+  const opensAt = closed && pricing.open && pricing.openAt ? new Date(pricing.openAt) : null;
   const mode = paymentMode();
   return (
     <div className="relative flex flex-1 flex-col">
@@ -29,10 +32,21 @@ export default async function DaftarPage() {
           Empat langkah, sekitar tiga menit. Isianmu tersimpan otomatis di perangkat ini selama 24 jam.
         </p>
         <div className="mt-8">
-          <RegistrationForm
-            categories={categories} fees={settings.fees} methods={settings.methods} paymentMode={mode} trackCheckout={trackCheckout()}
-            maxTickets={settings.maxTickets} holdMinutes={mode === "manual" ? settings.manualHoldMinutes : settings.holdMinutes}
-          />
+          {closed ? (
+            <div className="rounded-[20px] border border-glass-border bg-card p-8 text-center">
+              <p className="font-display text-2xl text-brand-yellow uppercase">Pendaftaran ditutup sementara</p>
+              <p className="mt-2 text-white/75">
+                {opensAt
+                  ? `Dibuka lagi ${opensAt.toLocaleString("id-ID", { timeZone: "Asia/Jakarta", weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" })} WIB.`
+                  : "Tanyakan jadwal pembukaannya ke WhatsApp panitia."}
+              </p>
+            </div>
+          ) : (
+            <RegistrationForm
+              categories={categories} fees={settings.fees} methods={settings.methods} paymentMode={mode} trackCheckout={trackCheckout()}
+              maxTickets={settings.maxTickets} holdMinutes={mode === "manual" ? settings.manualHoldMinutes : settings.holdMinutes}
+            />
+          )}
         </div>
       </main>
       <Footer />

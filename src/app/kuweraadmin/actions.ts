@@ -8,6 +8,7 @@ import { rateLimit } from "@/lib/rate-limit";
 import { checkOrderWithMidtrans, type MidtransCheck } from "@/lib/admin-data";
 import { MANUAL_GATEWAY, markOrderPaid, syncOrderWithMidtrans } from "@/lib/orders";
 import { verifyTurnstile } from "@/lib/turnstile";
+import type { Pricing } from "@/lib/pricing";
 
 // Server action = endpoint publik: setiap aksi memeriksa sesi dan perannya sendiri.
 
@@ -130,4 +131,41 @@ export async function markManualPaidAction(orderId: string, confirmTotal: number
   await logAdmin(admin.username, "tandai_lunas_manual", `${orderId} Rp${order.total}`);
   revalidatePath(`/kuweraadmin/peserta/${orderId}`);
   return { ok: "Order ditandai lunas, tiket sudah terbit" };
+}
+
+// Input datetime-local diisi dalam WIB ("2026-09-29T10:00"); kosong = tanpa batas waktu.
+function wibToIso(v: FormDataEntryValue | null) {
+  const s = String(v ?? "").trim();
+  if (!s) return null;
+  const d = new Date(`${s}:00+07:00`);
+  return Number.isNaN(d.getTime()) ? undefined : d.toISOString();
+}
+
+export async function savePricingAction(_prev: FormState, form: FormData): Promise<FormState> {
+  const admin = await getAdmin();
+  if (!admin || admin.role !== "admin") return { error: "Hanya admin yang bisa mengubah harga" };
+  const num = (k: string) => Number(String(form.get(k) ?? "").replace(/\D/g, ""));
+  const text = (k: string) => String(form.get(k) ?? "").trim().slice(0, 40);
+  const pricing: Pricing = {
+    open: form.get("open") === "on",
+    openAt: wibToIso(form.get("openAt")) ?? null,
+    promo: {
+      enabled: form.get("promoEnabled") === "on",
+      label: text("promoLabel"),
+      price: num("promoPrice"),
+      start: wibToIso(form.get("promoStart")) ?? null,
+      end: wibToIso(form.get("promoEnd")) ?? null,
+    },
+    regular: { label: text("regularLabel"), price: num("regularPrice") },
+  };
+  if ([form.get("openAt"), form.get("promoStart"), form.get("promoEnd")].some((v) => wibToIso(v) === undefined)) return { error: "Format waktu tidak valid" };
+  if (!pricing.regular.label || !pricing.promo.label) return { error: "Nama harga tidak boleh kosong" };
+  if (pricing.regular.price < 1000 || pricing.promo.price < 1000) return { error: "Harga minimal Rp1.000" };
+  if (pricing.promo.start && pricing.promo.end && pricing.promo.end <= pricing.promo.start) return { error: "Waktu selesai promo harus setelah waktu mulai" };
+  await prisma.setting.upsert({ where: { key: "pricing" }, create: { key: "pricing", value: pricing }, update: { value: pricing } });
+  await logAdmin(admin.username, "ubah_harga", JSON.stringify(pricing).slice(0, 500));
+  revalidatePath("/");
+  revalidatePath("/daftar");
+  revalidatePath("/kuweraadmin/harga");
+  return { ok: "Pengaturan harga tersimpan" };
 }

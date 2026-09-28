@@ -55,7 +55,9 @@ const HEADLINE = [
   { word: "5K", outline: true },
 ];
 
-export default function Hero({ stats, noFee = false }: { stats: { paid: number; remaining: number } | null; noFee?: boolean }) {
+export type HeroPrice = { label: string; price: number; promo: boolean; regular: { label: string; price: number } };
+
+export default function Hero({ stats, price, noFee = false }: { stats: { paid: number; remaining: number } | null; price: HeroPrice; noFee?: boolean }) {
   return (
     <section id="hero" className="relative overflow-hidden px-6 pt-32 pb-20">
       {/* Latar hero memudar di bagian bawah ke tekstur halaman, jadi tidak ada garis batas saat digulir. */}
@@ -141,8 +143,13 @@ export default function Hero({ stats, noFee = false }: { stats: { paid: number; 
               className="rounded-[20px] p-6"
               style={{ background: "linear-gradient(135deg, #F4E71D 0%, #C6DA2A 50%, #8DBF2A 100%)" }}
             >
-              <p className="text-xs font-semibold tracking-wide text-green-deep uppercase">Biaya pendaftaran</p>
-              <p className="font-display mt-1 text-5xl text-green-deep">Rp{eventData.price.toLocaleString("id-ID")}</p>
+              <p className="text-xs font-semibold tracking-wide text-green-deep uppercase">Biaya pendaftaran &middot; {price.label}</p>
+              <p className="font-display mt-1 text-5xl text-green-deep">Rp{price.price.toLocaleString("id-ID")}</p>
+              {price.promo && price.regular.price !== price.price && (
+                <p className="mt-1 text-sm font-semibold text-green-deep">
+                  {price.regular.label} <span className="line-through">Rp{price.regular.price.toLocaleString("id-ID")}</span>
+                </p>
+              )}
               <p className="mt-2 text-sm font-medium text-green-deep">
                 Sudah termasuk jersey, BIB, dan medali finisher. {noFee ? "Bayar lewat QRIS tanpa biaya layanan." : "Belum termasuk biaya layanan pembayaran."}
               </p>
