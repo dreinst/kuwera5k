@@ -35,9 +35,24 @@ const ORDER_RE = /KWR-\d{4}-[A-Z0-9]{6}/i;
 const CONFIRM_FILE = '/data/konfirmasi.json';
 const OUTBOX = '/data/outbox';
 const PROOF_FILE = '/data/telegram-bukti.json'; // order -> id pesan bukti (angka = Telegram, teks = Discord)
-// Layanan pelanggan: chat biasa dari pemesan ditaruh di INBOX untuk worker CS (bot D'Pro Ops di VPS, Kimi),
-// balasannya kembali lewat OUTBOX dengan field jid.
+// Layanan pelanggan: semua chat pribadi ke nomor kantor (di luar alur bukti bayar) ditaruh di INBOX untuk worker CS
+// (bot D'Pro Ops di VPS: Kimi, cadangan Claude). Worker yang memilah konteksnya; balasan kembali lewat OUTBOX (field jid).
 const INBOX = '/data/inbox';
+// Nama kontak yang tersimpan di HP kantor (sinkron app state WhatsApp), dikunci dengan digit nomor atau LID.
+const CONTACTS_FILE = '/data/contacts.json';
+let contacts = {};
+try { contacts = JSON.parse(fs.readFileSync(CONTACTS_FILE, 'utf8')); } catch { contacts = {}; }
+const digits = (id) => String(id || '').replace(/@.*/, '').replace(/:.*/, '').replace(/\D/g, '');
+function rememberContacts(list) {
+  let changed = false;
+  for (const c of list) {
+    if (!c.name) continue;
+    for (const key of [c.id, c.lid, c.phoneNumber].map(digits).filter(Boolean)) {
+      if (contacts[key] !== c.name) { contacts[key] = c.name; changed = true; }
+    }
+  }
+  if (changed) fs.writeFileSync(CONTACTS_FILE, JSON.stringify(contacts));
+}
 const humanAt = new Map(); // jid -> waktu terakhir admin membalas dari HP
 // ponytail: pesan kiriman Baileys ber-ID "3EB0...", dari HP tidak. Cukup untuk membedakan admin dari bot.
 const byHuman = (msg) => msg.key.fromMe && !String(msg.key.id || '').startsWith('3EB0');
@@ -252,7 +267,7 @@ async function handleIncoming(msg) {
       const o = await loadOrder(pending);
       if (o && o.status !== 'PAID') await notifyProof(o, o.status !== 'PENDING' || (o.expiresAt && new Date(o.expiresAt) <= new Date()), msg);
     }
-    if (!hasProof) await csInbox(msg);
+    if (!pending) await csInbox(msg);
     return; // chat biasa: worker CS yang memutuskan dibalas atau diserahkan ke admin
   }
   const orderId = match[0].toUpperCase();
@@ -282,9 +297,12 @@ async function handleIncoming(msg) {
 // Chat biasa dari nomor yang pernah memesan KUWERA diteruskan ke worker CS, kecuali admin baru membalas.
 async function csInbox(msg) {
   const jid = msg.key.remoteJid;
-  const text = textOf(msg).trim();
-  if (!text || Date.now() - (humanAt.get(jid) || 0) < 30 * 60_000) return;
-  const phone = String(msg.key.senderPn || msg.key.remoteJidAlt || jid).replace(/@.*/, '').replace(/\D/g, '');
+  const m = msg.message || {};
+  const media = m.imageMessage ? '[gambar]' : m.documentMessage ? '[dokumen]' : m.audioMessage ? '[pesan suara]'
+    : m.videoMessage ? '[video]' : m.stickerMessage ? '[stiker]' : m.contactMessage ? '[kontak]' : m.locationMessage ? '[lokasi]' : '';
+  const text = [media, textOf(msg).trim()].filter(Boolean).join(' ');
+  if (!text || m.protocolMessage || m.reactionMessage || Date.now() - (humanAt.get(jid) || 0) < 30 * 60_000) return;
+  const phone = digits(msg.key.senderPn || msg.key.remoteJidAlt || jid);
   const known = Object.keys(confirmChats).filter((id) => confirmChats[id] === jid);
   const { rows } = await pool.query(
     `SELECT o.id, o.status, o.total, o.quantity FROM "Order" o
@@ -294,9 +312,9 @@ async function csInbox(msg) {
       ORDER BY o."createdAt" DESC LIMIT 3`,
     [phone, known],
   );
-  if (!rows.length) return; // bukan pelanggan KUWERA
   fs.mkdirSync(INBOX, { recursive: true });
   const item = { id: msg.key.id, bot: 'kuwera', jid, phone, nama: msg.pushName || '', text: text.slice(0, 1000), waktu: Date.now(),
+    kontak: contacts[phone] || contacts[digits(jid)] || null,
     order: rows.map((o) => ({ id: o.id, status: o.status, total: rupiah(o.total), tiket: o.quantity })) };
   fs.writeFileSync(`${INBOX}/${msg.key.id}.json`, JSON.stringify(item));
 }
@@ -477,6 +495,8 @@ async function start() {
   const { version } = await fetchLatestBaileysVersion();
   const s = makeWASocket({ auth: state, version, logger: pino({ level: 'silent' }), browser: ['KUWERA 5K', 'Chrome', '1.0'] });
   s.ev.on('creds.update', saveCreds);
+  s.ev.on('contacts.upsert', rememberContacts);
+  s.ev.on('contacts.update', rememberContacts);
   s.ev.on('connection.update', async ({ connection, lastDisconnect, qr }) => {
     if (qr) {
       // Belum tertaut: pakai kode 8 huruf (Perangkat tertaut > Tautkan dengan nomor telepon) kalau
@@ -506,6 +526,12 @@ async function start() {
       connected = true;
       pairingRequested = false;
       logger.info('bot KUWERA terhubung ke WhatsApp');
+      // Sekali saja: tarik ulang app state supaya nama kontak dari HP kantor terkirim lewat contacts.upsert.
+      if (!fs.existsSync('/data/contacts-synced')) {
+        s.resyncAppState(['critical_unblock_low', 'regular_high', 'regular_low', 'critical_block', 'regular'], true)
+          .then(() => { fs.writeFileSync('/data/contacts-synced', new Date().toISOString()); logger.info({ jumlah: Object.keys(contacts).length }, 'kontak tersinkron'); })
+          .catch((e) => logger.warn({ err: e.message }, 'sinkron kontak gagal'));
+      }
     }
   });
   s.ev.on('messages.upsert', async ({ messages, type }) => {
