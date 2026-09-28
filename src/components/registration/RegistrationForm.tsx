@@ -450,7 +450,7 @@ function FormSteps({ categories, fees, methods, paymentMode, trackCheckout, maxT
                 <>
                   <h2 className="font-display text-2xl text-white uppercase">Pembayaran QRIS</h2>
                   <p className="mt-1 text-sm text-white/75">
-                    Di halaman berikutnya muncul QRIS dengan nominal yang sudah terisi otomatis. Scan dari aplikasi bank atau e-wallet apa pun, lalu konfirmasi lewat WhatsApp panitia.
+                    Di halaman berikutnya muncul ringkasan pembayaran. Kirim pesan pesanan ke WhatsApp panitia, lalu chatbot membalas dengan QRIS bernominal yang bisa dibayar dari aplikasi bank atau e-wallet apa pun.
                   </p>
                 </>
               ) : (
@@ -507,7 +507,7 @@ function FormSteps({ categories, fees, methods, paymentMode, trackCheckout, maxT
             <button type="button" onClick={next} className="rounded-full bg-brand-yellow px-7 py-3 text-sm font-semibold text-green-deep transition-transform hover:translate-x-0.5">Lanjut &rarr;</button>
           ) : (
             <button type="button" onClick={submit} disabled={submitting || paymentMode === "off" || (!!TURNSTILE_SITE_KEY && !turnstileToken)} className="rounded-full bg-brand-yellow px-7 py-3 text-sm font-semibold text-green-deep transition-transform hover:translate-x-0.5 disabled:opacity-60">
-              {submitting ? "Memproses..." : paymentMode === "off" ? "Pembayaran belum dibuka" : manual ? "Lanjut ke QRIS \u2192" : `Bayar ${formatRupiah(total)} →`}
+              {submitting ? "Memproses..." : paymentMode === "off" ? "Pembayaran belum dibuka" : manual ? "Lanjut ke pembayaran \u2192" : `Bayar ${formatRupiah(total)} →`}
             </button>
           )}
         </div>

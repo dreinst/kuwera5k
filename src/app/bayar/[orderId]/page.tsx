@@ -8,7 +8,7 @@ import { prisma } from "@/lib/db";
 import { needsSync, paymentMode, syncOrderWithMidtrans, trackCheckout } from "@/lib/orders";
 import { midtrans } from "@/lib/midtrans";
 import { maskEmail } from "@/lib/registration";
-import { confirmText, priceLines, qrisSvgFor } from "@/lib/manual-payment";
+import { confirmText, priceLines } from "@/lib/manual-payment";
 import { rateLimit } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
@@ -28,7 +28,7 @@ export default async function BayarPage({ params }: { params: Promise<{ orderId:
   if (order.status === "PAID") redirect(`/tiket/${order.id}`);
   const mode = paymentMode();
   const manual = mode === "manual" && order.status === "PENDING"
-    ? { qrSvg: await qrisSvgFor(order.total), waText: confirmText(order), lines: priceLines(order) }
+    ? { waText: confirmText(order), lines: priceLines(order) }
     : null;
 
   // Peserta yang kembali ke halaman ini (misal setelah notifikasi Midtrans gagal) langsung dicek ulang.
