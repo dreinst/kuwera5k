@@ -2,7 +2,7 @@
 // `docker exec kuwera-wa-bot node cli.js <perintah> ...`. Keluaran selalu satu baris JSON.
 //
 //   menunggu                     order yang menunggu konfirmasi bayar
-//   setujui <order> <oleh>       tandai lunas + terbitkan tiket (bot lalu mengirim e-ticket ke WhatsApp)
+//   setujui <order> <oleh> [via] tandai lunas + terbitkan tiket (bot lalu mengirim e-ticket ke WhatsApp); via default telegram
 //   tolak <order> <oleh> <alasan>  kirim pesan ke pemesan bahwa pembayaran belum ditemukan
 //   pemasukan                    total pemasukan terverifikasi
 //
@@ -48,7 +48,7 @@ async function pemasukan() {
   return { ...rows[0], total: rupiah(rows[0].total) };
 }
 
-async function setujui(orderId, oleh) {
+async function setujui(orderId, oleh, via = 'telegram') {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
@@ -66,7 +66,7 @@ async function setujui(orderId, oleh) {
     await client.query(
       `INSERT INTO "Payment" (id, "orderId", gateway, "gatewayRef", method, amount, "rawPayload", "receivedAt")
        VALUES ($1, $2, 'qris-manual', NULL, 'qris', $3, $4, timezone('UTC', now()))`,
-      [id(), o.id, o.total, JSON.stringify({ verifiedBy: oleh, via: 'telegram', verifiedAt: new Date().toISOString() })],
+      [id(), o.id, o.total, JSON.stringify({ verifiedBy: oleh, via, verifiedAt: new Date().toISOString() })],
     );
     if (o.promoCode) await client.query('UPDATE "PromoCode" SET "usedCount" = "usedCount" + 1 WHERE code = $1', [o.promoCode]);
     const people = await client.query('SELECT id, position FROM "Participant" WHERE "orderId" = $1 ORDER BY position', [o.id]);
@@ -119,7 +119,7 @@ async function tolak(orderId, oleh, alasan) {
   if (cmd === 'menunggu') out = await menunggu();
   else if (cmd === 'pemasukan') out = await pemasukan();
   else if ((cmd === 'setujui' || cmd === 'tolak') && !ORDER_RE.test(orderId)) out = { ok: false, pesan: 'Format nomor order harus KWR-2026-XXXXXX' };
-  else if (cmd === 'setujui') out = await setujui(orderId, oleh);
+  else if (cmd === 'setujui') out = await setujui(orderId, oleh, rest[0] === 'discord' ? 'discord' : 'telegram');
   else if (cmd === 'tolak') out = await tolak(orderId, oleh, rest.join(' ').slice(0, 200));
   else out = { ok: false, pesan: 'Perintah: menunggu | pemasukan | setujui <order> <oleh> | tolak <order> <oleh> <alasan>' };
   process.stdout.write(JSON.stringify(out) + '\n');

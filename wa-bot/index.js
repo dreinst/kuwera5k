@@ -2,9 +2,10 @@
 //
 // 1. Pemesan menekan "Minta QRIS via WhatsApp" di /bayar dan mengirim pesan berisi nomor order ke nomor
 //    kantor. Bot membalas dengan kartu bayar (QRIS dinamis bernominal total, dari /api/orders/{id}/qris).
-//    Setelah pemesan mengirim screenshot bukti bayar, bot meneruskan ke Telegram superadmin (@dproagentbot)
-//    kartu invoice yang sama dengan milik pemesan plus foto bukti bayarnya. Keterangan foto bukti memuat nomor
-//    order, jadi superadmin cukup me-reply foto itu dengan "ok" (Hermes membaca keterangan foto yang di-reply).
+//    Setelah pemesan mengirim screenshot bukti bayar, bot meneruskan kartu invoice yang sama dengan milik pemesan
+//    plus foto bukti bayarnya ke Discord #chatbot (superadmin), dengan tombol Setujui/Tolak yang ditangani bot
+//    D'Pro Ops di VPS lewat cli.js. Kalau Discord gagal, jatuh ke Telegram superadmin (@dproagentbot) seperti dulu:
+//    keterangan foto bukti memuat nomor order, jadi superadmin cukup me-reply foto itu dengan "ok".
 // 2. Superadmin me-reply foto bukti dengan "ok" atau menulis "setujui KWR-..." ke Hermes (tool kuwera_setujui,
 //    lihat hermes-plugin/), atau admin menandai lunas di /kuweraadmin. Keduanya mengubah order yang sama di database,
 //    dan kabar "terverifikasi" dikirim sebagai reply ke foto bukti di Telegram, dari jalur mana pun. Setelah order lunas, bot mengirim tautan e-ticket ke WhatsApp pemesan
@@ -27,11 +28,13 @@ const SITE_URL = (process.env.SITE_URL || 'https://kuwera5k.vercel.app').replace
 const PAIRING_PHONE = (process.env.PAIRING_PHONE || '').replace(/\D/g, '');
 const TG_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '';
 const TG_CHAT = process.env.TELEGRAM_CHAT_ID || '';
+const DC_TOKEN = process.env.DISCORD_BOT_TOKEN || '';
+const DC_CHANNEL = process.env.DISCORD_CHANNEL_ID || '';
 const REAL_GATEWAYS = ['qris-manual', 'midtrans'];
 const ORDER_RE = /KWR-\d{4}-[A-Z0-9]{6}/i;
 const CONFIRM_FILE = '/data/konfirmasi.json';
 const OUTBOX = '/data/outbox';
-const PROOF_FILE = '/data/telegram-bukti.json'; // order -> message_id foto bukti di Telegram
+const PROOF_FILE = '/data/telegram-bukti.json'; // order -> id pesan bukti (angka = Telegram, teks = Discord)
 // Arsip per order (bukti bayar, invoice, info.json) plus riwayat.csv; disalin ke NAS oleh kuwera-arsip-nas di VPS.
 const ARCHIVE = '/data/arsip';
 // Sama dengan src/lib/event-data.ts (racePackDates, racePackPlace, jadwal lomba).
@@ -89,6 +92,40 @@ async function telegramFile(kind, buffer, filename, caption) {
   const res = await fetch(`https://api.telegram.org/bot${TG_TOKEN}/${method}`, { method: 'POST', body: form, signal: AbortSignal.timeout(30000) });
   if (!res.ok) throw new Error(`Telegram ${res.status}: ${await res.text()}`);
   return (await res.json()).result.message_id;
+}
+
+// Kirim ke Discord #chatbot lewat bot D'Pro Ops. files: [{ buffer, name }]. approve: nomor order untuk tombol
+// Setujui/Tolak. Mengembalikan id pesan (teks) supaya kabar lunas bisa dibalas ke pesan yang sama.
+async function discord(content, { replyTo, files = [], approve } = {}) {
+  if (!DC_TOKEN || !DC_CHANNEL) throw new Error('Discord belum diatur');
+  const payload = { content: content.slice(0, 1990), allowed_mentions: { parse: [] } };
+  if (replyTo) payload.message_reference = { message_id: replyTo, fail_if_not_exists: false };
+  if (approve) {
+    payload.components = [{ type: 1, components: [
+      { type: 2, style: 3, label: 'Setujui', emoji: { name: '✅' }, custom_id: `kuwera:setujui:${approve}` },
+      { type: 2, style: 4, label: 'Tolak', emoji: { name: '❌' }, custom_id: `kuwera:tolak:${approve}` },
+    ] }];
+  }
+  const form = new FormData();
+  payload.attachments = files.map((f, i) => ({ id: i, filename: f.name }));
+  form.append('payload_json', JSON.stringify(payload));
+  files.forEach((f, i) => form.append(`files[${i}]`, new Blob([f.buffer]), f.name));
+  const res = await fetch(`https://discord.com/api/v10/channels/${DC_CHANNEL}/messages`, {
+    method: 'POST', headers: { Authorization: `Bot ${DC_TOKEN}` }, body: form, signal: AbortSignal.timeout(30000),
+  });
+  if (!res.ok) throw new Error(`Discord ${res.status}: ${await res.text()}`);
+  return (await res.json()).id;
+}
+
+// Kabar teks ke superadmin: Discord dulu, Telegram kalau Discord gagal. replyTo dari proofMessages.
+async function notify(text, replyTo) {
+  try {
+    return await discord(text, { replyTo: typeof replyTo === 'string' ? replyTo : undefined });
+  } catch (e) {
+    logger.warn({ err: e.message }, 'Discord gagal, kirim ke Telegram');
+    await telegram(text, typeof replyTo === 'number' ? replyTo : undefined);
+    return null;
+  }
 }
 
 const stampWib = () => new Date().toLocaleString('sv-SE', { timeZone: 'Asia/Jakarta' }).replace(' ', '_').replace(/:/g, '');
@@ -248,7 +285,7 @@ async function qrisCard(orderId) {
 async function sendQris(jid, order, quoted) {
   const image = await qrisCard(order.id);
   if (!image) {
-    await telegram(`KUWERA 5K: kartu QRIS order ${order.id} gagal dibuat. Balas pemesan manual di WA kantor.`);
+    await notify(`KUWERA 5K: kartu QRIS order ${order.id} gagal dibuat. Balas pemesan manual di WA kantor.`);
     return;
   }
   const deadline = order.expiresAt
@@ -265,21 +302,37 @@ async function sendQris(jid, order, quoted) {
   await archive(order.id, 'QRIS/invoice dikirim ke pemesan', { buffer: image, name: 'invoice-qris.png' }, jid);
 }
 
-// Ke Telegram superadmin: kartu invoice yang sama dengan milik pemesan, lalu foto bukti bayarnya. Nomor order
-// ada di keterangan foto bukti, jadi cukup reply foto itu dengan "ok" untuk menyetujui.
+// Ke superadmin: kartu invoice yang sama dengan milik pemesan plus bukti bayarnya, dalam satu pesan Discord
+// dengan tombol Setujui/Tolak. Kalau Discord gagal, pakai jalur Telegram lama (reply foto bukti dengan "ok").
 async function notifyProof(order, expired, msg) {
   const card = order.status === 'PENDING' ? await qrisCard(order.id) : null;
-  if (card) await telegramFile('photo', card, `invoice-${order.id}.png`, `Invoice yang dikirim ke pemesan ${order.buyer || '-'}, order ${order.id}`);
-  const caption = [
+  const media = await mediaOf(msg);
+  const head = [
     `KUWERA 5K: bukti bayar order ${order.id}${expired ? ' (waktu bayar sudah habis)' : ''}`,
     `Pemesan: ${order.buyer || '-'}, ${order.quantity} tiket`,
     `Nominal yang harus masuk: ${rupiah(order.total)}`,
     '',
+  ];
+  try {
+    const files = [card && { buffer: card, name: `invoice-${order.id}.png` }, media && { buffer: media.buffer, name: `${order.id}-${media.name}` }].filter(Boolean);
+    proofMessages[order.id] = await discord([
+      ...head,
+      'Cek riwayat GoPay Merchant. Kalau nominalnya persis masuk, klik Setujui. Kalau belum ada, klik Tolak lalu isi alasannya.',
+      media ? '' : '(Gambar bukti gagal diteruskan, lihat di chat WA kantor.)',
+      `Bisa juga lewat ${SITE_URL}/kuweraadmin/peserta/${order.id}`,
+    ].join('\n'), { files, approve: order.id });
+    saveProofMessages();
+    return;
+  } catch (e) {
+    logger.warn({ err: e.message, orderId: order.id }, 'Discord gagal, bukti bayar dikirim ke Telegram');
+  }
+  if (card) await telegramFile('photo', card, `invoice-${order.id}.png`, `Invoice yang dikirim ke pemesan ${order.buyer || '-'}, order ${order.id}`);
+  const caption = [
+    ...head,
     'Cek riwayat GoPay Merchant. Kalau nominalnya persis masuk, reply foto ini dengan: ok',
     'Kalau belum ada, reply dengan: tolak <alasan>',
     `Bisa juga lewat ${SITE_URL}/kuweraadmin/peserta/${order.id}`,
   ].join('\n');
-  const media = await mediaOf(msg);
   const messageId = media
     ? await telegramFile(media.kind, media.buffer, `${order.id}-${media.name}`, caption)
     : await telegram(`${caption}\n\n(Gambar bukti gagal diteruskan, lihat di chat WA kantor.)`).then(() => null);
@@ -357,11 +410,12 @@ async function processPaid() {
     }
     if (!o.adminNotifiedAt) {
       const sum = await incomeSummary();
-      await telegram([
+      const lewat = { telegram: 'Telegram', discord: 'Discord' }[o.verified_via] || 'halaman admin';
+      await notify([
         'KUWERA 5K: pembayaran terverifikasi',
         `Order ${o.id}, ${o.quantity} tiket, ${rupiah(o.total)}`,
         `Pemesan: ${o.buyer || '-'}`,
-        `Disetujui: ${o.gateway === 'qris-manual' ? `${o.verified_by || 'admin'} lewat ${o.verified_via === 'telegram' ? 'Telegram' : 'halaman admin'}` : o.gateway}, ${wib(o.paidAt)}`,
+        `Disetujui: ${o.gateway === 'qris-manual' ? `${o.verified_by || 'admin'} lewat ${lewat}` : o.gateway}, ${wib(o.paidAt)}`,
         'Tautan e-ticket dikirim ke WhatsApp pemesan.',
         '',
         `Total pemasukan terverifikasi: ${rupiah(sum.total)}`,
