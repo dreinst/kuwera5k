@@ -201,6 +201,20 @@ export async function savePromoAction(_prev: FormState, form: FormData): Promise
   return { ok: `Kode ${code} tersimpan` };
 }
 
+// Hapus kode promo. Kode yang pernah dipakai order tidak bisa dihapus (riwayat order tetap utuh); nonaktifkan saja.
+export async function deletePromoAction(code: string): Promise<{ ok?: string; error?: string }> {
+  const admin = await getAdmin();
+  if (!admin || !allowed(admin.role, SUPER)) return { error: "Hanya superadmin yang bisa menghapus kode promo" };
+  const used = await prisma.order.count({ where: { promoCode: code } });
+  if (used > 0) return { error: `Kode ${code} sudah dipakai ${used} order, jadi tidak bisa dihapus. Hilangkan centang Kode aktif untuk mematikannya.` };
+  const { count } = await prisma.promoCode.deleteMany({ where: { code } });
+  if (!count) return { error: `Kode ${code} tidak ditemukan` };
+  await logAdmin(admin.username, "hapus_promo", code);
+  revalidatePath("/daftar");
+  revalidatePath("/kuweraadmin/promo");
+  return { ok: `Kode ${code} dihapus` };
+}
+
 // --- Reg ulang race pack (petugas) ---
 export type RegTicket = {
   code: string; name: string; jersey: string; gender: string; nik: string; community: string | null;
