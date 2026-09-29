@@ -87,6 +87,11 @@ const phoneJid = (phone) => {
 let confirmChats = {};
 try { confirmChats = JSON.parse(fs.readFileSync(CONFIRM_FILE, 'utf8')); } catch { confirmChats = {}; }
 const saveConfirmChats = () => fs.writeFileSync(CONFIRM_FILE, JSON.stringify(confirmChats));
+// Order yang sudah dikirimi pengingat bayar (order -> waktu kirim), supaya pengingat hanya sekali per order.
+const REMIND_FILE = '/data/pengingat.json';
+let reminded = {};
+try { reminded = JSON.parse(fs.readFileSync(REMIND_FILE, 'utf8')); } catch { reminded = {}; }
+const REMIND_MINUTES = 15;
 let proofMessages = {};
 try { proofMessages = JSON.parse(fs.readFileSync(PROOF_FILE, 'utf8')); } catch { proofMessages = {}; }
 const saveProofMessages = () => fs.writeFileSync(PROOF_FILE, JSON.stringify(proofMessages));
@@ -516,10 +521,58 @@ async function processPaid() {
   }
 }
 
+// Pengingat bayar: order yang batas bayarnya tinggal 15 menit dan belum ada bukti bayar dikirimi panduan sekali.
+// Belum pernah chat bot = panduan minta QRIS lewat halaman bayar; sudah menerima QRIS = ajakan bayar dan kirim bukti.
+async function processReminders() {
+  if (!connected) return;
+  const { rows } = await pool.query(
+    `SELECT o.id, o.total, o."expiresAt", o."buyerPhone",
+            (SELECT p."fullName" FROM "Participant" p WHERE p."orderId" = o.id ORDER BY p.position LIMIT 1) AS buyer
+       FROM "Order" o
+      WHERE o.status = 'PENDING' AND o."uniqueCode" > 0
+        AND o."expiresAt" > timezone('UTC', now()) AND o."expiresAt" <= timezone('UTC', now()) + make_interval(mins => $1)
+        AND NOT EXISTS (SELECT 1 FROM "PaymentProof" f WHERE f."orderId" = o.id)`,
+    [REMIND_MINUTES],
+  );
+  for (const o of rows) {
+    if (reminded[o.id] || proofMessages[o.id]) continue;
+    const jid = buyerChat(o.id, o.buyerPhone);
+    if (!jid) continue;
+    const name = o.buyer ? o.buyer.split(' ')[0] : 'kak';
+    const jam = new Date(o.expiresAt).toLocaleTimeString('id-ID', { timeZone: 'Asia/Jakarta', hour: '2-digit', minute: '2-digit' });
+    const text = confirmChats[o.id]
+      ? [
+          `Halo kak ${name}, QRIS pembayaran pesanan KUWERA 5K ${o.id} sebesar ${rupiah(o.total)} berlaku sampai pukul ${jam} WIB, sekitar ${REMIND_MINUTES} menit lagi.`,
+          '',
+          'Kalau sudah membayar, kirimkan screenshot bukti bayarnya di chat ini ya. Kalau belum, yuk selesaikan sekarang supaya slot kamu tetap aman 😊',
+        ].join('\n')
+      : [
+          `Halo kak ${name}, pesanan KUWERA 5K kamu (${o.id}, ${rupiah(o.total)}) masih menunggu pembayaran dan berakhir pukul ${jam} WIB, sekitar ${REMIND_MINUTES} menit lagi.`,
+          '',
+          'Yuk lanjutkan sebentar:',
+          `1. Buka ${SITE_URL}/bayar/${o.id}`,
+          '2. Tekan "Minta QRIS via WhatsApp", lalu kirim pesannya.',
+          '3. Bayar QRIS yang kami kirim, lalu kirim screenshot bukti bayarnya di chat ini.',
+          '',
+          'Kalau ada kendala, balas saja pesan ini ya, kami bantu 😊',
+        ].join('\n');
+    try {
+      await reply(jid, { text });
+      reminded[o.id] = Date.now();
+      fs.writeFileSync(REMIND_FILE, JSON.stringify(reminded));
+      await archive(o.id, `pengingat bayar ${REMIND_MINUTES} menit dikirim`, null, jid);
+      logger.info({ orderId: o.id, jid }, 'pengingat bayar terkirim');
+    } catch (e) {
+      logger.error({ orderId: o.id, err: e.message }, 'gagal kirim pengingat bayar');
+    }
+  }
+}
+
 async function paidLoop() {
   for (;;) {
     try { await processPaid(); } catch (e) { logger.error({ err: e.message }, 'proses order lunas gagal'); }
     try { await processOutbox(); } catch (e) { logger.error({ err: e.message }, 'proses outbox gagal'); }
+    try { await processReminders(); } catch (e) { logger.error({ err: e.message }, 'proses pengingat bayar gagal'); }
     await sleep(20000);
   }
 }
