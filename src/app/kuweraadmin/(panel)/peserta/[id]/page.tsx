@@ -83,9 +83,18 @@ export default async function PesertaDetailPage({ params }: { params: Promise<{ 
                 <p className="text-xs font-semibold tracking-wide text-gold uppercase">Race pack</p>
                 {p.ticket ? (
                   <>
-                    <p className="mt-2 text-white/85">
+                    <figure className="mt-3 w-44">
+                      <a href={`/kuweraadmin/berkas/qr/${p.ticket.code}`} target="_blank" rel="noopener noreferrer" className="block rounded-xl bg-white p-2">
+                        {/* eslint-disable-next-line @next/next/no-img-element -- PNG dari route admin */}
+                        <img src={`/kuweraadmin/berkas/qr/${p.ticket.code}`} alt={`QR registrasi ulang ${p.ticket.code}`} width={600} height={600} className="h-auto w-full" />
+                      </a>
+                      <figcaption className="mt-2 text-xs text-white/75">
+                        <span className="block font-semibold text-white">QR registrasi ulang</span>
+                        <a href={`/kuweraadmin/berkas/qr/${p.ticket.code}?unduh=1`} className="mt-1 inline-block rounded-full border border-brand-yellow px-4 py-1.5 text-sm font-semibold text-brand-yellow">Unduh QR</a>
+                      </figcaption>
+                    </figure>
+                    <p className="mt-3 text-white/85">
                       Kode tiket <span className="font-mono text-white">{p.ticket.code}</span>
-                      {" "}&middot; <a href={`/kuweraadmin/berkas/qr/${p.ticket.code}?unduh=1`} className="text-brand-yellow underline">Unduh QR</a>
                       {p.ticket.racepackCollectedAt
                         ? <> &middot; diambil {fmtDateTime(p.ticket.racepackCollectedAt)} (dicatat {p.ticket.collectedBy})</>
                         : <> &middot; belum diambil</>}
@@ -150,7 +159,8 @@ export default async function PesertaDetailPage({ params }: { params: Promise<{ 
                       ) : <p className="text-sm text-white/80">{f.fileName}</p>}
                       <figcaption className="mt-2 text-xs text-white/75">
                         {f.note && <span className="mb-1 block text-sm font-semibold text-white">{f.note}</span>}
-                        {fmtDateTime(f.createdAt)} &middot; <a href={`/kuweraadmin/berkas/bukti/${f.id}?unduh=1`} className="font-semibold text-brand-yellow underline">Unduh</a>
+                        <span className="block">{fmtDateTime(f.createdAt)}</span>
+                        <a href={`/kuweraadmin/berkas/bukti/${f.id}?unduh=1`} className="mt-1 inline-block rounded-full border border-brand-yellow px-4 py-1.5 text-sm font-semibold text-brand-yellow">Unduh bukti</a>
                       </figcaption>
                     </figure>
                   ))}
