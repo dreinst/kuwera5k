@@ -17,7 +17,7 @@ export async function POST(req: Request) {
   if (!parsed.success) return NextResponse.json({ valid: false, message: "Kode promonya belum diisi" }, { status: 400 });
   const category = await prisma.category.findUnique({ where: { id: parsed.data.categoryId } });
   if (!category) return NextResponse.json({ valid: false, message: "Kategori tidak ditemukan" }, { status: 400 });
-  const res = await validatePromo(parsed.data.code, currentPrice(await getPricing()).price * parsed.data.quantity);
+  const res = await validatePromo(parsed.data.code, currentPrice(await getPricing()).price * parsed.data.quantity, undefined, undefined, parsed.data.quantity);
   if (!res.ok) return NextResponse.json({ valid: false, message: res.message });
   return NextResponse.json({ valid: true, code: res.promo.code, discount: res.discount, label: res.label });
 }

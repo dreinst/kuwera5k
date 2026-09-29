@@ -125,7 +125,7 @@ export async function POST(req: Request) {
         let discount = 0;
         let promoCode: string | null = null;
         if (input.promoCode) {
-          const res = await validatePromo(input.promoCode, subtotal, now, tx);
+          const res = await validatePromo(input.promoCode, subtotal, now, tx, quantity);
           if (!res.ok) return { error: res.message, fields: { promoCode: res.message }, status: 400 };
           discount = res.discount;
           promoCode = res.promo.code;

@@ -102,18 +102,25 @@ export function newOrderId(year = new Date().getFullYear()) {
   return `KWR-${year}-${s}`;
 }
 
-// Kuota promo dihitung dari order aktif yang memakainya (lunas + pending yang belum lewat hold),
+// Kuota promo dihitung per tiket dari order aktif yang memakainya (lunas + pending yang belum lewat hold),
 // jadi order yang kedaluwarsa otomatis mengembalikan jatahnya. usedCount hanya mencatat pemakaian lunas.
-export async function validatePromo(code: string, price: number, now = new Date(), db: Db = prisma) {
+// discountType: "percent" (diskon %), "fixed" (potongan Rp per order), "flat" (harga rata Rp per tiket).
+export async function validatePromo(code: string, price: number, now = new Date(), db: Db = prisma, quantity = 1) {
   const promo = await db.promoCode.findUnique({ where: { code } });
   if (!promo || !promo.isActive) return { ok: false as const, message: "Kode promo tidak dikenal" };
   if (now < promo.validFrom || now > promo.validUntil) return { ok: false as const, message: "Kode promo sudah tidak berlaku" };
-  const used = await db.order.count({ where: { promoCode: promo.code, ...activeOrderWhere(now) } });
-  if (used >= promo.quota) return { ok: false as const, message: "Kuota kode promo sudah habis" };
+  const agg = await db.order.aggregate({ _sum: { quantity: true }, where: { promoCode: promo.code, ...activeOrderWhere(now) } });
+  const left = promo.quota - (agg._sum.quantity ?? 0);
+  if (left <= 0) return { ok: false as const, message: "Kuota kode promo sudah habis" };
+  if (left < quantity) return { ok: false as const, message: `Kuota kode promo tinggal ${left} tiket` };
   const discount = promo.discountType === "percent"
     ? Math.round((price * promo.discountValue) / 100)
-    : Math.min(promo.discountValue, price);
-  const label = promo.discountType === "percent" ? `Diskon ${promo.discountValue}%` : `Potongan Rp${promo.discountValue.toLocaleString("id-ID")}`;
+    : promo.discountType === "flat"
+      ? Math.max(0, price - promo.discountValue * quantity)
+      : Math.min(promo.discountValue, price);
+  const label = promo.discountType === "percent" ? `Diskon ${promo.discountValue}%`
+    : promo.discountType === "flat" ? `Harga khusus Rp${promo.discountValue.toLocaleString("id-ID")} per tiket`
+    : `Potongan Rp${promo.discountValue.toLocaleString("id-ID")}`;
   return { ok: true as const, discount, label, promo };
 }
 
