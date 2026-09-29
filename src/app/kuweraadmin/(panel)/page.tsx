@@ -63,7 +63,7 @@ export default async function DashboardPage() {
       </div>
 
       <div className="grid gap-4 sm:grid-cols-3">
-        <Stat label="Pendapatan tiket" value={formatRupiah(s.revenueTicket)} note="Harga tiket dikurangi diskon" />
+        <Stat label="Pendapatan tiket" value={formatRupiah(s.revenueTicket)} note="Harga dikurangi kode unik (pendapatan bersih)" />
         <Stat label="Biaya layanan" value={formatRupiah(s.revenueFee)} note="Dibayar peserta, untuk Midtrans" />
         <Stat label="Total diterima" value={formatRupiah(s.revenueTotal)} note="Sesuai nominal di Payment Gateway" />
       </div>
