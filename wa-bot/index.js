@@ -19,7 +19,7 @@
 
 const fs = require('node:fs');
 const crypto = require('node:crypto');
-const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, fetchLatestBaileysVersion, downloadMediaMessage } = require('@whiskeysockets/baileys');
+const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, fetchLatestBaileysVersion, downloadMediaMessage, BufferJSON } = require('@whiskeysockets/baileys');
 const { Boom } = require('@hapi/boom');
 const { Pool } = require('pg');
 const pino = require('pino');
@@ -60,6 +60,15 @@ function rememberContacts(list) {
 const SENT_IDS = '/data/sent-ids.txt';
 // Arsip per order (bukti bayar, invoice, info.json) plus riwayat.csv; disalin ke NAS oleh kuwera-arsip-nas di VPS.
 const ARCHIVE = '/data/arsip';
+// Jam operasional (aturan PRD optimasi 4.12): pukul JAM_TUTUP sampai JAM_BUKA WIB pesan pribadi tidak diproses.
+// Pesan disimpan di TUNDA (media ikut diunduh saat itu juga) dan setiap chat mendapat satu kabar singkat; mulai
+// JAM_BUKA semua pesan diproses berurutan seperti baru masuk. Order yang tenggat bayarnya jatuh di jam tutup
+// diperpanjang sampai JAM_BUKA + PERPANJANG_MENIT, jadi tidak ada order yang hangus karena menunggu jawaban.
+// Jendela perawatan server (restart, deploy) jatuh di dalam jam tutup, pukul 02.00 WIB.
+const JAM_TUTUP = Number(process.env.JAM_TUTUP ?? 1);
+const JAM_BUKA = Number(process.env.JAM_BUKA ?? 6);
+const PERPANJANG_MENIT = 180;
+const TUNDA = '/data/tunda';
 // Sama dengan src/lib/event-data.ts (racePackDates, racePackPlace, racePackHours, jadwal acara).
 const RACE_PACK = 'Kamis dan Jumat, 22 dan 23 Oktober 2026 di Kudam V/Brawijaya';
 const RACE_DAY = 'Sabtu, 24 Oktober 2026, 06.00 WIB di Lapangan Rampal';
@@ -273,9 +282,60 @@ function textOf(msg) {
   return m.conversation || m.extendedTextMessage?.text || m.imageMessage?.caption || m.documentMessage?.caption || '';
 }
 
+const jamWib = () => Number(new Date().toLocaleString('en-US', { timeZone: 'Asia/Jakarta', hour: 'numeric', hourCycle: 'h23' }));
+const jamTutup = () => { const h = jamWib(); return h >= JAM_TUTUP && h < JAM_BUKA; };
+const tanggalWib = () => new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Jakarta' });
+const jam = (h) => `${String(h).padStart(2, '0')}.00`;
+const sudahDikabari = new Set(); // "{tanggal}|{chat}": satu kabar jam tutup per chat per malam
+
+// Jam tutup: simpan pesan (dengan medianya) untuk diproses saat buka, dan kabari pengirim sekali per malam.
+async function tundaPesan(msg) {
+  const jid = msg.key.remoteJid;
+  const media = await mediaOf(msg);
+  fs.mkdirSync(TUNDA, { recursive: true });
+  const berkas = `${TUNDA}/${Date.now()}-${String(msg.key.id).replace(/\W/g, '')}.json`;
+  fs.writeFileSync(berkas, JSON.stringify({ msg: { key: msg.key, message: msg.message, messageTimestamp: msg.messageTimestamp, pushName: msg.pushName }, media }, BufferJSON.replacer));
+  logger.info({ jid }, 'jam tutup: pesan ditunda sampai jam buka');
+  const kunci = `${tanggalWib()}|${jid}`;
+  if (sudahDikabari.has(kunci)) return;
+  sudahDikabari.add(kunci);
+  await reply(jid, { text: `Terima kasih sudah menghubungi kami 🙏 Saat ini di luar jam operasional (${jam(JAM_TUTUP)} sampai ${jam(JAM_BUKA)} WIB). Pesan kakak sudah kami terima dan akan kami balas mulai pukul ${jam(JAM_BUKA)} WIB ya.` }, msg);
+}
+
+// Jam buka: proses pesan yang ditunda, urut sesuai waktu masuk.
+async function prosesTunda() {
+  if (!connected || jamTutup() || !fs.existsSync(TUNDA)) return;
+  for (const f of fs.readdirSync(TUNDA).filter((x) => x.endsWith('.json')).sort()) {
+    const file = `${TUNDA}/${f}`;
+    let item;
+    try { item = JSON.parse(fs.readFileSync(file, 'utf8'), BufferJSON.reviver); } catch (e) { logger.error({ f, err: e.message }, 'pesan tunda rusak'); fs.unlinkSync(file); continue; }
+    fs.unlinkSync(file);
+    const msg = item.msg;
+    msg._media = item.media ?? null;
+    try { await handleIncoming(msg); } catch (e) { logger.error({ err: e.message }, 'gagal memproses pesan tunda'); }
+    await sleep(between(2000, 5000));
+  }
+}
+
+// Jam tutup: order yang tenggatnya jatuh di jam tutup (atau sebelum JAM_BUKA + PERPANJANG_MENIT) diperpanjang.
+async function perpanjangOrderMalam() {
+  if (!jamTutup()) return;
+  const tgl = tanggalWib();
+  const mulai = new Date(`${tgl}T${String(JAM_TUTUP).padStart(2, '0')}:00:00+07:00`);
+  const sampai = new Date(new Date(`${tgl}T${String(JAM_BUKA).padStart(2, '0')}:00:00+07:00`).getTime() + PERPANJANG_MENIT * 60_000);
+  const { rowCount } = await pool.query(
+    `UPDATE "Order" SET "expiresAt" = $2, "updatedAt" = timezone('UTC', now())
+      WHERE status = 'PENDING' AND "expiresAt" >= $1 AND "expiresAt" < $2`,
+    // Kolom timestamp tanpa zona berisi waktu UTC, jadi dikirim sebagai teks UTC tanpa offset.
+    [mulai.toISOString().slice(0, 23), sampai.toISOString().slice(0, 23)],
+  );
+  if (rowCount) logger.info({ jumlah: rowCount, sampai }, 'jam tutup: tenggat order diperpanjang');
+}
+
 async function handleIncoming(msg) {
   const jid = msg.key.remoteJid || '';
   if (msg.key.fromMe || !jid || jid.endsWith('@g.us') || jid === 'status@broadcast' || jid.endsWith('@newsletter')) return;
+  if (jamTutup()) return tundaPesan(msg);
   // Kode booking DriveTech (BK-...) atau bukti bayarnya. Kalau API DriveTech gagal, pesan tetap masuk alur biasa (CS).
   if (await drivetech.handle(msg).catch((e) => { logger.error({ err: e.message }, 'DriveTech: pesan gagal diproses'); return false; })) return;
   const hasProof = !!(msg.message && (msg.message.imageMessage || msg.message.documentMessage));
@@ -671,8 +731,13 @@ async function paidLoop() {
   for (;;) {
     try { await processPaid(); } catch (e) { logger.error({ err: e.message }, 'proses order lunas gagal'); }
     try { await processOutbox(); } catch (e) { logger.error({ err: e.message }, 'proses outbox gagal'); }
-    try { await processReminders(); } catch (e) { logger.error({ err: e.message }, 'proses pengingat bayar gagal'); }
-    try { await drivetech.tick(); } catch (e) { logger.error({ err: e.message }, 'kabar DriveTech gagal'); }
+    // Pengingat dan kabar otomatis tidak dikirim di jam tutup; balasan admin (outbox, lunas) tetap jalan.
+    if (!jamTutup()) {
+      try { await processReminders(); } catch (e) { logger.error({ err: e.message }, 'proses pengingat bayar gagal'); }
+      try { await drivetech.tick(); } catch (e) { logger.error({ err: e.message }, 'kabar DriveTech gagal'); }
+    }
+    try { await perpanjangOrderMalam(); } catch (e) { logger.error({ err: e.message }, 'perpanjang order malam gagal'); }
+    try { await prosesTunda(); } catch (e) { logger.error({ err: e.message }, 'proses pesan tunda gagal'); }
     await sleep(20000);
   }
 }
