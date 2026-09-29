@@ -15,6 +15,7 @@ type Category = { id: string; name: string; price: number; saleEnd: string; rema
 type Props = {
   categories: Category[]; fees: Record<PaymentMethodId, number>; methods: PaymentMethodId[];
   paymentMode: "mock" | "off" | "midtrans" | "manual"; trackCheckout: boolean; maxTickets: number; holdMinutes: number;
+  promoAvailable: boolean; // kolom kode promo hanya tampil kalau ada kode promo aktif
 };
 
 const STEPS = ["Kategori", "Data peserta", "Ringkasan", "Pembayaran"];
@@ -67,7 +68,7 @@ export default function RegistrationForm(props: Props) {
   return <FormSteps key={inBrowser ? "browser" : "server"} {...props} draft={inBrowser ? readDraft() : null} saveDraft={inBrowser} />;
 }
 
-function FormSteps({ categories, fees, methods, paymentMode, trackCheckout, maxTickets, holdMinutes, draft, saveDraft }: Props & { draft: Draft | null; saveDraft: boolean }) {
+function FormSteps({ categories, fees, methods, paymentMode, trackCheckout, maxTickets, holdMinutes, promoAvailable, draft, saveDraft }: Props & { draft: Draft | null; saveDraft: boolean }) {
   const router = useRouter();
   const [step, setStep] = useState(() => (draft ? Math.min(Math.max(draft.step, 1), 3) : 1));
   const [categoryId, setCategoryId] = useState(() =>
@@ -427,14 +428,14 @@ function FormSteps({ categories, fees, methods, paymentMode, trackCheckout, maxT
               ))}
 
 
-              <div className="mt-6 border-t border-white/10 pt-5">
+              {promoAvailable && <div className="mt-6 border-t border-white/10 pt-5">
                 <label className="text-sm font-medium text-white">Kode promo (kalau ada)</label>
                 <div className="mt-2 flex gap-2">
-                  <input className={inputCls} value={promoInput} onChange={(e) => setPromoInput(e.target.value.toUpperCase())} placeholder="KUWERA10" />
+                  <input className={inputCls} value={promoInput} onChange={(e) => setPromoInput(e.target.value.toUpperCase())} placeholder="Masukkan kode promo" />
                   <button type="button" onClick={applyPromo} className="shrink-0 rounded-full border border-brand-yellow px-5 text-sm font-semibold text-brand-yellow hover:bg-brand-yellow/10">Pakai</button>
                 </div>
                 {promoMessage && <p className={`mt-2 text-sm ${promo ? "text-yellow-lime" : "text-brand-yellow"}`}>{promoMessage}</p>}
-              </div>
+              </div>}
 
               <div className="mt-6 rounded-2xl bg-white/5 p-4 text-sm">
                 <Line k="Harga tiket" v={quantity > 1 ? `${quantity} × ${formatRupiah(category.price)} = ${formatRupiah(subtotal)}` : formatRupiah(subtotal)} />
