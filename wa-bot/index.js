@@ -432,7 +432,7 @@ async function processOutbox() {
     const file = `${OUTBOX}/${f}`;
     const item = JSON.parse(fs.readFileSync(file, 'utf8'));
     if (item.jid) { // balasan worker CS
-      try { await reply(item.jid, { text: item.text }); } catch (e) { logger.error({ jid: item.jid, err: e.message }, 'gagal kirim balasan CS'); }
+      try { await reply(item.jid, { text: item.text, ...(item.mentions ? { mentions: item.mentions } : {}) }); } catch (e) { logger.error({ jid: item.jid, err: e.message }, 'gagal kirim balasan CS'); }
       fs.unlinkSync(file);
       logger.info({ jid: item.jid, topik: item.topik }, 'balasan CS terkirim');
       continue;
@@ -581,6 +581,16 @@ async function start() {
   });
   s.ev.on('messages.upsert', async ({ messages, type }) => {
     for (const m of messages) {
+      // Nama pengirim di grup (misal Ce Nadia di grup Kuwera Run), supaya worker CS bisa men-tag orang yang tepat.
+      if (!m.key.fromMe && m.key.remoteJid?.endsWith('@g.us') && m.key.participant && m.pushName) {
+        let senders = {};
+        try { senders = JSON.parse(fs.readFileSync('/data/group-senders.json', 'utf8')); } catch { senders = {}; }
+        const who = m.key.participantAlt || m.key.participant;
+        if (senders[who] !== m.pushName) {
+          senders[who] = m.pushName;
+          fs.writeFileSync('/data/group-senders.json', JSON.stringify(senders));
+        }
+      }
       if (!m.key.fromMe || !m.key.remoteJid || m.key.remoteJid.endsWith('@g.us') || m.key.remoteJid === 'status@broadcast') continue;
       // Semua pesan keluar diteruskan; worker CS mencocokkan ID-nya dengan sent-ids kedua bot untuk tahu mana balasan admin.
       fs.mkdirSync(INBOX, { recursive: true });
