@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { requireAdmin } from "@/lib/admin-auth";
-import { fmtDateTime, maskNik } from "@/lib/admin-data";
+import { FINANCE, SCAN, SUPER, allowed, requireAdmin } from "@/lib/admin-auth";
+import { fmtDateTime } from "@/lib/admin-data";
 import { prisma } from "@/lib/db";
 import { PAYMENT_METHODS, formatRupiah } from "@/lib/registration";
 import { StatusBadge } from "@/components/admin/Badges";
@@ -33,7 +33,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 }
 
 export default async function PesertaDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const admin = await requireAdmin();
+  const admin = await requireAdmin(FINANCE);
   const { id } = await params;
   const order = await prisma.order.findUnique({
     where: { id },
@@ -50,8 +50,6 @@ export default async function PesertaDetailPage({ params }: { params: Promise<{ 
   const verifiedBy = (order.payments.find((x) => x.gateway === MANUAL_GATEWAY)?.rawPayload as { verifiedBy?: string } | undefined)?.verifiedBy;
   const method = PAYMENT_METHODS.find((m) => m.id === order.paymentMethod)?.label ?? order.paymentMethod;
   const usesMidtrans = !!order.snapToken || order.payments.some((x) => x.gateway.startsWith("midtrans"));
-  // Panitia cukup melihat NIK tersamar (4 angka awal dan akhir) untuk dicocokkan dengan KTP/KIA; alamat khusus admin.
-  const full = admin.role === "admin";
 
   return (
     <div className="space-y-6">
@@ -69,13 +67,13 @@ export default async function PesertaDetailPage({ params }: { params: Promise<{ 
               <dl className="grid gap-4 sm:grid-cols-2">
                 <Item k="Nama depan" v={p.firstName ?? p.fullName} />
                 <Item k="Nama belakang" v={p.lastName} />
-                <Item k="Nomor identitas (NIK)" v={full ? p.idNumber : maskNik(p.idNumber)} mono />
+                <Item k="Nomor identitas (NIK)" v={p.idNumber} mono />
                 <Item k="Tanggal lahir" v={p.birthDate.toLocaleDateString("id-ID", { timeZone: "Asia/Jakarta", day: "numeric", month: "long", year: "numeric" })} />
                 <Item k="Jenis kelamin" v={p.gender === "L" ? "Laki-laki" : "Perempuan"} />
                 <Item k="Golongan darah" v={p.bloodType} />
                 <Item k="Email" v={p.email} />
                 <Item k="Nomor HP" v={p.phone} />
-                <div className="sm:col-span-2"><Item k="Alamat" v={full ? [p.address, p.city, p.province, p.postalCode].filter(Boolean).join(", ") : `${p.city ?? "-"} (alamat lengkap khusus admin)`} /></div>
+                <div className="sm:col-span-2"><Item k="Alamat" v={[p.address, p.city, p.province, p.postalCode].filter(Boolean).join(", ")} /></div>
                 <Item k="Kontak darurat" v={`${p.emergencyName} (${p.emergencyPhone})`} />
                 <Item k="Ukuran jersey" v={p.jerseySize} />
                 <Item k="Komunitas" v={p.community} />
@@ -91,10 +89,11 @@ export default async function PesertaDetailPage({ params }: { params: Promise<{ 
                         ? <> &middot; diambil {fmtDateTime(p.ticket.racepackCollectedAt)} (dicatat {p.ticket.collectedBy})</>
                         : <> &middot; belum diambil</>}
                     </p>
-                    <p className="mt-2 text-sm text-white/70">Cocokkan nama dan angka NIK di atas dengan KTP atau KIA asli sebelum menandai.</p>
-                    <div className="mt-3">
-                      <RacepackButton ticketCode={p.ticket.code} collected={!!p.ticket.racepackCollectedAt} canUndo={admin.role === "admin"} />
-                    </div>
+                    {allowed(admin.role, SCAN) && (
+                      <div className="mt-3">
+                        <RacepackButton ticketCode={p.ticket.code} collected={!!p.ticket.racepackCollectedAt} canUndo={allowed(admin.role, SUPER)} />
+                      </div>
+                    )}
                   </>
                 ) : <p className="mt-2 text-white/75">Tiket terbit setelah pembayaran lunas.</p>}
               </div>
@@ -156,7 +155,7 @@ export default async function PesertaDetailPage({ params }: { params: Promise<{ 
             <Section title="Konfirmasi bayar QRIS">
               {order.status === "PAID" ? (
                 <p className="text-white/85">Sudah lunas, dikonfirmasi oleh {verifiedBy ?? "admin"}.</p>
-              ) : admin.role === "admin" && (order.status === "PENDING" || order.status === "EXPIRED") ? (
+              ) : order.status === "PENDING" || order.status === "EXPIRED" ? (
                 <ManualPayPanel orderId={order.id} total={order.total} />
               ) : (
                 <p className="text-white/75">Menunggu admin mengecek pembayaran di GoPay Merchant.</p>

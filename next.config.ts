@@ -41,6 +41,8 @@ const nextConfig: NextConfig = {
           { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
         ],
       },
+      // Halaman reg ulang butuh kamera untuk membaca QR; header ini menimpa camera=() di atas khusus untuk halaman itu.
+      { source: "/kuweraadmin/regulang", headers: [{ key: "Permissions-Policy", value: "camera=(self), microphone=(), geolocation=()" }] },
     ];
   },
 };

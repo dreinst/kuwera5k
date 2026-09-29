@@ -168,7 +168,7 @@ model Setting {
 model AdminUser {
   id             String    @id @default(cuid())
   username       String    @unique
-  role           String // "admin" (semua fitur) | "panitia" (lihat, cek Midtrans, tandai race pack)
+  role           String // "superadmin" (semua fitur) | "admin" (keuangan) | "petugas" (reg ulang race pack)
   passwordHash   String?
   setupTokenHash String?   @unique
   setupExpires   DateTime?

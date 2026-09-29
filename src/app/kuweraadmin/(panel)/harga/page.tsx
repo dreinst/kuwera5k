@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { requireAdmin } from "@/lib/admin-auth";
+import { SUPER, requireAdmin } from "@/lib/admin-auth";
 import { currentPrice, getPricing, isOpen } from "@/lib/pricing";
 import { formatRupiah } from "@/lib/registration";
 import PricingForm from "@/components/admin/PricingForm";
@@ -8,7 +8,7 @@ export const metadata: Metadata = { title: "Harga" };
 export const dynamic = "force-dynamic";
 
 export default async function HargaPage() {
-  await requireAdmin({ role: "admin" });
+  await requireAdmin(SUPER);
   const pricing = await getPricing();
   const now = currentPrice(pricing);
   const open = isOpen(pricing);

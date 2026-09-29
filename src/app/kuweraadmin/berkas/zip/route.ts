@@ -1,13 +1,13 @@
 import { zipSync } from "fflate";
 import { prisma } from "@/lib/db";
-import { getAdmin, logAdmin } from "@/lib/admin-auth";
+import { FINANCE, allowed, getAdmin, logAdmin } from "@/lib/admin-auth";
 import { download, qrFileName, qrPng } from "@/lib/admin-files";
 
 // Unduh semua sekaligus (ZIP): ?jenis=qr untuk QR registrasi ulang semua tiket, ?jenis=bukti untuk semua bukti bayar.
-// Khusus peran admin, sama seperti ekspor CSV.
+// Khusus superadmin dan admin keuangan, sama seperti ekspor CSV.
 export async function GET(req: Request) {
   const admin = await getAdmin();
-  if (!admin || admin.role !== "admin") return new Response("Tidak diizinkan", { status: 403 });
+  if (!admin || !allowed(admin.role, FINANCE)) return new Response("Tidak diizinkan", { status: 403 });
   const jenis = new URL(req.url).searchParams.get("jenis") === "bukti" ? "bukti" : "qr";
   const files: Record<string, Uint8Array> = {};
   if (jenis === "qr") {

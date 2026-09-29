@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { requireAdmin } from "@/lib/admin-auth";
+import { FINANCE, requireAdmin } from "@/lib/admin-auth";
 import { dashboardStats, fmtDateTime } from "@/lib/admin-data";
-import { prisma } from "@/lib/db";
 import { formatRupiah } from "@/lib/registration";
 import { StatusBadge } from "@/components/admin/Badges";
 
@@ -30,9 +29,8 @@ function Card({ title, children }: { title: string; children: React.ReactNode })
 }
 
 export default async function DashboardPage() {
-  const admin = await requireAdmin();
+  await requireAdmin(FINANCE);
   const s = await dashboardStats();
-  const logs = admin.role === "admin" ? await prisma.adminLog.findMany({ orderBy: { createdAt: "desc" }, take: 10 }) : [];
   const maxDaily = Math.max(1, ...s.daily.map((d) => d.count));
   const maxJersey = Math.max(1, ...s.jersey.map((j) => j.count));
 
@@ -128,20 +126,6 @@ export default async function DashboardPage() {
         )}
         <Link href="/kuweraadmin/peserta" className="mt-4 inline-block text-sm font-semibold text-brand-yellow hover:underline">Lihat semua peserta</Link>
       </Card>
-
-      {admin.role === "admin" && (
-        <Card title="Aktivitas admin">
-          {logs.length === 0 ? <p className="text-white/70">Belum ada aktivitas.</p> : (
-            <ul className="space-y-1 text-sm">
-              {logs.map((l) => (
-                <li key={l.id} className="text-white/85">
-                  <span className="text-white/65">{fmtDateTime(l.createdAt)}</span> &middot; <span className="font-semibold text-white">{l.username}</span> {l.action.replace(/_/g, " ")}{l.target ? ` (${l.target})` : ""}
-                </li>
-              ))}
-            </ul>
-          )}
-        </Card>
-      )}
     </div>
   );
 }
