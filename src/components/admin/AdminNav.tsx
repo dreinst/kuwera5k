@@ -7,6 +7,7 @@ import { logoutAction } from "@/app/kuweraadmin/actions";
 const LINKS = [
   { href: "/kuweraadmin", label: "Dashboard" },
   { href: "/kuweraadmin/peserta", label: "Peserta" },
+  { href: "/kuweraadmin/qr", label: "QR & Bukti" },
   { href: "/kuweraadmin/harga", label: "Harga", adminOnly: true },
   { href: "/kuweraadmin/verifikasi", label: "Verifikasi Midtrans", adminOnly: true },
 ];

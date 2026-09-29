@@ -56,6 +56,7 @@ model Order {
   adminNotifiedAt DateTime? // superadmin sudah dikabari lewat Telegram
   participants Participant[]
   payments    Payment[]
+  proofs      PaymentProof[]
   tickets     Ticket[]
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
@@ -104,6 +105,20 @@ model Payment {
   amount     Int
   rawPayload Json
   receivedAt DateTime @default(now())
+
+  @@index([orderId])
+}
+
+// Bukti bayar QRIS manual yang dikirim pemesan ke WhatsApp; disimpan bot WA supaya bisa dilihat dan diunduh di admin.
+model PaymentProof {
+  id        String   @id @default(cuid())
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  orderId   String
+  fileName  String
+  mimeType  String
+  data      Bytes
+  source    String   @default("whatsapp")
+  createdAt DateTime @default(now())
 
   @@index([orderId])
 }

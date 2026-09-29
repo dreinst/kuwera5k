@@ -145,14 +145,18 @@ export async function markOrderPaid(orderId: string, pay: { gateway: string; gat
   return order.id;
 }
 
-// Kode unik 1..999 supaya setiap order PENDING punya nominal yang berbeda; admin mencocokkan uang masuk
-// di GoPay Merchant dari nominalnya. Dipanggil di dalam kunci pembuatan order.
+// Kode unik supaya setiap order PENDING punya nominal yang berbeda; admin mencocokkan uang masuk di GoPay Merchant
+// dari nominalnya. Dipilih dari 1..99 supaya tambahannya kecil; baru memakai 100..999 kalau 1..99 sedang habis
+// dipakai order lain dengan harga dasar sama. Dipanggil di dalam kunci pembuatan order.
 export async function pickUniqueCode(base: number, now: Date, db: Db) {
   const rows = await db.order.findMany({ where: { status: "PENDING", expiresAt: { gt: now }, uniqueCode: { gt: 0 } }, select: { total: true } });
   const taken = new Set(rows.map((r) => r.total));
-  const free = [];
-  for (let c = 1; c <= 999; c++) if (!taken.has(base + c)) free.push(c);
-  return free.length ? free[randomInt(free.length)] : null;
+  for (const [from, to] of [[1, 99], [100, 999]]) {
+    const free = [];
+    for (let c = from; c <= to; c++) if (!taken.has(base + c)) free.push(c);
+    if (free.length) return free[randomInt(free.length)];
+  }
+  return null;
 }
 
 type SyncOrder = { id: string; total: number; status: OrderStatus; paymentMethod: string | null; expiresAt: Date | null };

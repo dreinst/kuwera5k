@@ -17,6 +17,7 @@
 // chat berisi nomor order, jadi tidak bentrok.
 
 const fs = require('node:fs');
+const crypto = require('node:crypto');
 const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, fetchLatestBaileysVersion, downloadMediaMessage } = require('@whiskeysockets/baileys');
 const { Boom } = require('@hapi/boom');
 const { Pool } = require('pg');
@@ -162,10 +163,24 @@ async function mediaOf(msg) {
     try {
       const buffer = await downloadMediaMessage(msg, 'buffer', {});
       const name = kind === 'document' ? (doc.fileName || 'dokumen').replace(/[^\w.\- ]/g, '_') : 'bukti.jpg';
-      msg._media = { kind, buffer, name };
+      const mime = (kind === 'document' ? doc.mimetype : msg.message.imageMessage.mimetype) || 'application/octet-stream';
+      msg._media = { kind, buffer, name, mime };
     } catch (e) { logger.error({ err: e.message }, 'gagal mengunduh media'); }
   }
   return msg._media;
+}
+
+// Bukti bayar juga disimpan di database (tabel PaymentProof) supaya bisa dilihat dan diunduh di /kuweraadmin.
+async function saveProof(orderId, media) {
+  try {
+    await pool.query(
+      `INSERT INTO "PaymentProof" (id, "orderId", "fileName", "mimeType", data, source, "createdAt")
+       SELECT $1, o.id, $3, $4, $5, 'whatsapp', timezone('UTC', now()) FROM "Order" o WHERE o.id = $2`,
+      ['c' + crypto.randomBytes(12).toString('hex'), orderId, `${stampWib()}-${media.name}`, media.mime, media.buffer],
+    );
+  } catch (e) {
+    logger.error({ orderId, err: e.message }, 'gagal menyimpan bukti bayar ke database');
+  }
 }
 
 // Simpan kejadian satu order ke arsip: file (kalau ada), info.json terbaru, dan satu baris riwayat.csv.
@@ -258,7 +273,11 @@ async function handleIncoming(msg) {
   const match = textOf(msg).match(ORDER_RE);
   // Semua file dari pemesan yang terkait order diarsipkan, termasuk kiriman ulang yang tidak dikabarkan lagi.
   const archiveId = match ? match[0].toUpperCase() : hasProof && Object.keys(confirmChats).find((id) => confirmChats[id] === jid);
-  if (hasProof && archiveId) await archive(archiveId, 'bukti bayar dari pemesan', await mediaOf(msg), jid);
+  if (hasProof && archiveId) {
+    const media = await mediaOf(msg);
+    await archive(archiveId, 'bukti bayar dari pemesan', media, jid);
+    if (media) await saveProof(archiveId, media);
+  }
   else if (match && !hasProof) await archive(archiveId, 'pesan pesanan masuk (minta QRIS)', null, jid);
   if (!match) {
     // Screenshot bukti bayar yang dikirim menyusul (tanpa nomor order) di chat yang sudah konfirmasi.
@@ -540,7 +559,14 @@ async function start() {
     }
   });
   s.ev.on('messages.upsert', async ({ messages, type }) => {
-    for (const m of messages) if (byHuman(m)) humanAt.set(m.key.remoteJid, Date.now());
+    for (const m of messages) {
+      if (!byHuman(m) || !m.key.remoteJid || m.key.remoteJid.endsWith('@g.us') || m.key.remoteJid === 'status@broadcast') continue;
+      humanAt.set(m.key.remoteJid, Date.now());
+      // Catat ke worker CS bahwa admin sudah membalas dari HP, supaya pengingat "belum dibalas" tidak muncul.
+      fs.mkdirSync(INBOX, { recursive: true });
+      fs.writeFileSync(`${INBOX}/admin-${m.key.id}.json`, JSON.stringify({ tipe: 'admin', id: m.key.id, bot: 'kuwera', jid: m.key.remoteJid,
+        phone: digits(m.key.remoteJidAlt || m.key.remoteJid), text: textOf(m).slice(0, 300) || '[media]', waktu: Date.now() }));
+    }
     if (type !== 'notify') return;
     for (const msg of messages) {
       try { await handleIncoming(msg); } catch (e) { logger.error({ err: e.message }, 'gagal memproses pesan masuk'); }

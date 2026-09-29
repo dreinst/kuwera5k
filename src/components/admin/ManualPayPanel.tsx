@@ -19,7 +19,7 @@ export default function ManualPayPanel({ orderId, total }: { orderId: string; to
   return (
     <div>
       <p className="text-sm text-white/85">
-        Buka riwayat transaksi di aplikasi GoPay Merchant. Cari uang masuk sebesar <span className="font-semibold text-brand-yellow">{formatRupiah(total)}</span> (nominal harus persis sama, termasuk 3 digit terakhir).
+        Buka riwayat transaksi di aplikasi GoPay Merchant. Cari uang masuk sebesar <span className="font-semibold text-brand-yellow">{formatRupiah(total)}</span> (nominal harus persis sama, termasuk kode unik di angka terakhir).
       </p>
       <label className="mt-4 block text-sm text-white/80">Ketik nominal yang masuk</label>
       <input
