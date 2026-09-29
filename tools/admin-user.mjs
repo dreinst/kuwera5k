@@ -1,4 +1,4 @@
-// Buat akun admin baru atau reset kata sandinya: npm run admin:user -- <username> <admin|panitia>
+// Buat akun admin baru atau reset kata sandinya: npm run admin:user -- <username> <superadmin|admin|petugas>
 // Mencetak link sekali pakai (berlaku 24 jam) untuk mengatur kata sandi sendiri, jadi kata sandi
 // tidak pernah lewat chat. Reset juga mengeluarkan semua sesi lama akun itu.
 import "dotenv/config";
@@ -7,9 +7,9 @@ import { createHash, randomBytes } from "node:crypto";
 import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 
-const [username = "", role = "panitia"] = process.argv.slice(2);
-if (!/^[a-z0-9._-]{3,32}$/.test(username) || !["admin", "panitia"].includes(role)) {
-  console.error("Pakai: npm run admin:user -- <username huruf kecil> <admin|panitia>");
+const [username = "", role = "petugas"] = process.argv.slice(2);
+if (!/^[a-z0-9._-]{3,32}$/.test(username) || !["superadmin", "admin", "petugas"].includes(role)) {
+  console.error("Pakai: npm run admin:user -- <username huruf kecil> <superadmin|admin|petugas>");
   process.exit(1);
 }
 // TLS sama dengan src/lib/db.ts: DB_SSL_CA (CA) dan DB_SSL_SERVERNAME (nama di sertifikat) kalau lewat IP.

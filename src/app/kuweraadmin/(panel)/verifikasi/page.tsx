@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { requireAdmin } from "@/lib/admin-auth";
+import { SUPER, requireAdmin } from "@/lib/admin-auth";
 import { midtrans } from "@/lib/midtrans";
 import VerifyAll from "@/components/admin/VerifyAll";
 
@@ -7,7 +7,7 @@ export const metadata: Metadata = { title: "Verifikasi Midtrans" };
 export const dynamic = "force-dynamic";
 
 export default async function VerifikasiPage() {
-  await requireAdmin({ role: "admin" });
+  await requireAdmin(SUPER);
   return (
     <div>
       <h1 className="font-display text-4xl text-white uppercase">Verifikasi <span className="text-brand-yellow">Midtrans</span></h1>

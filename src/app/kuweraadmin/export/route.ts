@@ -1,11 +1,11 @@
 import { prisma } from "@/lib/db";
-import { getAdmin, logAdmin } from "@/lib/admin-auth";
+import { FINANCE, allowed, getAdmin, logAdmin } from "@/lib/admin-auth";
 import { registrantWhere, STATUS_LABEL } from "@/lib/admin-data";
 
-// Unduh data peserta (CSV untuk Excel). Khusus peran admin karena memuat NIK dan alamat.
+// Unduh data peserta (CSV untuk Excel). Khusus superadmin dan admin keuangan karena memuat NIK dan alamat.
 export async function GET(req: Request) {
   const admin = await getAdmin();
-  if (!admin || admin.role !== "admin") return new Response("Tidak diizinkan", { status: 403 });
+  if (!admin || !allowed(admin.role, FINANCE)) return new Response("Tidak diizinkan", { status: 403 });
   const url = new URL(req.url);
   const q = url.searchParams.get("q") ?? "";
   const status = url.searchParams.get("status") ?? "";

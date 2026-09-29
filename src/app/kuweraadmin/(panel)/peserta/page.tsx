@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { requireAdmin } from "@/lib/admin-auth";
+import { FINANCE, requireAdmin } from "@/lib/admin-auth";
 import { PAGE_SIZE, STATUS_LABEL, fmtDateTime, listRegistrants, maskNik } from "@/lib/admin-data";
 import { formatRupiah } from "@/lib/registration";
 import { StatusBadge } from "@/components/admin/Badges";
@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
 type Search = { q?: string; status?: string; page?: string };
 
 export default async function PesertaPage({ searchParams }: { searchParams: Promise<Search> }) {
-  const admin = await requireAdmin();
+  await requireAdmin(FINANCE);
   const { q = "", status = "", page: pageRaw = "1" } = await searchParams;
   const page = Math.max(1, Number.parseInt(pageRaw, 10) || 1);
   const { total, rows } = await listRegistrants(q, status, page);
@@ -34,11 +34,9 @@ export default async function PesertaPage({ searchParams }: { searchParams: Prom
           {Object.entries(STATUS_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
         </select>
         <button type="submit" className="rounded-full bg-brand-yellow px-6 py-3 text-sm font-semibold text-green-deep">Cari</button>
-        {admin.role === "admin" && (
           <a href={`/kuweraadmin/export?${new URLSearchParams({ ...(q ? { q } : {}), ...(status ? { status } : {}) })}`} className="rounded-full border border-brand-yellow px-6 py-3 text-sm font-semibold text-brand-yellow">
             Unduh CSV
           </a>
-        )}
       </form>
 
       <p className="mt-4 text-sm text-white/75">{total.toLocaleString("id-ID")} order ditemukan</p>

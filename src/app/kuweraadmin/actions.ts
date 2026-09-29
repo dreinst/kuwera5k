@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
-import { LOGIN_ERROR, attemptLogin, clientIp, endSession, getAdmin, hashPassword, logAdmin, sha256 } from "@/lib/admin-auth";
+import { FINANCE, LOGIN_ERROR, SCAN, SUPER, allowed, attemptLogin, clientIp, deviceName, endSession, getAdmin, hashPassword, homeFor, logAdmin, sha256 } from "@/lib/admin-auth";
 import { rateLimit } from "@/lib/rate-limit";
 import { checkOrderWithMidtrans, type MidtransCheck } from "@/lib/admin-data";
 import { MANUAL_GATEWAY, markOrderPaid, syncOrderWithMidtrans } from "@/lib/orders";
@@ -26,12 +26,12 @@ export async function loginAction(_prev: FormState, form: FormData): Promise<For
   if (!/^[a-z0-9._-]{3,32}$/.test(username) || password.length > 200) return { error: LOGIN_ERROR };
   const res = await attemptLogin(username, password);
   if (!res.ok) return { error: res.message };
-  redirect("/kuweraadmin");
+  redirect(homeFor(res.role));
 }
 
 export async function logoutAction() {
   const admin = await getAdmin();
-  if (admin) await logAdmin(admin.username, "logout");
+  if (admin) await logAdmin(admin.username, "logout", await deviceName());
   await endSession(admin?.id);
   redirect("/kuweraadmin/login");
 }
@@ -55,10 +55,10 @@ export async function setupPasswordAction(_prev: FormState, form: FormData): Pro
 const orderForCheck = (id: string) =>
   prisma.order.findUnique({ where: { id }, select: { id: true, status: true, total: true, paymentMethod: true, expiresAt: true, payments: { select: { gateway: true } } } });
 
-// Cek satu order ke Midtrans (admin dan panitia).
+// Cek satu order ke Midtrans (superadmin dan admin keuangan).
 export async function checkMidtransAction(orderId: string): Promise<MidtransCheck | { error: string }> {
   const admin = await getAdmin();
-  if (!admin) return { error: "Sesi habis, masuk lagi" };
+  if (!admin || !allowed(admin.role, FINANCE)) return { error: "Sesi habis, masuk lagi" };
   const order = await orderForCheck(orderId);
   if (!order) return { error: "Order tidak ditemukan" };
   await logAdmin(admin.username, "cek_midtrans", orderId);
@@ -68,7 +68,7 @@ export async function checkMidtransAction(orderId: string): Promise<MidtransChec
 // Terapkan status resmi Midtrans ke order yang belum final (jalur yang sama dengan webhook).
 export async function syncMidtransAction(orderId: string): Promise<{ ok?: string; error?: string }> {
   const admin = await getAdmin();
-  if (!admin) return { error: "Sesi habis, masuk lagi" };
+  if (!admin || !allowed(admin.role, FINANCE)) return { error: "Sesi habis, masuk lagi" };
   const order = await orderForCheck(orderId);
   if (!order) return { error: "Order tidak ditemukan" };
   if (order.status !== "PENDING" && order.status !== "FAILED") return { error: "Hanya order yang menunggu bayar atau gagal yang bisa disinkronkan" };
@@ -82,8 +82,8 @@ export async function syncMidtransAction(orderId: string): Promise<{ ok?: string
 
 export async function racepackAction(ticketCode: string, undo = false): Promise<{ ok?: string; error?: string }> {
   const admin = await getAdmin();
-  if (!admin) return { error: "Sesi habis, masuk lagi" };
-  if (undo && admin.role !== "admin") return { error: "Hanya admin yang bisa membatalkan" };
+  if (!admin || !allowed(admin.role, SCAN)) return { error: "Hanya superadmin dan petugas race pack yang bisa menandai" };
+  if (undo && !allowed(admin.role, SUPER)) return { error: "Hanya superadmin yang bisa membatalkan" };
   const ticket = await prisma.ticket.findUnique({ where: { code: ticketCode }, include: { order: { select: { status: true } } } });
   if (!ticket || ticket.order.status !== "PAID") return { error: "Order ini belum lunas atau belum punya tiket" };
   if (!undo && ticket.racepackCollectedAt) return { error: "Race pack sudah diambil sebelumnya" };
@@ -93,13 +93,14 @@ export async function racepackAction(ticketCode: string, undo = false): Promise<
   });
   await logAdmin(admin.username, undo ? "racepack_batal" : "racepack_ambil", ticketCode);
   revalidatePath(`/kuweraadmin/peserta/${ticket.orderId}`);
+  revalidatePath("/kuweraadmin/regulang");
   return { ok: undo ? "Tanda ambil race pack dibatalkan" : "Race pack ditandai sudah diambil" };
 }
 
 // Verifikasi massal: semua order yang pernah membuka Midtrans atau tercatat lunas, dicocokkan satu per satu.
 export async function verifyAllAction(): Promise<{ results?: MidtransCheck[]; error?: string }> {
   const admin = await getAdmin();
-  if (!admin || admin.role !== "admin") return { error: "Hanya admin yang bisa menjalankan verifikasi massal" };
+  if (!admin || !allowed(admin.role, SUPER)) return { error: "Hanya superadmin yang bisa menjalankan verifikasi massal" };
   const orders = await prisma.order.findMany({
     where: { OR: [{ snapToken: { not: null } }, { status: "PAID" }] },
     select: { id: true, status: true, total: true, payments: { select: { gateway: true } } },
@@ -114,11 +115,11 @@ export async function verifyAllAction(): Promise<{ results?: MidtransCheck[]; er
 }
 
 // Konfirmasi bayar manual (QRIS GoPay Merchant): admin sudah melihat uang masuk dengan nominal persis
-// sama di aplikasi GoPay Merchant. Khusus peran admin. Tiket terbit, lalu bot WA mengirim tautannya ke
+// sama di aplikasi GoPay Merchant. Khusus superadmin dan admin keuangan. Tiket terbit, lalu bot WA mengirim tautannya ke
 // pemesan dan superadmin dikabari lewat Telegram (worker di VPS membaca kolom waNotifiedAt/adminNotifiedAt).
 export async function markManualPaidAction(orderId: string, confirmTotal: number): Promise<{ ok?: string; error?: string }> {
   const admin = await getAdmin();
-  if (!admin || admin.role !== "admin") return { error: "Hanya admin yang bisa menandai lunas" };
+  if (!admin || !allowed(admin.role, FINANCE)) return { error: "Hanya superadmin dan admin keuangan yang bisa menandai lunas" };
   const order = await prisma.order.findUnique({ where: { id: orderId }, select: { status: true, total: true, paymentMethod: true } });
   if (!order) return { error: "Order tidak ditemukan" };
   if (order.status === "PAID") return { error: "Order ini sudah lunas" };
@@ -143,7 +144,7 @@ function wibToIso(v: FormDataEntryValue | null) {
 
 export async function savePricingAction(_prev: FormState, form: FormData): Promise<FormState> {
   const admin = await getAdmin();
-  if (!admin || admin.role !== "admin") return { error: "Hanya admin yang bisa mengubah harga" };
+  if (!admin || !allowed(admin.role, SUPER)) return { error: "Hanya superadmin yang bisa mengubah harga" };
   const num = (k: string) => Number(String(form.get(k) ?? "").replace(/\D/g, ""));
   const text = (k: string) => String(form.get(k) ?? "").trim().slice(0, 40);
   const pricing: Pricing = {
@@ -168,4 +169,57 @@ export async function savePricingAction(_prev: FormState, form: FormData): Promi
   revalidatePath("/daftar");
   revalidatePath("/kuweraadmin/harga");
   return { ok: "Pengaturan harga tersimpan" };
+}
+
+// --- Reg ulang race pack (superadmin dan petugas) ---
+export type RegTicket = {
+  code: string; name: string; jersey: string; gender: string; nik: string; community: string | null;
+  orderId: string; paid: boolean; collectedAt: string | null; collectedBy: string | null;
+};
+
+const ticketView = {
+  code: true, racepackCollectedAt: true, collectedBy: true, orderId: true,
+  order: { select: { status: true } },
+  participant: { select: { fullName: true, jerseySize: true, gender: true, idNumber: true, community: true } },
+} as const;
+
+type TicketRow = { code: string; racepackCollectedAt: Date | null; collectedBy: string | null; orderId: string; order: { status: string };
+  participant: { fullName: string; jerseySize: string; gender: string; idNumber: string | null; community: string | null } | null };
+
+// NIK tersamar (4 angka awal dan akhir), cukup untuk dicocokkan dengan KTP/KIA yang dibawa peserta.
+const toRegTicket = (t: TicketRow): RegTicket => ({
+  code: t.code, name: t.participant?.fullName ?? "-", jersey: t.participant?.jerseySize ?? "-",
+  gender: t.participant?.gender === "P" ? "Perempuan" : "Laki-laki",
+  nik: t.participant?.idNumber ? `${t.participant.idNumber.slice(0, 4)}********${t.participant.idNumber.slice(-4)}` : "-",
+  community: t.participant?.community ?? null, orderId: t.orderId, paid: t.order.status === "PAID",
+  collectedAt: t.racepackCollectedAt?.toISOString() ?? null, collectedBy: t.collectedBy,
+});
+
+export async function lookupTicketAction(code: string): Promise<{ ticket?: RegTicket; error?: string }> {
+  const admin = await getAdmin();
+  if (!admin || !allowed(admin.role, SCAN)) return { error: "Sesi habis, masuk lagi" };
+  const clean = code.trim().toUpperCase();
+  if (!/^KWR-\d{4}-[A-Z0-9]{6}-\d{1,2}$/.test(clean)) return { error: "QR ini bukan tiket KUWERA 5K" };
+  const t = await prisma.ticket.findUnique({ where: { code: clean }, select: ticketView });
+  return t ? { ticket: toRegTicket(t) } : { error: "Tiket tidak ditemukan" };
+}
+
+// Cadangan kalau QR tidak terbaca: cari nama, nomor HP, atau kode tiket/order (minimal 2 huruf, maksimal 10 hasil).
+export async function searchTicketsAction(q: string): Promise<{ tickets?: RegTicket[]; error?: string }> {
+  const admin = await getAdmin();
+  if (!admin || !allowed(admin.role, SCAN)) return { error: "Sesi habis, masuk lagi" };
+  const s = q.trim();
+  if (s.length < 2) return { tickets: [] };
+  const rows = await prisma.ticket.findMany({
+    where: {
+      order: { status: "PAID" },
+      OR: [
+        { code: { contains: s, mode: "insensitive" } },
+        { participant: { fullName: { contains: s, mode: "insensitive" } } },
+        { participant: { phone: { contains: s.replace(/\D/g, "") || s } } },
+      ],
+    },
+    select: ticketView, orderBy: { code: "asc" }, take: 10,
+  });
+  return { tickets: rows.map(toRegTicket) };
 }

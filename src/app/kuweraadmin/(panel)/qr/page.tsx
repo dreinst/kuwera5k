@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { requireAdmin } from "@/lib/admin-auth";
+import { FINANCE, requireAdmin } from "@/lib/admin-auth";
 import { fmtDateTime } from "@/lib/admin-data";
 import { prisma } from "@/lib/db";
 
@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 // Database QR registrasi ulang dan bukti bayar, seperti halaman QR Pet Blessing: lihat, unduh satu per satu, atau unduh
 // semua sekaligus (ZIP). Gambar dimuat dari /kuweraadmin/berkas, jadi halaman ini tidak memuat data gambar sendiri.
 export default async function QrPage() {
-  const admin = await requireAdmin();
+  await requireAdmin(FINANCE);
   const orders = await prisma.order.findMany({
     where: { OR: [{ status: "PAID" }, { proofs: { some: {} } }] },
     orderBy: { createdAt: "desc" },
@@ -28,12 +28,10 @@ export default async function QrPage() {
       <p className="mt-3 text-sm text-white/75">
         {tickets.toLocaleString("id-ID")} QR registrasi ulang dan {proofs.toLocaleString("id-ID")} bukti bayar dari {orders.length.toLocaleString("id-ID")} order.
       </p>
-      {admin.role === "admin" && (
-        <div className="mt-5 flex flex-wrap gap-3">
+      <div className="mt-5 flex flex-wrap gap-3">
           <a href="/kuweraadmin/berkas/zip?jenis=qr" className="rounded-full bg-brand-yellow px-6 py-3 text-sm font-semibold text-green-deep">Unduh semua QR (ZIP)</a>
           <a href="/kuweraadmin/berkas/zip?jenis=bukti" className="rounded-full border border-brand-yellow px-6 py-3 text-sm font-semibold text-brand-yellow">Unduh semua bukti bayar (ZIP)</a>
-        </div>
-      )}
+      </div>
 
       <div className="mt-6 space-y-5">
         {orders.length === 0 && <p className="rounded-[20px] border border-glass-border bg-card p-6 text-white/75">Belum ada order lunas atau bukti bayar.</p>}
