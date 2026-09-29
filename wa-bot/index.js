@@ -263,7 +263,7 @@ async function reply(jid, content, quoted) {
   await sock.sendPresenceUpdate('composing', jid).catch(() => {});
   await sleep(between(1500, 4000));
   await sock.sendPresenceUpdate('paused', jid).catch(() => {});
-  await sock.sendMessage(jid, content, quoted ? { quoted } : undefined);
+  return sock.sendMessage(jid, content, quoted ? { quoted } : undefined);
 }
 
 function textOf(msg) {
@@ -390,7 +390,7 @@ async function saveCsMedia(msg) {
 
 // Relay grup WA internal ke Hermes di Discord (bot D'Pro Ops). Konfigurasi /data/relay.json:
 // { "parent": "<jid komunitas>", "groups": { "<jid grup>": "<nama>" }, "allowed": ["<nomor>"] }
-// Hanya pesan dari nomor di "allowed" yang diawali "hermes" atau me-reply pesan bot yang diteruskan.
+// Hanya pesan dari nomor di "allowed" yang diawali "hermes", perintah "/..." (seperti di Telegram), atau me-reply pesan bot yang diteruskan.
 const RELAY_FILE = '/data/relay.json';
 const RELAY_IN = '/data/relay-in';
 const relayConfig = () => { try { return JSON.parse(fs.readFileSync(RELAY_FILE, 'utf8')); } catch { return { groups: {}, allowed: [] }; } };
@@ -407,7 +407,7 @@ function relayIncoming(msg) {
   const allowed = (cfg.allowed || []).some((a) => sender.endsWith(String(a).slice(-10)));
   // Grup uji ("test" di cfg.testGroups): semua pesan superadmin diproses seperti chat pelanggan.
   const isTest = (cfg.testGroups || []).includes(group);
-  if (!allowed || (!isTest && !/^hermes\b/i.test(text) && !replyToBot)) {
+  if (!allowed || (!isTest && !/^(hermes\b|\/)/i.test(text) && !replyToBot)) {
     logger.info({ grup: cfg.groups[group], sender, allowed, replyToBot, awal: text.slice(0, 30) }, 'pesan grup tidak diteruskan');
     return;
   }
@@ -511,6 +511,17 @@ async function processOutbox() {
         fs.writeFileSync(RELAY_FILE, JSON.stringify(cfg, null, 1));
         logger.info({ id: meta.id, subject: item.subject }, 'grup internal dibuat');
       } catch (e) { logger.error({ subject: item.subject, err: e.message }, 'gagal membuat grup'); }
+      await sleep(between(3000, 6000));
+      continue;
+    }
+    if (item.tipe === 'panduan-grup') { // deskripsi grup diperbarui, lalu panduan dikirim dan disematkan 30 hari
+      fs.unlinkSync(file);
+      try {
+        if (item.description) await sock.groupUpdateDescription(item.jid, item.description);
+        const sent = await reply(item.jid, { text: item.text });
+        await sock.sendMessage(item.jid, { pin: sent.key, type: 1, time: 2592000 });
+        logger.info({ jid: item.jid }, 'panduan grup dikirim dan disematkan');
+      } catch (e) { logger.error({ jid: item.jid, err: e.message }, 'gagal memasang panduan grup'); }
       await sleep(between(3000, 6000));
       continue;
     }
