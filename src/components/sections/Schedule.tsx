@@ -17,7 +17,7 @@ const SCHEDULE = [
     title: "Pengambilan race pack",
     date: eventData.racePackDates,
     // "e\u2011ticket" memakai tanda hubung tak terputus supaya tidak terbelah di ujung baris.
-    note: `Lokasinya di ${eventData.racePackPlace}. Bawa KTP atau KIA asli dan tunjukkan QR di e\u2011ticket.`,
+    note: `Ambil race pack kamu di ${eventData.racePackPlace} dengan membawa KTP atau KIA asli dan QR di e\u2011ticket. ${eventData.racePackHours}`,
   },
   {
     title: "Hari lomba",

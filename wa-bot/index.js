@@ -58,8 +58,8 @@ const humanAt = new Map(); // jid -> waktu terakhir admin membalas dari HP
 const byHuman = (msg) => msg.key.fromMe && !String(msg.key.id || '').startsWith('3EB0');
 // Arsip per order (bukti bayar, invoice, info.json) plus riwayat.csv; disalin ke NAS oleh kuwera-arsip-nas di VPS.
 const ARCHIVE = '/data/arsip';
-// Sama dengan src/lib/event-data.ts (racePackDates, racePackPlace, jadwal lomba).
-const RACE_PACK = 'Kamis dan Jumat, 22 dan 23 Oktober 2026 di Lapangan Rampal (tenda panitia)';
+// Sama dengan src/lib/event-data.ts (racePackDates, racePackPlace, racePackHours, jadwal acara).
+const RACE_PACK = 'Kamis dan Jumat, 22 dan 23 Oktober 2026 di Kudam V/Brawijaya';
 const RACE_DAY = 'Sabtu, 24 Oktober 2026, 06.00 WIB di Lapangan Rampal';
 
 const caFile = process.env.DB_SSL_CA_FILE;
@@ -441,7 +441,7 @@ async function processPaid() {
         '',
         `E-ticket lengkap: ${SITE_URL}/tiket/${o.id}`,
         '',
-        `Ambil race pack: ${RACE_PACK}. Bawa KTP atau KIA asli tiap peserta.`,
+        `Race pack bisa diambil pada ${RACE_PACK}. Jam pengambilannya kami kabarkan lewat WhatsApp ini menjelang hari H. Jangan lupa bawa KTP atau KIA asli setiap peserta, ya.`,
         `Hari lomba: ${RACE_DAY}.`,
         '',
         'QR tiap peserta kami kirim di bawah ini. Simpan baik-baik.',

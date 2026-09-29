@@ -12,8 +12,8 @@ export const eventData = {
   // Tutup H-1 minggu (ukuran jersey dikirim ke vendor untuk dicetak), atau lebih awal kalau kuota penuh.
   registrationCloseLabel: "Sabtu, 17 Oktober 2026 pukul 23.59 WIB", // sama dengan registrationCloseIso
   racePackDates,
-  racePackLabel: `${racePackDates} (jam menyusul)`,
-  racePackPlace: "Lapangan Rampal (tenda panitia)",
+  racePackPlace: "Kudam V/Brawijaya",
+  racePackHours: "Jam pengambilannya kami kabarkan lewat WhatsApp menjelang hari H.",
   // Untuk data terstruktur (schema.org) dan metadata; sumber koordinat: OpenStreetMap way 295948065.
   startIso: "2026-10-24T06:00:00+07:00",
   registrationOpenIso: "2026-09-01T00:00:00+07:00", // jendela jual kategori di seed
@@ -90,7 +90,7 @@ export const faqs = [
   },
   {
     q: "Kapan dan di mana pengambilan race pack?",
-    a: `Race pack diambil ${eventData.racePackDates} di ${eventData.racePackPlace}. Bawa KTP atau KIA asli dan tunjukkan QR di e-ticket.`,
+    a: `Race pack bisa kamu ambil pada ${eventData.racePackDates} di ${eventData.racePackPlace}. ${eventData.racePackHours} Jangan lupa bawa KTP atau KIA asli dan tunjukkan QR di e-ticket, ya.`,
   },
   {
     q: "Apakah ada kategori kelompok atau komunitas?",
