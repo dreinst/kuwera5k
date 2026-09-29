@@ -41,7 +41,7 @@ export async function getSettings(): Promise<RegistrationSettings> {
   const methods = Array.isArray(v.methods) ? PAYMENT_METHOD_IDS.filter((id) => v.methods!.includes(id)) : [];
   return {
     holdMinutes: v.holdMinutes ?? 30,
-    quotaTotal: v.quotaTotal ?? 1500,
+    quotaTotal: v.quotaTotal ?? 1000,
     fees: { ...DEFAULT_FEES, ...(v.fees ?? {}) },
     methods: methods.length ? methods : [...PAYMENT_METHOD_IDS],
     maxTickets: Math.min(MAX_TICKETS_HARD, Math.max(1, v.maxTickets ?? 5)),
