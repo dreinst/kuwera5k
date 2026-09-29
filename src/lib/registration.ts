@@ -75,29 +75,29 @@ export function ageOn(birthDate: string, on: string = RACE_DATE) {
 export const participantSchema = z.object({
   firstName: z.string().trim().min(2, "Nama depan minimal 2 huruf").max(40, "Nama depan maksimal 40 huruf"),
   lastName: z.string().trim().max(40, "Nama belakang maksimal 40 huruf").optional().or(z.literal("")),
-  idNumber: z.string().trim().regex(/^\d{16}$/, "Nomor identitas (NIK) harus 16 angka"),
+  idNumber: z.string().trim().regex(/^\d{16}$/, "Nomor identitas (NIK) terdiri dari 16 angka"),
   address: z.string().trim().min(10, "Alamat minimal 10 huruf").max(200, "Alamat maksimal 200 huruf"),
-  province: z.enum(PROVINCES, { message: "Pilih provinsi" }),
-  city: z.string().trim().min(1, "Pilih kota/kabupaten"),
-  postalCode: z.string().trim().regex(/^\d{5}$/, "Kode pos harus 5 angka"),
-  bloodType: z.enum(BLOOD_TYPES, { message: "Pilih golongan darah" }),
+  province: z.enum(PROVINCES, { message: "Provinsinya belum dipilih" }),
+  city: z.string().trim().min(1, "Kota/kabupatennya belum dipilih"),
+  postalCode: z.string().trim().regex(/^\d{5}$/, "Kode pos terdiri dari 5 angka"),
+  bloodType: z.enum(BLOOD_TYPES, { message: "Golongan darahnya belum dipilih" }),
   birthDate: z
     .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/, "Tanggal lahir wajib diisi")
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "Tanggal lahirnya belum diisi")
     .refine((v) => !Number.isNaN(new Date(v).getTime()), "Tanggal lahir tidak valid")
     .refine((v) => ageOn(v) >= MIN_AGE, `Usia minimal ${MIN_AGE} tahun saat hari lomba`)
-    .refine((v) => ageOn(v) <= 90, "Cek lagi tanggal lahirnya"),
-  gender: z.enum(["L", "P"], { message: "Pilih jenis kelamin" }),
+    .refine((v) => ageOn(v) <= 90, "Tanggal lahirnya sepertinya kurang tepat, boleh dicek lagi?"),
+  gender: z.enum(["L", "P"], { message: "Jenis kelaminnya belum dipilih" }),
   phone: phone("Nomor HP"),
   email: z.string().trim().toLowerCase().email("Email tidak valid"),
-  jerseySize: z.enum(JERSEY_SIZES, { message: "Pilih ukuran jersey" }),
+  jerseySize: z.enum(JERSEY_SIZES, { message: "Ukuran jerseynya belum dipilih" }),
   emergencyName: z.string().trim().min(3, "Nama kontak darurat minimal 3 huruf").max(80),
   emergencyPhone: phone("Nomor kontak darurat"),
   community: z.string().trim().max(80, "Maksimal 80 huruf").optional().or(z.literal("")),
 }).superRefine((p, ctx) => {
   // Kota/kabupaten harus salah satu wilayah di provinsi yang dipilih (daftar di src/lib/wilayah.ts).
   if (p.city && !(KAB_KOTA[p.province] ?? []).includes(p.city)) {
-    ctx.addIssue({ code: "custom", path: ["city"], message: "Pilih kota/kabupaten dari daftar provinsi yang dipilih" });
+    ctx.addIssue({ code: "custom", path: ["city"], message: "Kota/kabupaten ini belum sesuai dengan provinsi yang dipilih" });
   }
 });
 export type ParticipantInput = z.infer<typeof participantSchema>;
@@ -109,9 +109,9 @@ export const fullNameOf = (p: { firstName: string; lastName?: string | null }) =
 export const MAX_TICKETS_HARD = 20;
 
 export const orderInputSchema = z.object({
-  categoryId: z.string().min(1, "Pilih kategori"),
+  categoryId: z.string().min(1, "Kategorinya belum dipilih"),
   // Satu pembelian bisa beberapa tiket; peserta pertama sekaligus pemesan.
-  participants: z.array(participantSchema).min(1, "Isi data minimal satu peserta").max(MAX_TICKETS_HARD).superRefine((list, ctx) => {
+  participants: z.array(participantSchema).min(1, "Data peserta belum diisi").max(MAX_TICKETS_HARD).superRefine((list, ctx) => {
     // Satu NIK satu tiket, termasuk di dalam pembelian yang sama.
     const seen = new Map<string, number>();
     list.forEach((p, i) => {
@@ -121,8 +121,8 @@ export const orderInputSchema = z.object({
     });
   }),
   promoCode: z.string().trim().toUpperCase().max(30).optional().or(z.literal("")),
-  paymentMethod: z.enum(PAYMENT_METHOD_IDS, { message: "Pilih metode pembayaran" }),
-  agreeTerms: z.literal(true, { message: "Wajib menyetujui syarat dan ketentuan" }),
+  paymentMethod: z.enum(PAYMENT_METHOD_IDS, { message: "Metode pembayarannya belum dipilih" }),
+  agreeTerms: z.literal(true, { message: "Syarat dan ketentuannya perlu disetujui dulu, ya" }),
 });
 export type OrderInput = z.infer<typeof orderInputSchema>;
 

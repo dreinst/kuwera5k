@@ -151,7 +151,7 @@ export default function Hero({ stats, price, noFee = false }: { stats: { paid: n
                 </p>
               )}
               <p className="mt-2 text-sm font-medium text-green-deep">
-                Sudah termasuk jersey, BIB, dan medali finisher. {noFee ? "Bayar lewat QRIS tanpa biaya layanan." : "Belum termasuk biaya layanan pembayaran."}
+                Sudah termasuk jersey, BIB, dan medali finisher. {noFee ? "Pembayaran lewat QRIS, tanpa biaya layanan." : "Belum termasuk biaya layanan pembayaran."}
               </p>
             </motion.div>
           </div>

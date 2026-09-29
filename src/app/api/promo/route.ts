@@ -14,7 +14,7 @@ const schema = z.object({
 export async function POST(req: Request) {
   if (!(await rateLimit("promo", 20, 600))) return NextResponse.json({ valid: false, message: "Terlalu banyak percobaan, tunggu beberapa menit" }, { status: 429 });
   const parsed = schema.safeParse(await req.json().catch(() => null));
-  if (!parsed.success) return NextResponse.json({ valid: false, message: "Masukkan kode promo" }, { status: 400 });
+  if (!parsed.success) return NextResponse.json({ valid: false, message: "Kode promonya belum diisi" }, { status: 400 });
   const category = await prisma.category.findUnique({ where: { id: parsed.data.categoryId } });
   if (!category) return NextResponse.json({ valid: false, message: "Kategori tidak ditemukan" }, { status: 400 });
   const res = await validatePromo(parsed.data.code, currentPrice(await getPricing()).price * parsed.data.quantity);

@@ -175,7 +175,7 @@ function FormSteps({ categories, fees, methods, paymentMode, trackCheckout, maxT
 
   const next = () => {
     setServerError("");
-    if (step === 1 && !category) return setServerError("Pilih kategori dulu");
+    if (step === 1 && !category) return setServerError("Kategorinya belum dipilih");
     if (step === 2 && active < quantity - 1) {
       // Isi peserta satu per satu: Lanjut membuka peserta berikutnya setelah peserta ini lengkap.
       const res = participantSchema.safeParse(participant);
@@ -189,7 +189,7 @@ function FormSteps({ categories, fees, methods, paymentMode, trackCheckout, maxT
       return;
     }
     if (step === 2 && !validateAll()) return;
-    if (step === 3 && !agree) return setServerError("Centang persetujuan syarat dan ketentuan dulu");
+    if (step === 3 && !agree) return setServerError("Syarat dan ketentuannya perlu disetujui dulu, ya");
     setStep((s) => Math.min(4, s + 1));
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
@@ -241,7 +241,7 @@ function FormSteps({ categories, fees, methods, paymentMode, trackCheckout, maxT
     return (
       <div className="rounded-[20px] border border-glass-border bg-card p-8 text-center">
         <p className="font-display text-2xl text-brand-yellow uppercase">Pendaftaran belum dibuka</p>
-        <p className="mt-2 text-white/70">Tanyakan jadwal pembukaannya ke WhatsApp panitia.</p>
+        <p className="mt-2 text-white/70">Jadwal pembukaannya bisa kamu tanyakan ke WhatsApp panitia.</p>
       </div>
     );
   }
@@ -269,7 +269,7 @@ function FormSteps({ categories, fees, methods, paymentMode, trackCheckout, maxT
         <AnimatePresence mode="wait" initial={false}>
           {step === 1 && (
             <motion.div key="s1" variants={slide} initial="enter" animate="center" exit="exit">
-              <h2 className="font-display text-2xl text-white uppercase">Pilih kategori</h2>
+              <h2 className="font-display text-2xl text-white uppercase">Kategori lari</h2>
               <div className="mt-5 grid gap-3">
                 {categories.map((c) => {
                   const full = c.remaining <= 0; const selected = c.id === categoryId;
@@ -311,7 +311,7 @@ function FormSteps({ categories, fees, methods, paymentMode, trackCheckout, maxT
             <motion.div key="s2" variants={slide} initial="enter" animate="center" exit="exit">
               <h2 className="font-display text-2xl text-white uppercase">{quantity > 1 ? `Data peserta ${active + 1} dari ${quantity}` : "Data peserta"}</h2>
               <p className="mt-1 text-sm text-white/75">
-                Isi sesuai KTP atau KIA. Data ini dipakai untuk BIB, asuransi, dan verifikasi saat ambil race pack.
+                Mohon diisi sesuai KTP atau KIA, ya. Data ini kami pakai untuk BIB, asuransi, dan verifikasi saat pengambilan race pack.
                 {quantity > 1 && active === 0 && " Peserta 1 juga menjadi pemesan yang dihubungi lewat WhatsApp."}
               </p>
               {quantity > 1 && (
@@ -344,7 +344,7 @@ function FormSteps({ categories, fees, methods, paymentMode, trackCheckout, maxT
                 <Field label="Nomor HP (WhatsApp)" error={errors["phone"]}>
                   <input inputMode="numeric" className={inputCls} value={participant.phone} onChange={(e) => set("phone", e.target.value.replace(/\D/g, ""))} onBlur={() => blur("phone")} autoComplete="tel" placeholder="08xxxxxxxxxx" />
                 </Field>
-                <Field label="Nomor identitas (KTP/KIA)" error={errors["idNumber"]} hint="Pastikan nomor identitas benar karena akan digunakan untuk verifikasi" className="sm:col-span-2">
+                <Field label="Nomor identitas (KTP/KIA)" error={errors["idNumber"]} hint="Mohon dicek lagi, nomor ini kami pakai untuk verifikasi" className="sm:col-span-2">
                   <input inputMode="numeric" maxLength={16} className={inputCls} value={participant.idNumber} onChange={(e) => set("idNumber", e.target.value.replace(/\D/g, ""))} onBlur={() => blur("idNumber")} autoComplete="off" placeholder="16 angka NIK" />
                 </Field>
                 <Field label="Alamat" error={errors["address"]} className="sm:col-span-2">
@@ -397,7 +397,7 @@ function FormSteps({ categories, fees, methods, paymentMode, trackCheckout, maxT
 
           {step === 3 && category && (
             <motion.div key="s3" variants={slide} initial="enter" animate="center" exit="exit">
-              <h2 className="font-display text-2xl text-white uppercase">Cek lagi isianmu</h2>
+              <h2 className="font-display text-2xl text-white uppercase">Ringkasan pendaftaranmu</h2>
               {people.slice(0, quantity).map((p, i) => (
                 <div key={i} className={i ? "mt-6 border-t border-white/10 pt-5" : "mt-5"}>
                   {quantity > 1 && <p className="text-xs font-semibold tracking-wide text-gold uppercase">Peserta {i + 1}{i === 0 ? " (pemesan)" : ""}</p>}
@@ -450,12 +450,12 @@ function FormSteps({ categories, fees, methods, paymentMode, trackCheckout, maxT
                 <>
                   <h2 className="font-display text-2xl text-white uppercase">Pembayaran QRIS</h2>
                   <p className="mt-1 text-sm text-white/75">
-                    Di halaman berikutnya muncul ringkasan pembayaran. Kirim pesan pesanan ke WhatsApp panitia, lalu chatbot membalas dengan QRIS bernominal yang bisa dibayar dari aplikasi bank atau e-wallet apa pun.
+                    Di halaman berikutnya ada ringkasan pembayaran. Cukup kirimkan pesan pesanan ke WhatsApp panitia, lalu chatbot kami membalas dengan QRIS bernominal yang bisa dibayar dari aplikasi bank atau e-wallet apa pun.
                   </p>
                 </>
               ) : (
                 <>
-              <h2 className="font-display text-2xl text-white uppercase">Pilih metode pembayaran</h2>
+              <h2 className="font-display text-2xl text-white uppercase">Metode pembayaran</h2>
                   <p className="mt-1 text-sm text-white/75">Biaya layanan berbeda per metode dan sudah termasuk di total.</p>
                   <div className="mt-5 space-y-5">
                     {["QRIS", "Virtual account", "E-wallet", "Kartu"].filter((group) => available.some((m) => m.group === group)).map((group) => (

@@ -61,9 +61,9 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
           </div>
         </div>
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginTop: 28, fontSize: 27, lineHeight: 1.45, textAlign: "center" }}>
-          <span>Scan QRIS di atas, nominal terisi otomatis.</span>
-          <span>Bayar persis sesuai total, lalu kirim bukti ke WhatsApp panitia.</span>
-          {deadline && <span style={{ color: "#F4E71D" }}>{`Bayar sebelum ${deadline} WIB`}</span>}
+          <span>Silakan scan QRIS di atas, nominalnya sudah terisi otomatis.</span>
+          <span>Mohon bayar sesuai total, lalu kirimkan bukti bayarnya ke WhatsApp panitia ya.</span>
+          {deadline && <span style={{ color: "#F4E71D" }}>{`Kami tunggu pembayarannya sebelum ${deadline} WIB`}</span>}
         </div>
       </div>
     ),

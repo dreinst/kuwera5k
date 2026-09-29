@@ -102,10 +102,10 @@ async function tolak(orderId, oleh, alasan) {
   const o = rows[0];
   if (o.status === 'PAID') return { ok: false, pesan: `Order ${orderId} sudah lunas, tidak bisa ditolak` };
   const text = [
-    `Mohon maaf, pembayaran untuk order ${o.id} (${rupiah(o.total)}) belum kami temukan.`,
+    `Mohon maaf kak, pembayaran untuk order ${o.id} (${rupiah(o.total)}) belum kami temukan.`,
     alasan ? `Catatan admin: ${alasan}` : '',
     '',
-    'Pastikan nominal yang dibayar persis sama dengan total di halaman pembayaran, lalu kirim ulang screenshot bukti bayarnya di chat ini.',
+    'Boleh dicek lagi apakah nominal yang dibayar sudah sama persis dengan total di halaman pembayaran? Setelah itu, screenshot bukti bayarnya bisa dikirim ulang di chat ini, ya.',
   ].filter((x, i) => x || i === 2).join('\n');
   fs.mkdirSync('/data/outbox', { recursive: true });
   fs.writeFileSync(`/data/outbox/${Date.now()}-${o.id}.json`, JSON.stringify({ orderId: o.id, phone: o.buyerPhone, text, oleh }));
