@@ -413,7 +413,7 @@ function relayIncoming(msg) {
   }
   fs.mkdirSync(RELAY_IN, { recursive: true });
   fs.writeFileSync(`${RELAY_IN}/${msg.key.id}.json`, JSON.stringify({
-    id: msg.key.id, group, grup: cfg.groups[group], sender, nama: msg.pushName || '', waktu: Date.now(),
+    id: msg.key.id, group, grup: cfg.groups[group], sender, nama: msg.pushName || '', waktu: Date.now(), reply: replyToBot,
     text: text.replace(/^hermes[\s,:]*/i, ''), quoted: ctx?.quotedMessage ? textOf({ message: ctx.quotedMessage }).slice(0, 500) : '',
   }));
 }
