@@ -71,12 +71,12 @@ export default async function TiketPage({ params }: { params: Promise<{ code: st
                 <div><dt className="text-green-deep/60">Nama</dt><dd className="font-semibold">{p.fullName}</dd></div>
                 <div><dt className="text-green-deep/60">Jersey</dt><dd className="font-semibold">{p.jerseySize}</dd></div>
                 <div><dt className="text-green-deep/60">Start</dt><dd className="font-semibold">{eventData.dateLabel}, {eventData.timeLabel}</dd></div>
-                <div><dt className="text-green-deep/60">Lokasi</dt><dd className="font-semibold">{eventData.startPoint}</dd></div>
+                <div><dt className="text-green-deep/60">Titik start</dt><dd className="font-semibold">{eventData.startPoint}</dd></div>
               </dl>
             </div>
           </div>
           <div className="border-t border-dashed border-green-deep/20 px-6 py-5 text-sm sm:px-8">
-            <p><span className="font-semibold">Ambil race pack:</span> {eventData.racePackLabel}, {eventData.racePackPlace}. Bawa KTP atau KIA asli dan tunjukkan QR ini.</p>
+            <p><span className="font-semibold">Ambil race pack:</span> {eventData.racePackDates} di {eventData.racePackPlace}. {eventData.racePackHours} Bawa KTP atau KIA asli dan tunjukkan QR ini.</p>
             <p className="mt-2 text-green-deep/80">Pertanyaan lain ada di <Link href="/#faq" className="underline">FAQ</Link> atau <a href={waLink(waText.tiket(ticket.code))} target="_blank" rel="noopener noreferrer" className="underline">WhatsApp panitia</a>.</p>
           </div>
           {isMock && (
