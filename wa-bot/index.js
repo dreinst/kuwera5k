@@ -399,13 +399,18 @@ function relayIncoming(msg) {
   const group = msg.key.remoteJid;
   if (!cfg.groups?.[group] || msg.key.fromMe) return;
   const sender = digits(msg.key.participantAlt || msg.key.participant);
-  if (!(cfg.allowed || []).some((a) => sender.endsWith(String(a).slice(-10)))) return;
   const ctx = msg.message?.extendedTextMessage?.contextInfo;
   const text = textOf(msg).trim();
   let sentIds = '';
   try { sentIds = fs.readFileSync(SENT_IDS, 'utf8'); } catch { sentIds = ''; }
   const replyToBot = !!ctx?.stanzaId && sentIds.includes(ctx.stanzaId);
-  if (!/^hermes\b/i.test(text) && !replyToBot) return;
+  const allowed = (cfg.allowed || []).some((a) => sender.endsWith(String(a).slice(-10)));
+  // Grup uji ("test" di cfg.testGroups): semua pesan superadmin diproses seperti chat pelanggan.
+  const isTest = (cfg.testGroups || []).includes(group);
+  if (!allowed || (!isTest && !/^hermes\b/i.test(text) && !replyToBot)) {
+    logger.info({ grup: cfg.groups[group], sender, allowed, replyToBot, awal: text.slice(0, 30) }, 'pesan grup tidak diteruskan');
+    return;
+  }
   fs.mkdirSync(RELAY_IN, { recursive: true });
   fs.writeFileSync(`${RELAY_IN}/${msg.key.id}.json`, JSON.stringify({
     id: msg.key.id, group, grup: cfg.groups[group], sender, nama: msg.pushName || '', waktu: Date.now(),
