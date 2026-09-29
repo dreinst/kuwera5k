@@ -454,7 +454,9 @@ async function saveCsMedia(msg) {
 
 // Relay grup WA internal ke Hermes di Discord (bot D'Pro Ops). Konfigurasi /data/relay.json:
 // { "parent": "<jid komunitas>", "groups": { "<jid grup>": "<nama>" }, "allowed": ["<nomor>"] }
-// Semua pesan dari nomor di "allowed" diteruskan langsung (tanpa kata panggil); awalan "hermes" dan tag nomor bot dibuang.
+// Semua pesan dari nomor di "allowed" (owner/superadmin) diteruskan langsung (tanpa kata panggil). Di grup staf ("openGroups")
+// anggota lain juga boleh memakai bot tanpa login, tapi pesannya harus diawali "hermes" atau me-reply pesan bot; batas
+// jumlah permintaan staf diatur bot D'Pro Ops. Awalan "hermes" dan tag nomor bot dibuang.
 const RELAY_FILE = '/data/relay.json';
 const RELAY_IN = '/data/relay-in';
 const relayConfig = () => { try { return JSON.parse(fs.readFileSync(RELAY_FILE, 'utf8')); } catch { return { groups: {}, allowed: [] }; } };
@@ -468,14 +470,15 @@ function relayIncoming(msg) {
   let sentIds = '';
   try { sentIds = fs.readFileSync(SENT_IDS, 'utf8'); } catch { sentIds = ''; }
   const replyToBot = !!ctx?.stanzaId && sentIds.includes(ctx.stanzaId);
-  const allowed = (cfg.allowed || []).some((a) => sender.endsWith(String(a).slice(-10)));
-  if (!allowed || !text) {
+  const isAdmin = (cfg.allowed || []).some((a) => sender.endsWith(String(a).slice(-10)));
+  const staffCall = (cfg.openGroups || []).includes(group) && (/^(@\d+[\s,:]*)*hermes\b/i.test(text) || replyToBot);
+  if (!(isAdmin || staffCall) || !text) {
     logger.info({ grup: cfg.groups[group], sender, allowed, replyToBot, awal: text.slice(0, 30) }, 'pesan grup tidak diteruskan');
     return;
   }
   fs.mkdirSync(RELAY_IN, { recursive: true });
   fs.writeFileSync(`${RELAY_IN}/${msg.key.id}.json`, JSON.stringify({
-    id: msg.key.id, group, grup: cfg.groups[group], sender, nama: msg.pushName || '', waktu: Date.now(), reply: replyToBot,
+    id: msg.key.id, group, grup: cfg.groups[group], sender, nama: msg.pushName || '', waktu: Date.now(), reply: replyToBot, admin: isAdmin,
     text: text.replace(/^(@\d+[\s,:]*)+/, '').replace(/^hermes[\s,:]*/i, ''), quoted: ctx?.quotedMessage ? textOf({ message: ctx.quotedMessage }).slice(0, 500) : '',
   }));
 }
@@ -574,6 +577,13 @@ async function processOutbox() {
         logger.info({ id: meta.id, subject: item.subject }, 'grup internal dibuat');
       } catch (e) { logger.error({ subject: item.subject, err: e.message }, 'gagal membuat grup'); }
       await sleep(between(3000, 6000));
+      continue;
+    }
+    if (item.tipe === 'ubah-deskripsi') { // hanya deskripsi grup, tanpa kirim pesan
+      fs.unlinkSync(file);
+      try { await sock.groupUpdateDescription(item.jid, item.description); logger.info({ jid: item.jid }, 'deskripsi grup diubah'); }
+      catch (e) { logger.error({ jid: item.jid, err: e.message }, 'gagal mengubah deskripsi grup'); }
+      await sleep(between(2000, 4000));
       continue;
     }
     if (item.tipe === 'panduan-grup') { // deskripsi grup diperbarui, lalu panduan dikirim dan disematkan 30 hari
