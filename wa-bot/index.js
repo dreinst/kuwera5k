@@ -354,6 +354,31 @@ async function saveCsMedia(msg) {
   return name;
 }
 
+// Relay grup WA internal ke Hermes di Discord (bot D'Pro Ops). Konfigurasi /data/relay.json:
+// { "parent": "<jid komunitas>", "groups": { "<jid grup>": "<nama>" }, "allowed": ["<nomor>"] }
+// Hanya pesan dari nomor di "allowed" yang diawali "hermes" atau me-reply pesan bot yang diteruskan.
+const RELAY_FILE = '/data/relay.json';
+const RELAY_IN = '/data/relay-in';
+const relayConfig = () => { try { return JSON.parse(fs.readFileSync(RELAY_FILE, 'utf8')); } catch { return { groups: {}, allowed: [] }; } };
+function relayIncoming(msg) {
+  const cfg = relayConfig();
+  const group = msg.key.remoteJid;
+  if (!cfg.groups?.[group] || msg.key.fromMe) return;
+  const sender = digits(msg.key.participantAlt || msg.key.participant);
+  if (!(cfg.allowed || []).some((a) => sender.endsWith(String(a).slice(-10)))) return;
+  const ctx = msg.message?.extendedTextMessage?.contextInfo;
+  const text = textOf(msg).trim();
+  let sentIds = '';
+  try { sentIds = fs.readFileSync(SENT_IDS, 'utf8'); } catch { sentIds = ''; }
+  const replyToBot = !!ctx?.stanzaId && sentIds.includes(ctx.stanzaId);
+  if (!/^hermes\b/i.test(text) && !replyToBot) return;
+  fs.mkdirSync(RELAY_IN, { recursive: true });
+  fs.writeFileSync(`${RELAY_IN}/${msg.key.id}.json`, JSON.stringify({
+    id: msg.key.id, group, grup: cfg.groups[group], sender, nama: msg.pushName || '', waktu: Date.now(),
+    text: text.replace(/^hermes[\s,:]*/i, ''), quoted: ctx?.quotedMessage ? textOf({ message: ctx.quotedMessage }).slice(0, 500) : '',
+  }));
+}
+
 // Kartu bayar dibuat website (QRIS dinamis bernominal total order), bot tinggal meneruskannya sebagai gambar.
 async function qrisCard(orderId) {
   const res = await fetch(`${SITE_URL}/api/orders/${orderId}/qris`, { signal: AbortSignal.timeout(20000) });
@@ -436,6 +461,19 @@ async function processOutbox() {
   for (const f of fs.readdirSync(OUTBOX).filter((x) => x.endsWith('.json')).sort()) {
     const file = `${OUTBOX}/${f}`;
     const item = JSON.parse(fs.readFileSync(file, 'utf8'));
+    if (item.tipe === 'buat-grup') { // grup baru di komunitas internal, lalu deskripsi aturannya
+      fs.unlinkSync(file);
+      try {
+        const cfg = relayConfig();
+        const meta = await sock.communityCreateGroup(item.subject, item.participants || [], cfg.parent);
+        if (item.description) await sock.groupUpdateDescription(meta.id, item.description);
+        cfg.groups = { ...(cfg.groups || {}), [meta.id]: item.subject };
+        fs.writeFileSync(RELAY_FILE, JSON.stringify(cfg, null, 1));
+        logger.info({ id: meta.id, subject: item.subject }, 'grup internal dibuat');
+      } catch (e) { logger.error({ subject: item.subject, err: e.message }, 'gagal membuat grup'); }
+      await sleep(between(3000, 6000));
+      continue;
+    }
     if (item.jid) { // balasan worker CS
       try { await reply(item.jid, { text: item.text, ...(item.mentions ? { mentions: item.mentions } : {}) }); } catch (e) { logger.error({ jid: item.jid, err: e.message }, 'gagal kirim balasan CS'); }
       fs.unlinkSync(file);
@@ -622,7 +660,12 @@ async function start() {
       logger.info('bot KUWERA terhubung ke WhatsApp');
       // Daftar grup yang diikuti nomor kantor (id -> nama), dipakai worker CS untuk laporan ke grup tim.
       s.groupFetchAllParticipating()
-        .then((g) => fs.writeFileSync('/data/groups.json', JSON.stringify(Object.fromEntries(Object.values(g).map((x) => [x.id, x.subject])))))
+        .then((g) => {
+          fs.writeFileSync('/data/groups.json', JSON.stringify(Object.fromEntries(Object.values(g).map((x) => [x.id, x.subject]))));
+          fs.writeFileSync('/data/groups-meta.json', JSON.stringify(Object.values(g).map((x) => ({
+            id: x.id, subject: x.subject, isCommunity: !!x.isCommunity, isCommunityAnnounce: !!x.isCommunityAnnounce, linkedParent: x.linkedParent || null,
+          })), null, 1));
+        })
         .catch((e) => logger.warn({ err: e.message }, 'gagal mengambil daftar grup'));
       // Sekali saja: tarik ulang app state supaya nama kontak dari HP kantor terkirim lewat contacts.upsert.
       if (!fs.existsSync('/data/contacts-synced')) {
@@ -652,6 +695,7 @@ async function start() {
     }
     if (type !== 'notify') return;
     for (const msg of messages) {
+      if (msg.key.remoteJid?.endsWith('@g.us')) { try { relayIncoming(msg); } catch (e) { logger.error({ err: e.message }, 'relay grup gagal'); } continue; }
       try { await handleIncoming(msg); } catch (e) { logger.error({ err: e.message }, 'gagal memproses pesan masuk'); }
     }
   });
