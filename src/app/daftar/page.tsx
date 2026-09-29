@@ -5,6 +5,7 @@ import Footer from "@/components/sections/Footer";
 import RegistrationForm from "@/components/registration/RegistrationForm";
 import { getOpenCategories, getSettings, paymentMode, trackCheckout } from "@/lib/orders";
 import { getPricing, isOpen } from "@/lib/pricing";
+import { prisma } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
@@ -16,7 +17,11 @@ export const metadata: Metadata = {
 };
 
 export default async function DaftarPage() {
-  const [categories, settings, pricing] = await Promise.all([getOpenCategories(), getSettings(), getPricing()]);
+  const now = new Date();
+  const [categories, settings, pricing, promoCount] = await Promise.all([
+    getOpenCategories(), getSettings(), getPricing(),
+    prisma.promoCode.count({ where: { isActive: true, validUntil: { gt: now } } }),
+  ]);
   const closed = !isOpen(pricing);
   const opensAt = closed && pricing.open && pricing.openAt ? new Date(pricing.openAt) : null;
   const mode = paymentMode();
@@ -46,7 +51,7 @@ export default async function DaftarPage() {
           ) : (
             <RegistrationForm
               categories={categories} fees={settings.fees} methods={settings.methods} paymentMode={mode} trackCheckout={trackCheckout()}
-              maxTickets={settings.maxTickets} holdMinutes={mode === "manual" ? settings.manualHoldMinutes : settings.holdMinutes}
+              maxTickets={settings.maxTickets} holdMinutes={mode === "manual" ? settings.manualHoldMinutes : settings.holdMinutes} promoAvailable={promoCount > 0}
             />
           )}
         </div>
