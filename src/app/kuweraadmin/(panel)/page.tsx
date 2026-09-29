@@ -4,7 +4,6 @@ import { requireAdmin } from "@/lib/admin-auth";
 import { dashboardStats, fmtDateTime } from "@/lib/admin-data";
 import { prisma } from "@/lib/db";
 import { formatRupiah } from "@/lib/registration";
-import AutoRefresh from "@/components/admin/AutoRefresh";
 import { StatusBadge } from "@/components/admin/Badges";
 
 export const metadata: Metadata = { title: "Dashboard" };
@@ -49,7 +48,6 @@ export default async function DashboardPage() {
             Midtrans: <span className={`font-semibold ${s.mode.production ? "text-yellow-lime" : "text-brand-yellow"}`}>{s.mode.production ? "Production" : "Sandbox"}</span>
             {" "}&middot; mode bayar <span className="font-semibold">{s.mode.payment}</span>
           </p>
-          <AutoRefresh />
         </div>
       </div>
 
@@ -63,7 +61,7 @@ export default async function DashboardPage() {
       <div className="grid gap-4 sm:grid-cols-3">
         <Stat label="Pendapatan tiket" value={formatRupiah(s.revenueTicket)} note="Harga tiket dikurangi diskon" />
         <Stat label="Biaya layanan" value={formatRupiah(s.revenueFee)} note="Dibayar peserta, untuk Midtrans" />
-        <Stat label="Total diterima" value={formatRupiah(s.revenueTotal)} note="Sesuai nominal di Midtrans" />
+        <Stat label="Total diterima" value={formatRupiah(s.revenueTotal)} note="Sesuai nominal di Payment Gateway" />
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">

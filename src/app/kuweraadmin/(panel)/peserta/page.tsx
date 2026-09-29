@@ -3,7 +3,6 @@ import Link from "next/link";
 import { requireAdmin } from "@/lib/admin-auth";
 import { PAGE_SIZE, STATUS_LABEL, fmtDateTime, listRegistrants, maskNik } from "@/lib/admin-data";
 import { formatRupiah } from "@/lib/registration";
-import AutoRefresh from "@/components/admin/AutoRefresh";
 import { StatusBadge } from "@/components/admin/Badges";
 
 export const metadata: Metadata = { title: "Peserta" };
@@ -23,7 +22,6 @@ export default async function PesertaPage({ searchParams }: { searchParams: Prom
     <div>
       <div className="flex flex-wrap items-end justify-between gap-4">
         <h1 className="font-display text-4xl text-white uppercase">Data <span className="text-brand-yellow">peserta</span></h1>
-        <AutoRefresh />
       </div>
 
       <form className="mt-6 flex flex-wrap gap-3" action="/kuweraadmin/peserta">

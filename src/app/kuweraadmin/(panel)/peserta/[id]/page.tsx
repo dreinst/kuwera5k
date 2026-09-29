@@ -40,6 +40,7 @@ export default async function PesertaDetailPage({ params }: { params: Promise<{ 
     include: {
       participants: { orderBy: { position: "asc" }, include: { ticket: true } },
       payments: { orderBy: { receivedAt: "desc" } }, category: { select: { name: true } },
+      proofs: { orderBy: { createdAt: "asc" }, select: { id: true, fileName: true, mimeType: true, createdAt: true } },
     },
   });
   if (!order) notFound();
@@ -85,6 +86,7 @@ export default async function PesertaDetailPage({ params }: { params: Promise<{ 
                   <>
                     <p className="mt-2 text-white/85">
                       Kode tiket <span className="font-mono text-white">{p.ticket.code}</span>
+                      {" "}&middot; <a href={`/kuweraadmin/berkas/qr/${p.ticket.code}?unduh=1`} className="text-brand-yellow underline">Unduh QR</a>
                       {p.ticket.racepackCollectedAt
                         ? <> &middot; diambil {fmtDateTime(p.ticket.racepackCollectedAt)} (dicatat {p.ticket.collectedBy})</>
                         : <> &middot; belum diambil</>}
@@ -125,6 +127,30 @@ export default async function PesertaDetailPage({ params }: { params: Promise<{ 
               </div>
             )}
           </Section>
+
+          {(manualOrder || order.proofs.length > 0) && (
+            <Section title="Bukti bayar">
+              {order.proofs.length === 0 ? (
+                <p className="text-white/75">Belum ada bukti bayar yang dikirim lewat WhatsApp.</p>
+              ) : (
+                <div className="grid gap-4 sm:grid-cols-2">
+                  {order.proofs.map((f) => (
+                    <figure key={f.id}>
+                      {f.mimeType.startsWith("image/") ? (
+                        <a href={`/kuweraadmin/berkas/bukti/${f.id}`} target="_blank" rel="noopener noreferrer">
+                          {/* eslint-disable-next-line @next/next/no-img-element -- gambar dari database lewat route admin */}
+                          <img src={`/kuweraadmin/berkas/bukti/${f.id}`} alt={`Bukti bayar ${order.id}`} className="max-h-80 w-full rounded-lg bg-white/5 object-contain" />
+                        </a>
+                      ) : <p className="text-sm text-white/80">{f.fileName}</p>}
+                      <figcaption className="mt-2 text-xs text-white/75">
+                        {fmtDateTime(f.createdAt)} &middot; <a href={`/kuweraadmin/berkas/bukti/${f.id}?unduh=1`} className="font-semibold text-brand-yellow underline">Unduh</a>
+                      </figcaption>
+                    </figure>
+                  ))}
+                </div>
+              )}
+            </Section>
+          )}
 
           {manualOrder ? (
             <Section title="Konfirmasi bayar QRIS">
