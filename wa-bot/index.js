@@ -454,7 +454,7 @@ async function saveCsMedia(msg) {
 
 // Relay grup WA internal ke Hermes di Discord (bot D'Pro Ops). Konfigurasi /data/relay.json:
 // { "parent": "<jid komunitas>", "groups": { "<jid grup>": "<nama>" }, "allowed": ["<nomor>"] }
-// Hanya pesan dari nomor di "allowed" yang diawali "hermes", perintah "/..." (seperti di Telegram), atau me-reply pesan bot yang diteruskan.
+// Semua pesan dari nomor di "allowed" diteruskan langsung (tanpa kata panggil); awalan "hermes" dan tag nomor bot dibuang.
 const RELAY_FILE = '/data/relay.json';
 const RELAY_IN = '/data/relay-in';
 const relayConfig = () => { try { return JSON.parse(fs.readFileSync(RELAY_FILE, 'utf8')); } catch { return { groups: {}, allowed: [] }; } };
@@ -469,16 +469,14 @@ function relayIncoming(msg) {
   try { sentIds = fs.readFileSync(SENT_IDS, 'utf8'); } catch { sentIds = ''; }
   const replyToBot = !!ctx?.stanzaId && sentIds.includes(ctx.stanzaId);
   const allowed = (cfg.allowed || []).some((a) => sender.endsWith(String(a).slice(-10)));
-  // Grup uji ("test" di cfg.testGroups): semua pesan superadmin diproses seperti chat pelanggan.
-  const isTest = (cfg.testGroups || []).includes(group);
-  if (!allowed || (!isTest && !/^(hermes\b|\/)/i.test(text) && !replyToBot)) {
+  if (!allowed || !text) {
     logger.info({ grup: cfg.groups[group], sender, allowed, replyToBot, awal: text.slice(0, 30) }, 'pesan grup tidak diteruskan');
     return;
   }
   fs.mkdirSync(RELAY_IN, { recursive: true });
   fs.writeFileSync(`${RELAY_IN}/${msg.key.id}.json`, JSON.stringify({
     id: msg.key.id, group, grup: cfg.groups[group], sender, nama: msg.pushName || '', waktu: Date.now(), reply: replyToBot,
-    text: text.replace(/^hermes[\s,:]*/i, ''), quoted: ctx?.quotedMessage ? textOf({ message: ctx.quotedMessage }).slice(0, 500) : '',
+    text: text.replace(/^(@\d+[\s,:]*)+/, '').replace(/^hermes[\s,:]*/i, ''), quoted: ctx?.quotedMessage ? textOf({ message: ctx.quotedMessage }).slice(0, 500) : '',
   }));
 }
 
@@ -582,6 +580,9 @@ async function processOutbox() {
       fs.unlinkSync(file);
       try {
         if (item.description) await sock.groupUpdateDescription(item.jid, item.description);
+        for (const id of item.unpin || []) { // lepas sematan panduan lama
+          await sock.sendMessage(item.jid, { pin: { remoteJid: item.jid, fromMe: true, id }, type: 2 }).catch(() => {});
+        }
         const sent = await reply(item.jid, { text: item.text });
         await sock.sendMessage(item.jid, { pin: sent.key, type: 1, time: 2592000 });
         logger.info({ jid: item.jid }, 'panduan grup dikirim dan disematkan');
