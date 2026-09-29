@@ -68,7 +68,7 @@ export default async function PesertaPage({ searchParams }: { searchParams: Prom
                 </td>
                 <td className="px-4 py-3 font-mono text-white/85">{maskNik(o.participants[0]?.idNumber)}</td>
                 <td className="px-4 py-3">
-                  <StatusBadge status={o.status} />
+                  <StatusBadge status={o.status} test={o.isTest} />
                   {o.status === "PAID" && o.payments[0] && o.payments[0].gateway !== "midtrans" && <p className="mt-1 text-[10px] text-gold uppercase">{o.payments[0].gateway}</p>}
                 </td>
                 <td className="px-4 py-3 text-white">{o.participants.map((p) => p.jerseySize).join(", ") || "-"}</td>

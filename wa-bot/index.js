@@ -237,7 +237,7 @@ async function incomeSummary() {
   const { rows } = await pool.query(
     `SELECT count(*)::int AS orders, coalesce(sum(o.quantity), 0)::int AS tickets, coalesce(sum(o.total), 0)::bigint AS total
        FROM "Order" o
-      WHERE o.status = 'PAID'
+      WHERE o.status = 'PAID' AND NOT o."isTest"
         AND EXISTS (SELECT 1 FROM "Payment" p WHERE p."orderId" = o.id AND p.gateway = ANY($1))`,
     [REAL_GATEWAYS],
   );

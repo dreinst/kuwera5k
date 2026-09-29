@@ -16,25 +16,25 @@ export const maskNik = (nik: string | null | undefined) => (nik ? `${nik.slice(0
 
 export async function dashboardStats(now = new Date()) {
   const [byStatus, activePending, paidSums, settings, held, jersey, gender, blood, cities, collected, recent] = await Promise.all([
-    prisma.order.groupBy({ by: ["status"], _count: { _all: true } }),
-    prisma.order.count({ where: { status: "PENDING", expiresAt: { gt: now } } }),
-    prisma.order.aggregate({ where: { status: "PAID" }, _sum: { subtotal: true, discount: true, fee: true, total: true } }),
+    prisma.order.groupBy({ by: ["status"], where: { isTest: false }, _count: { _all: true } }),
+    prisma.order.count({ where: { status: "PENDING", isTest: false, expiresAt: { gt: now } } }),
+    prisma.order.aggregate({ where: { status: "PAID", isTest: false }, _sum: { subtotal: true, discount: true, fee: true, total: true } }),
     getSettings(),
     heldCount(null, now),
-    prisma.participant.groupBy({ by: ["jerseySize"], where: { order: { status: "PAID" } }, _count: { _all: true } }),
-    prisma.participant.groupBy({ by: ["gender"], where: { order: { status: "PAID" } }, _count: { _all: true } }),
-    prisma.participant.groupBy({ by: ["bloodType"], where: { order: { status: "PAID" } }, _count: { _all: true } }),
-    prisma.participant.groupBy({ by: ["city"], where: { order: { status: "PAID" } }, _count: { _all: true }, orderBy: { _count: { city: "desc" } }, take: 5 }),
-    prisma.ticket.count({ where: { racepackCollectedAt: { not: null } } }),
+    prisma.participant.groupBy({ by: ["jerseySize"], where: { order: { status: "PAID", isTest: false } }, _count: { _all: true } }),
+    prisma.participant.groupBy({ by: ["gender"], where: { order: { status: "PAID", isTest: false } }, _count: { _all: true } }),
+    prisma.participant.groupBy({ by: ["bloodType"], where: { order: { status: "PAID", isTest: false } }, _count: { _all: true } }),
+    prisma.participant.groupBy({ by: ["city"], where: { order: { status: "PAID", isTest: false } }, _count: { _all: true }, orderBy: { _count: { city: "desc" } }, take: 5 }),
+    prisma.ticket.count({ where: { racepackCollectedAt: { not: null }, order: { isTest: false } } }),
     prisma.order.findMany({ orderBy: { createdAt: "desc" }, take: 8, include: { participants: { where: { position: 1 }, select: { fullName: true } } } }),
   ]);
   const count = (s: OrderStatus) => byStatus.find((b) => b.status === s)?._count._all ?? 0;
   // Peserta lunas dihitung per tiket (satu order bisa beberapa tiket).
-  const paid = await prisma.participant.count({ where: { order: { status: "PAID" } } });
+  const paid = await prisma.participant.count({ where: { order: { status: "PAID", isTest: false } } });
 
-  // Pendaftar lunas per hari (WIB), 14 hari terakhir.
+  // Pendaftar lunas per hari (WIB), 14 hari terakhir. Semua angka di sini tanpa order data uji.
   const since = new Date(now.getTime() - 13 * 86400_000);
-  const paidRecent = await prisma.order.findMany({ where: { status: "PAID", paidAt: { gte: since } }, select: { paidAt: true, quantity: true } });
+  const paidRecent = await prisma.order.findMany({ where: { status: "PAID", isTest: false, paidAt: { gte: since } }, select: { paidAt: true, quantity: true } });
   const dayKey = (d: Date) => d.toLocaleDateString("en-CA", { timeZone: "Asia/Jakarta" });
   const daily = Array.from({ length: 14 }, (_, i) => {
     const d = new Date(since.getTime() + i * 86400_000);

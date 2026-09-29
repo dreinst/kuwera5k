@@ -10,7 +10,7 @@ export async function GET(req: Request) {
   const q = url.searchParams.get("q") ?? "";
   const status = url.searchParams.get("status") ?? "";
   const rows = await prisma.order.findMany({
-    where: registrantWhere(q, status),
+    where: { ...registrantWhere(q, status), isTest: false }, // data uji tidak ikut diekspor
     orderBy: { createdAt: "asc" },
     include: { participants: { orderBy: { position: "asc" }, include: { ticket: true } } },
   });
