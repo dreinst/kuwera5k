@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Reveal from "@/components/Reveal";
 import { sponsors } from "@/lib/event-data";
 
@@ -23,9 +24,12 @@ export default function Sponsors() {
                 hidden: { opacity: 0, y: 12 },
                 show: { opacity: 1, y: 0, transition: { duration: 0.4 } },
               }}
-              className="flex h-20 items-center justify-center rounded-2xl bg-cream text-sm font-semibold text-green-deep"
+              className="flex h-20 items-center justify-center rounded-2xl bg-cream px-4 text-sm font-semibold text-green-deep"
             >
-              {sponsor.name}
+              {/* mix-blend-multiply: latar putih logo menyatu dengan kartu krem */}
+              {"logo" in sponsor && sponsor.logo
+                ? <Image src={sponsor.logo} alt={sponsor.name} width={800} height={189} className="h-auto max-h-12 w-full object-contain mix-blend-multiply" />
+                : sponsor.name}
             </Reveal>
           ))}
         </div>
