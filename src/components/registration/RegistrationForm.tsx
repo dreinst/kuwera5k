@@ -109,13 +109,20 @@ function FormSteps({ categories, fees, methods, paymentMode, trackCheckout, maxT
   }, [saveDraft, step, categoryId, quantity, people]);
 
   // Semua peserta dicek; yang pertama gagal langsung dibuka dengan semua pesan errornya.
+  // Isian yang belum pas sering berada di atas layar (HP), jadi pendaftar dibawa ke kolomnya dan diberi tahu di dekat tombol.
+  const showErrors = (map: Record<string, string>) => {
+    setErrors(map);
+    const first = Object.values(map)[0];
+    if (first) setServerError(`Ada isian yang perlu dicek: ${first}`);
+    setTimeout(() => document.querySelector("[data-field-error]")?.parentElement?.scrollIntoView({ behavior: "smooth", block: "center" }), 60);
+  };
   const validateAll = () => {
     for (let i = 0; i < quantity; i++) {
       const res = participantSchema.safeParse(people[i] ?? emptyParticipant);
       if (!res.success) {
         setActive(i);
         setTouched((t) => ({ ...t, ...Object.fromEntries(Object.keys(emptyParticipant).map((k) => [`${i}.${k}`, true])) }));
-        setErrors(issuesToMap(res.error.issues));
+        showErrors(issuesToMap(res.error.issues));
         return false;
       }
     }
@@ -123,7 +130,7 @@ function FormSteps({ categories, fees, methods, paymentMode, trackCheckout, maxT
     const dup = niks.findIndex((n, i) => niks.indexOf(n) !== i);
     if (dup >= 0) {
       setActive(dup);
-      setErrors({ idNumber: `NIK ini sama dengan peserta ${niks.indexOf(niks[dup]) + 1}` });
+      showErrors({ idNumber: `NIK ini sama dengan peserta ${niks.indexOf(niks[dup]) + 1}` });
       return false;
     }
     setErrors({});
@@ -181,7 +188,7 @@ function FormSteps({ categories, fees, methods, paymentMode, trackCheckout, maxT
       const res = participantSchema.safeParse(participant);
       if (!res.success) {
         setTouched((t) => ({ ...t, ...Object.fromEntries(Object.keys(emptyParticipant).map((k) => [`${active}.${k}`, true])) }));
-        setErrors(issuesToMap(res.error.issues));
+        showErrors(issuesToMap(res.error.issues));
         return;
       }
       openPerson(active + 1);
@@ -524,7 +531,7 @@ function Field({ label, error, hint, className = "", children }: { label: string
     <div className={className}>
       <label className="text-sm font-medium text-white">{label}</label>
       <div className="mt-2">{children}</div>
-      {error ? <p className="mt-1.5 text-sm text-yellow-lime">{error}</p> : hint ? <p className="mt-1.5 text-xs text-white/75">{hint}</p> : null}
+      {error ? <p data-field-error className="mt-1.5 text-sm text-yellow-lime">{error}</p> : hint ? <p className="mt-1.5 text-xs text-white/75">{hint}</p> : null}
     </div>
   );
 }
