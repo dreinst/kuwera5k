@@ -67,7 +67,7 @@ export const route = {
 };
 
 export const sponsors = [
-  { name: "Sponsor 1", tier: "Utama" },
+  { name: "Profast Fashion Custom", tier: "Utama", logo: "/sponsors/profast.webp" },
   { name: "Sponsor 2", tier: "Utama" },
   { name: "Sponsor 3", tier: "Pendukung" },
   { name: "Sponsor 4", tier: "Pendukung" },
