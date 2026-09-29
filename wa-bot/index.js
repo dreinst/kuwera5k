@@ -514,7 +514,13 @@ async function processOutbox() {
       continue;
     }
     if (item.jid) { // balasan worker CS
-      try { await reply(item.jid, { text: item.text, ...(item.mentions ? { mentions: item.mentions } : {}) }); } catch (e) { logger.error({ jid: item.jid, err: e.message }, 'gagal kirim balasan CS'); }
+      // audio (voice note, ogg opus) atau gambar: file ada di /data/media, dibuat bot D'Pro Ops
+      const media = item.audio ? { audio: fs.readFileSync(`/data/media/${item.audio}`), mimetype: 'audio/ogg; codecs=opus', ptt: true }
+        : item.image ? { image: fs.readFileSync(`/data/media/${item.image}`), caption: item.text || undefined } : null;
+      try {
+        if (media) await reply(item.jid, media);
+        if (item.text && !item.image) await reply(item.jid, { text: item.text, ...(item.mentions ? { mentions: item.mentions } : {}) });
+      } catch (e) { logger.error({ jid: item.jid, err: e.message }, 'gagal kirim balasan CS'); }
       fs.unlinkSync(file);
       logger.info({ jid: item.jid, topik: item.topik }, 'balasan CS terkirim');
       continue;
