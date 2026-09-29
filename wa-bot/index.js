@@ -389,6 +389,11 @@ async function notifyProof(order, expired, msg) {
   }
 }
 
+// Satu tujuan per pemesan: chat tempat dia menghubungi bot. Chat itu sering tercatat sebagai ...@lid, sedangkan
+// nomor HP di form menjadi ...@s.whatsapp.net; keduanya orang yang sama, jadi kirim ke dua-duanya membuat pesan dobel.
+// Nomor di form hanya dipakai kalau pemesan belum pernah chat.
+const buyerChat = (orderId, phone) => confirmChats[orderId] || phoneJid(phone);
+
 // Pesan penolakan dari tool kuwera_tolak (cli.js) menunggu di /data/outbox sebagai file JSON.
 async function processOutbox() {
   if (!connected) return;
@@ -402,7 +407,7 @@ async function processOutbox() {
       logger.info({ jid: item.jid, topik: item.topik }, 'balasan CS terkirim');
       continue;
     }
-    const targets = new Set([phoneJid(item.phone), confirmChats[item.orderId]].filter(Boolean));
+    const targets = [buyerChat(item.orderId, item.phone)].filter(Boolean);
     for (const jid of targets) {
       try { await reply(jid, { text: item.text }); } catch (e) { logger.error({ jid, err: e.message }, 'gagal kirim pesan outbox'); }
     }
@@ -446,7 +451,7 @@ async function processPaid() {
         '',
         'QR setiap peserta kami kirim di bawah ini. Disimpan baik-baik ya, sampai jumpa di garis start!',
       ].join('\n');
-      const targets = new Set([phoneJid(o.buyerPhone), confirmChats[o.id]].filter(Boolean));
+      const targets = [buyerChat(o.id, o.buyerPhone)].filter(Boolean);
       for (const jid of targets) {
         try {
           await reply(jid, { text });
