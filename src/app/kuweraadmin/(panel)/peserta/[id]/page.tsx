@@ -41,7 +41,7 @@ export default async function PesertaDetailPage({ params }: { params: Promise<{ 
     include: {
       participants: { orderBy: { position: "asc" }, include: { ticket: true } },
       payments: { orderBy: { receivedAt: "desc" } }, category: { select: { name: true } },
-      proofs: { orderBy: { createdAt: "asc" }, select: { id: true, fileName: true, mimeType: true, createdAt: true } },
+      proofs: { orderBy: { createdAt: "asc" }, select: { id: true, fileName: true, mimeType: true, createdAt: true, note: true } },
     },
   });
   if (!order) notFound();
@@ -149,6 +149,7 @@ export default async function PesertaDetailPage({ params }: { params: Promise<{ 
                         </a>
                       ) : <p className="text-sm text-white/80">{f.fileName}</p>}
                       <figcaption className="mt-2 text-xs text-white/75">
+                        {f.note && <span className="mb-1 block text-sm font-semibold text-white">{f.note}</span>}
                         {fmtDateTime(f.createdAt)} &middot; <a href={`/kuweraadmin/berkas/bukti/${f.id}?unduh=1`} className="font-semibold text-brand-yellow underline">Unduh</a>
                       </figcaption>
                     </figure>
