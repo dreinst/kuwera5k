@@ -334,8 +334,19 @@ async function csInbox(msg) {
   fs.mkdirSync(INBOX, { recursive: true });
   const item = { id: msg.key.id, bot: 'kuwera', jid, phone, nama: msg.pushName || '', text: text.slice(0, 1000), waktu: Date.now(),
     kontak: contacts[phone] || contacts[digits(jid)] || null,
+    file: await saveCsMedia(msg),
     order: rows.map((o) => ({ id: o.id, status: o.status, total: rupiah(o.total), tiket: o.quantity })) };
   fs.writeFileSync(`${INBOX}/${msg.key.id}.json`, JSON.stringify(item));
+}
+
+// Screenshot atau dokumen dari pelanggan disimpan di INBOX supaya worker CS bisa meneruskannya ke Discord.
+async function saveCsMedia(msg) {
+  const media = (msg.message?.imageMessage || msg.message?.documentMessage) ? await mediaOf(msg) : null;
+  if (!media) return null;
+  fs.mkdirSync(INBOX, { recursive: true });
+  const name = `${msg.key.id}-${media.name}`;
+  fs.writeFileSync(`${INBOX}/${name}`, media.buffer);
+  return name;
 }
 
 // Kartu bayar dibuat website (QRIS dinamis bernominal total order), bot tinggal meneruskannya sebagai gambar.
@@ -560,6 +571,8 @@ async function start() {
   });
   s.ev.on('messages.upsert', async ({ messages, type }) => {
     for (const m of messages) {
+      // SEMENTARA (29 Sep): cari tahu bentuk pesan admin dari HP, hapus setelah deteksi byHuman dipastikan benar.
+      if (m.key.fromMe) logger.info({ idAwal: String(m.key.id || '').slice(0, 6), type, jid: m.key.remoteJid, alt: m.key.remoteJidAlt }, 'debug pesan keluar');
       if (!byHuman(m) || !m.key.remoteJid || m.key.remoteJid.endsWith('@g.us') || m.key.remoteJid === 'status@broadcast') continue;
       humanAt.set(m.key.remoteJid, Date.now());
       // Catat ke worker CS bahwa admin sudah membalas dari HP, supaya pengingat "belum dibalas" tidak muncul.
