@@ -42,7 +42,7 @@ async function pemasukan() {
   const { rows } = await pool.query(
     `SELECT count(*)::int AS pembelian, coalesce(sum(o.quantity), 0)::int AS tiket, coalesce(sum(o.total), 0)::bigint AS total
        FROM "Order" o
-      WHERE o.status = 'PAID'
+      WHERE o.status = 'PAID' AND NOT o."isTest"
         AND EXISTS (SELECT 1 FROM "Payment" p WHERE p."orderId" = o.id AND p.gateway IN ('qris-manual', 'midtrans'))`,
   );
   return { ...rows[0], total: rupiah(rows[0].total) };

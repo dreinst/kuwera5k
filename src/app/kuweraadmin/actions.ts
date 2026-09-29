@@ -223,3 +223,14 @@ export async function searchTicketsAction(q: string): Promise<{ tickets?: RegTic
   });
   return { tickets: rows.map(toRegTicket) };
 }
+
+// Tandai order sebagai data uji (tidak dihapus, tapi tidak dihitung di statistik, kuota, dan pendapatan) atau sebaliknya.
+export async function setTestOrderAction(orderId: string, isTest: boolean): Promise<{ ok?: string; error?: string }> {
+  const admin = await getAdmin();
+  if (!admin || !allowed(admin.role, SUPER)) return { error: "Hanya superadmin yang bisa mengubah tanda data uji" };
+  const r = await prisma.order.updateMany({ where: { id: orderId }, data: { isTest } });
+  if (!r.count) return { error: "Order tidak ditemukan" };
+  await logAdmin(admin.username, isTest ? "tandai_data_uji" : "batal_data_uji", orderId);
+  revalidatePath(`/kuweraadmin/peserta/${orderId}`);
+  return { ok: isTest ? "Ditandai sebagai data uji, tidak lagi dihitung" : "Tanda data uji dilepas, order kembali dihitung" };
+}

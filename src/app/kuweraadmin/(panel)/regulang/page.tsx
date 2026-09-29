@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 // Khusus superadmin dan petugas race pack. Angka di atas ikut diperbarui otomatis (AutoRefresh di layout).
 export default async function RegUlangPage() {
   await requireAdmin(SCAN);
-  const where = { order: { status: "PAID" as const } };
+  const where = { order: { status: "PAID" as const, isTest: false } };
   const [total, collected] = await Promise.all([
     prisma.ticket.count({ where }),
     prisma.ticket.count({ where: { ...where, racepackCollectedAt: { not: null } } }),

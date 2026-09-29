@@ -49,9 +49,9 @@ export async function getSettings(): Promise<RegistrationSettings> {
   };
 }
 
-// Kuota terpakai = lunas + pending yang belum kedaluwarsa (PRD bagian 5).
+// Kuota terpakai = lunas + pending yang belum kedaluwarsa (PRD bagian 5). Order data uji tidak dihitung.
 export function activeOrderWhere(now: Date) {
-  return { OR: [{ status: "PAID" as const }, { status: "PENDING" as const, expiresAt: { gt: now } }] };
+  return { isTest: false, OR: [{ status: "PAID" as const }, { status: "PENDING" as const, expiresAt: { gt: now } }] };
 }
 
 // Kuota dihitung per tiket (satu order bisa beberapa tiket).
@@ -64,7 +64,7 @@ export async function heldCount(categoryId: string | null, now = new Date(), db:
 export async function getPublicStats(now = new Date()) {
   const [settings, paid, held] = await Promise.all([
     getSettings(),
-    prisma.order.aggregate({ where: { status: "PAID" }, _sum: { quantity: true } }).then((r) => r._sum.quantity ?? 0),
+    prisma.order.aggregate({ where: { status: "PAID", isTest: false }, _sum: { quantity: true } }).then((r) => r._sum.quantity ?? 0),
     heldCount(null, now),
   ]);
   return { paid, remaining: Math.max(0, settings.quotaTotal - held) };

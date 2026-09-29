@@ -9,6 +9,7 @@ import { StatusBadge } from "@/components/admin/Badges";
 import MidtransPanel from "@/components/admin/MidtransPanel";
 import RacepackButton from "@/components/admin/RacepackButton";
 import ManualPayPanel from "@/components/admin/ManualPayPanel";
+import TestOrderToggle from "@/components/admin/TestOrderToggle";
 import { MANUAL_GATEWAY } from "@/lib/orders";
 
 export const metadata: Metadata = { title: "Detail peserta" };
@@ -56,7 +57,7 @@ export default async function PesertaDetailPage({ params }: { params: Promise<{ 
       <Link href="/kuweraadmin/peserta" className="text-sm text-brand-yellow hover:underline">Kembali ke daftar peserta</Link>
       <div className="flex flex-wrap items-center gap-4">
         <h1 className="font-display text-4xl text-white uppercase">{buyer?.fullName ?? order.id}</h1>
-        <StatusBadge status={order.status} />
+        <StatusBadge status={order.status} test={order.isTest} />
       </div>
       <p className="font-mono text-white/80">{order.id} &middot; {order.category.name} &middot; {order.quantity} tiket</p>
 
@@ -126,6 +127,12 @@ export default async function PesertaDetailPage({ params }: { params: Promise<{ 
               </div>
             )}
           </Section>
+
+          {allowed(admin.role, SUPER) && (
+            <Section title="Data uji">
+              <TestOrderToggle orderId={order.id} isTest={order.isTest} />
+            </Section>
+          )}
 
           {(manualOrder || order.proofs.length > 0) && (
             <Section title="Bukti bayar">

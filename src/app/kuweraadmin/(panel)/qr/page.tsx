@@ -39,7 +39,7 @@ export default async function QrPage() {
           <section key={o.id} className="rounded-[20px] border border-glass-border bg-card p-5">
             <div className="flex flex-wrap items-baseline justify-between gap-2">
               <Link href={`/kuweraadmin/peserta/${o.id}`} className="font-mono text-brand-yellow hover:underline">{o.id}</Link>
-              <p className="text-sm text-white/75">{o.participants[0]?.fullName} &middot; {o.status === "PAID" ? `lunas ${fmtDateTime(o.paidAt)}` : "belum lunas"}</p>
+              <p className="text-sm text-white/75">{o.isTest && <span className="font-semibold text-gold">UJI &middot; </span>}{o.participants[0]?.fullName} &middot; {o.status === "PAID" ? `lunas ${fmtDateTime(o.paidAt)}` : "belum lunas"}</p>
             </div>
             <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               {o.participants.filter((p) => p.ticket).map((p) => (
