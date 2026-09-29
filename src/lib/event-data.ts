@@ -9,6 +9,8 @@ export const eventData = {
   startPoint: "Lapangan Rampal",
   quotaTotal: 1000,
   paidCount: 214,
+  // Jumlah pendaftar baru ditampilkan di beranda setelah mencapai angka ini; sebelumnya kartu berisi ajakan Early Bird.
+  publicCountFrom: 100,
   // Tutup H-1 minggu (ukuran jersey dikirim ke vendor untuk dicetak), atau lebih awal kalau kuota penuh.
   registrationCloseLabel: "Sabtu, 17 Oktober 2026 pukul 23.59 WIB", // sama dengan registrationCloseIso
   racePackDates,

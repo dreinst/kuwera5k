@@ -7,6 +7,7 @@ import Counter from "@/components/Counter";
 import JerseyTexture from "@/components/JerseyTexture";
 import ArrowCircle from "@/components/ArrowCircle";
 import Countdown from "@/components/Countdown";
+import EarlyBirdTimer from "@/components/EarlyBirdTimer";
 
 const wordVariants = {
   hidden: { y: 30, opacity: 0, clipPath: "inset(100% 0 0 0)" },
@@ -57,7 +58,9 @@ const HEADLINE = [
 
 export type HeroPrice = { label: string; price: number; promo: boolean; regular: { label: string; price: number } };
 
-export default function Hero({ stats, price, noFee = false }: { stats: { paid: number; remaining: number } | null; price: HeroPrice; noFee?: boolean }) {
+export default function Hero({ stats, price, promoEnd = null, noFee = false }: { stats: { paid: number; remaining: number } | null; price: HeroPrice; promoEnd?: string | null; noFee?: boolean }) {
+  // Angka pendaftar baru tampil setelah cukup banyak; sisa kuota hanya terlihat di halaman admin.
+  const showCount = !!stats && stats.paid >= eventData.publicCountFrom;
   return (
     <section id="hero" className="relative overflow-hidden px-6 pt-32 pb-20">
       {/* Latar hero memudar di bagian bawah ke tekstur halaman, jadi tidak ada garis batas saat digulir. */}
@@ -162,18 +165,25 @@ export default function Hero({ stats, price, noFee = false }: { stats: { paid: n
               className="rounded-[20px] border border-glass-border bg-glass p-6 backdrop-blur-md"
               style={{ backgroundImage: "radial-gradient(circle at 100% 0%, rgba(244,231,29,0.28), transparent 60%)" }}
             >
-              {stats ? (
+              {showCount ? (
                 <>
                   <p className="flex items-baseline gap-3">
-                    <span className="font-display text-6xl leading-none text-brand-yellow"><Counter to={stats.paid} /></span>
+                    <span className="font-display text-6xl leading-none text-brand-yellow"><Counter to={stats!.paid} /></span>
                     <span className="font-display text-2xl text-white uppercase">Peserta</span>
                   </p>
                   <p className="mt-2 text-lg text-white/85">sudah terdaftar</p>
                 </>
+              ) : promoEnd ? (
+                <>
+                  <p className="text-xs font-semibold tracking-[0.2em] text-white/80 uppercase">{price.label} berakhir dalam</p>
+                  <div className="mt-2"><EarlyBirdTimer to={promoEnd} /></div>
+                  <p className="mt-3 text-lg text-white/85">Kuota terbatas {eventData.quotaTotal.toLocaleString("id-ID")} pelari, yuk amankan slotmu!</p>
+                </>
               ) : (
-                <p className="font-display text-4xl leading-tight text-brand-yellow uppercase">
-                  Kuota {eventData.quotaTotal.toLocaleString("id-ID")} peserta
-                </p>
+                <>
+                  <p className="font-display text-4xl leading-tight text-brand-yellow uppercase">Kuota terbatas {eventData.quotaTotal.toLocaleString("id-ID")} pelari</p>
+                  <p className="mt-2 text-lg text-white/85">Yuk amankan slotmu sebelum kehabisan!</p>
+                </>
               )}
               <a
                 href="/daftar"
@@ -182,7 +192,6 @@ export default function Hero({ stats, price, noFee = false }: { stats: { paid: n
                 Daftar sekarang
                 <ArrowCircle />
               </a>
-              {stats && <p className="mt-3 text-center text-sm text-white/75">Sisa kuota {stats.remaining.toLocaleString("id-ID")}</p>}
             </motion.div>
 
             <motion.div

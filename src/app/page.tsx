@@ -27,13 +27,14 @@ export default async function Home() {
   const stats = live
     ? await getPublicStats().catch(() => null)
     : { paid: eventData.paidCount, remaining: remainingQuota };
-  const price = currentPrice(await getPricing().catch(() => DEFAULT_PRICING));
+  const pricing = await getPricing().catch(() => DEFAULT_PRICING);
+  const price = currentPrice(pricing);
   return (
     <div className="flex flex-1 flex-col">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: homeJsonLd(live ? stats?.remaining ?? null : null, price.price) }} />
       <Navbar />
       <main className="flex flex-1 flex-col">
-        <Hero stats={stats} price={price} noFee={paymentMode() === "manual"} />
+        <Hero stats={stats} price={price} promoEnd={price.promo ? pricing.promo.end : null} noFee={paymentMode() === "manual"} />
         <RouteDetail />
         <DateBanner />
         <Schedule />

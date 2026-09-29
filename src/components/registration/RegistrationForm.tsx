@@ -280,7 +280,7 @@ function FormSteps({ categories, fees, methods, paymentMode, trackCheckout, maxT
                     >
                       <div>
                         <p className="text-lg font-semibold text-white">{c.name}</p>
-                        <p className="text-sm text-white/70">{full ? "Kuota penuh" : `Sisa kuota ${c.remaining.toLocaleString("id-ID")}`} &middot; berlaku sampai {new Date(c.saleEnd).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })}</p>
+                        <p className="text-sm text-white/70">{full ? "Kuota penuh" : "Kuota terbatas"} &middot; berlaku sampai {new Date(c.saleEnd).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })}</p>
                       </div>
                       <p className="font-display text-2xl text-brand-yellow">{formatRupiah(c.price)}</p>
                     </button>
