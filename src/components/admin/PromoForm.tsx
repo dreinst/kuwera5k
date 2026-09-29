@@ -1,7 +1,7 @@
 "use client";
 
-import { useActionState } from "react";
-import { savePromoAction, type FormState } from "@/app/kuweraadmin/actions";
+import { useActionState, useState, useTransition } from "react";
+import { deletePromoAction, savePromoAction, type FormState } from "@/app/kuweraadmin/actions";
 import { inputCls } from "@/components/admin/LoginForm";
 
 export type PromoInput = {
@@ -46,10 +46,40 @@ export default function PromoForm({ promo }: { promo?: PromoInput }) {
       </label>
       {state?.error && <p className="rounded-xl border border-brand-yellow/40 bg-brand-yellow/10 px-4 py-3 text-sm text-brand-yellow">{state.error}</p>}
       {state?.ok && <p className="rounded-xl border border-white/30 bg-white/10 px-4 py-3 text-sm text-white">{state.ok}</p>}
-      <button type="submit" disabled={pending} className="justify-self-start rounded-full bg-brand-yellow px-8 py-3 text-sm font-semibold text-green-deep disabled:opacity-60">
-        {pending ? "Menyimpan..." : promo ? "Simpan perubahan" : "Tambah kode"}
-      </button>
+      <div className="flex flex-wrap items-center gap-3">
+        <button type="submit" disabled={pending} className="rounded-full bg-brand-yellow px-8 py-3 text-sm font-semibold text-green-deep disabled:opacity-60">
+          {pending ? "Menyimpan..." : promo ? "Simpan perubahan" : "Tambah kode"}
+        </button>
+        {promo && <DeleteButton code={promo.code} />}
+      </div>
     </form>
+  );
+}
+
+// Hapus dua langkah: klik Hapus, lalu konfirmasi Ya, hapus.
+function DeleteButton({ code }: { code: string }) {
+  const [ask, setAsk] = useState(false);
+  const [msg, setMsg] = useState<{ ok?: string; error?: string } | null>(null);
+  const [busy, start] = useTransition();
+  if (msg?.ok) return <p className="text-sm text-white">{msg.ok}</p>;
+  return (
+    <div className="flex flex-wrap items-center gap-3">
+      {!ask ? (
+        <button type="button" onClick={() => setAsk(true)} className="rounded-full border border-white/40 px-6 py-3 text-sm text-white hover:border-brand-yellow hover:text-brand-yellow">
+          Hapus kode
+        </button>
+      ) : (
+        <>
+          <span className="text-sm text-white">Hapus {code}?</span>
+          <button type="button" disabled={busy} onClick={() => start(async () => setMsg(await deletePromoAction(code)))}
+            className="rounded-full bg-white px-5 py-2 text-sm font-semibold text-green-deep disabled:opacity-60">
+            {busy ? "Menghapus..." : "Ya, hapus"}
+          </button>
+          <button type="button" onClick={() => { setAsk(false); setMsg(null); }} className="text-sm text-white/80 underline">Batal</button>
+        </>
+      )}
+      {msg?.error && <p className="w-full text-sm text-brand-yellow">{msg.error}</p>}
+    </div>
   );
 }
 
