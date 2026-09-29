@@ -62,8 +62,10 @@ export const DEFAULT_FEES: Record<PaymentMethodId, number> = {
   gopay: 4000, shopeepay: 4000, credit_card: 7500,
 };
 
+// Spasi, strip, titik, kurung, dan awalan +62/62 dirapikan dulu, jadi "+62 812-3456-7890" diterima sebagai 081234567890.
+export const normalizePhone = (v: unknown) => String(v ?? "").replace(/[\s.\-()]/g, "").replace(/^\+?62/, "0");
 const phone = (label: string) =>
-  z.string().trim().regex(/^08\d{8,11}$/, `${label} ditulis 08xxxxxxxxxx (10 sampai 13 digit)`);
+  z.preprocess(normalizePhone, z.string().regex(/^08\d{8,11}$/, `${label} diawali 08 dan berisi 10 sampai 13 angka, contoh 081234567890`));
 
 export function ageOn(birthDate: string, on: string = RACE_DATE) {
   const b = new Date(birthDate), d = new Date(on);
