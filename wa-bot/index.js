@@ -1,4 +1,5 @@
-// Bot WhatsApp KUWERA 5K untuk bayar manual QRIS.
+// Bot WhatsApp KUWERA 5K untuk bayar manual QRIS. Bayar manual DriveTech (kode booking BK-...) juga lewat bot ini,
+// lihat drivetech.js.
 //
 // 1. Pemesan menekan "Minta QRIS via WhatsApp" di /bayar dan mengirim pesan berisi nomor order ke nomor
 //    kantor. Bot membalas dengan kartu bayar (QRIS dinamis bernominal total, dari /api/orders/{id}/qris).
@@ -121,16 +122,17 @@ async function telegramFile(kind, buffer, filename, caption) {
   return (await res.json()).result.message_id;
 }
 
-// Kirim ke Discord #chatbot lewat bot D'Pro Ops. files: [{ buffer, name }]. approve: nomor order untuk tombol
-// Setujui/Tolak. Mengembalikan id pesan (teks) supaya kabar lunas bisa dibalas ke pesan yang sama.
-async function discord(content, { replyTo, files = [], approve } = {}) {
+// Kirim ke Discord #chatbot lewat bot D'Pro Ops. files: [{ buffer, name }]. approve: nomor order (atau kode booking
+// DriveTech dengan approvePrefix 'drivetech') untuk tombol Setujui/Tolak. Mengembalikan id pesan (teks) supaya kabar
+// lunas bisa dibalas ke pesan yang sama.
+async function discord(content, { replyTo, files = [], approve, approvePrefix = 'kuwera' } = {}) {
   if (!DC_TOKEN || !DC_CHANNEL) throw new Error('Discord belum diatur');
   const payload = { content: content.slice(0, 1990), allowed_mentions: { parse: [] } };
   if (replyTo) payload.message_reference = { message_id: replyTo, fail_if_not_exists: false };
   if (approve) {
     payload.components = [{ type: 1, components: [
-      { type: 2, style: 3, label: 'Setujui', emoji: { name: '✅' }, custom_id: `kuwera:setujui:${approve}` },
-      { type: 2, style: 4, label: 'Tolak', emoji: { name: '❌' }, custom_id: `kuwera:tolak:${approve}` },
+      { type: 2, style: 3, label: 'Setujui', emoji: { name: '✅' }, custom_id: `${approvePrefix}:setujui:${approve}` },
+      { type: 2, style: 4, label: 'Tolak', emoji: { name: '❌' }, custom_id: `${approvePrefix}:tolak:${approve}` },
     ] }];
   }
   const form = new FormData();
@@ -274,6 +276,8 @@ function textOf(msg) {
 async function handleIncoming(msg) {
   const jid = msg.key.remoteJid || '';
   if (msg.key.fromMe || !jid || jid.endsWith('@g.us') || jid === 'status@broadcast' || jid.endsWith('@newsletter')) return;
+  // Kode booking DriveTech (BK-...) atau bukti bayarnya. Kalau API DriveTech gagal, pesan tetap masuk alur biasa (CS).
+  if (await drivetech.handle(msg).catch((e) => { logger.error({ err: e.message }, 'DriveTech: pesan gagal diproses'); return false; })) return;
   const hasProof = !!(msg.message && (msg.message.imageMessage || msg.message.documentMessage));
   const match = textOf(msg).match(ORDER_RE);
   // Semua file dari pemesan yang terkait order diarsipkan, termasuk kiriman ulang yang tidak dikabarkan lagi.
@@ -668,6 +672,7 @@ async function paidLoop() {
     try { await processPaid(); } catch (e) { logger.error({ err: e.message }, 'proses order lunas gagal'); }
     try { await processOutbox(); } catch (e) { logger.error({ err: e.message }, 'proses outbox gagal'); }
     try { await processReminders(); } catch (e) { logger.error({ err: e.message }, 'proses pengingat bayar gagal'); }
+    try { await drivetech.tick(); } catch (e) { logger.error({ err: e.message }, 'kabar DriveTech gagal'); }
     await sleep(20000);
   }
 }
@@ -757,6 +762,11 @@ async function start() {
     }
   });
 }
+
+// Bayar manual DriveTech di nomor yang sama (lihat drivetech.js).
+const drivetech = require('./drivetech')(() => ({
+  reply, mediaOf, discord, notify, recent, textOf, PAID_CLAIM, logger, isConnected: () => connected,
+}));
 
 start().catch((e) => { logger.error({ err: e.message }, 'gagal start bot'); process.exit(1); });
 paidLoop();
