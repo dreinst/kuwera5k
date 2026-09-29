@@ -443,6 +443,7 @@ async function sendQris(jid, order, quoted) {
     '',
     'Silakan scan dari aplikasi bank atau e-wallet apa pun. Nominalnya sudah terisi otomatis, mohon dibayar sesuai angka itu ya.',
     `Setelah membayar, screenshot bukti bayarnya bisa dikirim di chat ini.${deadline ? ` Kami tunggu pembayarannya sebelum ${deadline} WIB.` : ''}`,
+    'Pembayaran QRIS ini kami verifikasi manual, paling lama 1x24 jam. E-ticket dikirim otomatis begitu terverifikasi ya.',
   ].join('\n');
   await reply(jid, { image, caption }, quoted);
   await archive(order.id, 'QRIS/invoice dikirim ke pemesan', { buffer: image, name: 'invoice-qris.png' }, jid);
