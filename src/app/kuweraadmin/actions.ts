@@ -82,7 +82,7 @@ export async function syncMidtransAction(orderId: string): Promise<{ ok?: string
 
 export async function racepackAction(ticketCode: string, undo = false): Promise<{ ok?: string; error?: string }> {
   const admin = await getAdmin();
-  if (!admin || !allowed(admin.role, SCAN)) return { error: "Hanya superadmin dan petugas race pack yang bisa menandai" };
+  if (!admin || !allowed(admin.role, SCAN)) return { error: "Hanya petugas race pack yang bisa menandai" };
   if (undo && !allowed(admin.role, SUPER)) return { error: "Hanya superadmin yang bisa membatalkan" };
   const ticket = await prisma.ticket.findUnique({ where: { code: ticketCode }, include: { order: { select: { status: true } } } });
   if (!ticket || ticket.order.status !== "PAID") return { error: "Order ini belum lunas atau belum punya tiket" };
@@ -171,7 +171,37 @@ export async function savePricingAction(_prev: FormState, form: FormData): Promi
   return { ok: "Pengaturan harga tersimpan" };
 }
 
-// --- Reg ulang race pack (superadmin dan petugas) ---
+// --- Kode promo (superadmin) ---
+// Jenis: flat = harga khusus per tiket, fixed = potongan Rp per order, percent = diskon %. Kuota dihitung per tiket.
+export async function savePromoAction(_prev: FormState, form: FormData): Promise<FormState> {
+  const admin = await getAdmin();
+  if (!admin || !allowed(admin.role, SUPER)) return { error: "Hanya superadmin yang bisa mengatur kode promo" };
+  const code = String(form.get("code") ?? "").trim().toUpperCase();
+  const discountType = String(form.get("discountType") ?? "");
+  const num = (k: string) => Number(String(form.get(k) ?? "").replace(/\D/g, ""));
+  const discountValue = num("discountValue");
+  const quota = num("quota");
+  const from = wibToIso(form.get("validFrom"));
+  const until = wibToIso(form.get("validUntil"));
+  if (!/^[A-Z0-9]{3,30}$/.test(code)) return { error: "Kode promo 3 sampai 30 huruf atau angka, tanpa spasi" };
+  if (!["flat", "fixed", "percent"].includes(discountType)) return { error: "Jenis promo tidak dikenal" };
+  if (discountType === "percent" ? discountValue < 1 || discountValue > 100 : discountValue < 1000) {
+    return { error: discountType === "percent" ? "Diskon persen antara 1 sampai 100" : "Nilai minimal Rp1.000" };
+  }
+  if (quota < 1) return { error: "Kuota minimal 1 orang" };
+  if (from === undefined || !until) return { error: "Isi waktu berlaku sampai dengan benar" };
+  const validFrom = from ? new Date(from) : new Date();
+  const validUntil = new Date(until);
+  if (validUntil <= validFrom) return { error: "Waktu berakhir harus setelah waktu mulai" };
+  const data = { discountType, discountValue, quota, validFrom, validUntil, isActive: form.get("isActive") === "on" };
+  await prisma.promoCode.upsert({ where: { code }, create: { code, ...data }, update: data });
+  await logAdmin(admin.username, "ubah_promo", JSON.stringify({ code, ...data }).slice(0, 500));
+  revalidatePath("/daftar");
+  revalidatePath("/kuweraadmin/promo");
+  return { ok: `Kode ${code} tersimpan` };
+}
+
+// --- Reg ulang race pack (petugas) ---
 export type RegTicket = {
   code: string; name: string; jersey: string; gender: string; nik: string; community: string | null;
   orderId: string; paid: boolean; collectedAt: string | null; collectedBy: string | null;

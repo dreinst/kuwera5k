@@ -13,6 +13,7 @@ const LINKS = [
   { href: "/kuweraadmin/regulang", label: "Reg ulang", roles: SCAN },
   { href: "/kuweraadmin/superadmin", label: "Superadmin", roles: SUPER },
   { href: "/kuweraadmin/harga", label: "Harga", roles: SUPER },
+  { href: "/kuweraadmin/promo", label: "Kode promo", roles: SUPER },
   { href: "/kuweraadmin/verifikasi", label: "Verifikasi Midtrans", roles: SUPER },
 ];
 
