@@ -16,7 +16,7 @@ export default async function QrPage() {
     orderBy: { createdAt: "desc" },
     include: {
       participants: { orderBy: { position: "asc" }, include: { ticket: { select: { code: true } } } },
-      proofs: { orderBy: { createdAt: "asc" }, select: { id: true, fileName: true, mimeType: true, createdAt: true } },
+      proofs: { orderBy: { createdAt: "asc" }, select: { id: true, fileName: true, mimeType: true, createdAt: true, note: true } },
     },
   });
   const tickets = orders.reduce((n, o) => n + o.participants.filter((p) => p.ticket).length, 0);
@@ -62,7 +62,7 @@ export default async function QrPage() {
                     <p className="py-10 text-center text-sm text-white/75">{f.fileName}</p>
                   )}
                   <figcaption className="mt-2 text-xs text-white/80">
-                    <span className="block font-semibold text-white">Bukti bayar</span>
+                    <span className="block font-semibold text-white">{f.note ?? "Bukti bayar"}</span>
                     <span className="block">{fmtDateTime(f.createdAt)}</span>
                     <a href={`/kuweraadmin/berkas/bukti/${f.id}?unduh=1`} className="mt-1 inline-block font-semibold text-brand-yellow underline">Unduh bukti</a>
                   </figcaption>

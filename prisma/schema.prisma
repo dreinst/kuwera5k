@@ -119,6 +119,7 @@ model PaymentProof {
   mimeType  String
   data      Bytes
   source    String   @default("whatsapp")
+  note      String? // keterangan yang tampil di admin, misalnya "Kekurangan Rp12.500, dibayar superadmin"
   createdAt DateTime @default(now())
 
   @@index([orderId])
