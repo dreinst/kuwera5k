@@ -26,7 +26,7 @@ const SCHEDULE = [
   },
 ];
 
-// Jadwal lomba seperti referensi (tiga kartu lalu tombol daftar), memakai kartu dan judul gaya beranda.
+// Jadwal acara seperti referensi (tiga kartu lalu tombol daftar), memakai kartu dan judul gaya beranda.
 export default function Schedule() {
   return (
     <section id="jadwal" className="scroll-mt-16 px-6 py-20">
@@ -34,7 +34,7 @@ export default function Schedule() {
         <Reveal className="mx-auto max-w-2xl text-center">
           <h2 className="font-display text-4xl text-white uppercase sm:text-5xl">
             Jadwal{" "}
-            <span className="text-brand-yellow underline decoration-brand-yellow decoration-4 underline-offset-8">Lomba</span>
+            <span className="text-brand-yellow underline decoration-brand-yellow decoration-4 underline-offset-8">Acara</span>
           </h2>
           <p className="mt-5 text-white/80">Tandai tanggal-tanggal ini di kalendermu.</p>
         </Reveal>

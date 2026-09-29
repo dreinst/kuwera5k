@@ -15,9 +15,9 @@ const prisma = new PrismaClient({ adapter: new PrismaPg({ connectionString: proc
 
 // Satu kategori, harga Rp125.000 (keputusan Donny 2026-09-22). Acara Sabtu 24 Oktober 2026 pukul 06.00,
 // jadi penjualan ditutup H-1 minggu (Sabtu 17 Oktober 23.59 WIB) karena ukuran jersey harus dikirim ke vendor,
-// atau lebih awal kalau kuota 1.500 penuh. Baris "Early Bird 5K" lama
+// atau lebih awal kalau kuota 1.000 penuh. Baris "Early Bird 5K" lama
 // diganti nama supaya order yang sudah ada tetap terhubung; "Reguler 5K" dinonaktifkan.
-const main = { name: "Pendaftaran 5K", price: 125000, quota: 1500, isActive: true,
+const main = { name: "Pendaftaran 5K", price: 125000, quota: 1000, isActive: true,
   saleStart: new Date("2026-09-01T00:00:00+07:00"), saleEnd: new Date("2026-10-17T23:59:59+07:00") };
 const old = await prisma.category.findFirst({ where: { name: { in: ["Early Bird 5K", "Pendaftaran 5K"] } } });
 if (old) await prisma.category.update({ where: { id: old.id }, data: main });
@@ -37,7 +37,7 @@ await prisma.setting.upsert({
     key: "registration",
     value: {
       holdMinutes: 30,
-      quotaTotal: 1500,
+      quotaTotal: 1000,
       fees: { qris: 1500, bca_va: 4500, bni_va: 4500, bri_va: 4500, mandiri_va: 4500, permata_va: 4500, cimb_va: 4500, gopay: 4000, shopeepay: 4000, credit_card: 7500 },
     },
   },

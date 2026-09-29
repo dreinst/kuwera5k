@@ -7,7 +7,7 @@ export const eventData = {
   dateLabel: "Sabtu, 24 Oktober 2026",
   timeLabel: "06.00 WIB",
   startPoint: "Lapangan Rampal",
-  quotaTotal: 1500,
+  quotaTotal: 1000,
   paidCount: 214,
   // Tutup H-1 minggu (ukuran jersey dikirim ke vendor untuk dicetak), atau lebih awal kalau kuota penuh.
   registrationCloseLabel: "Sabtu, 17 Oktober 2026 pukul 23.59 WIB", // sama dengan registrationCloseIso
