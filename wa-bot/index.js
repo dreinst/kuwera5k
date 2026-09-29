@@ -291,6 +291,7 @@ async function handleIncoming(msg) {
       const o = await loadOrder(pending);
       if (o && o.status !== 'PAID') await notifyProof(o, o.status !== 'PENDING' || (o.expiresAt && new Date(o.expiresAt) <= new Date()), msg);
     }
+    if (!pending && !hasProof && (await remindProof(msg))) return;
     if (!pending) await csInbox(msg);
     return; // chat biasa: worker CS yang memutuskan dibalas atau diserahkan ke admin
   }
@@ -308,6 +309,7 @@ async function handleIncoming(msg) {
   saveConfirmChats();
   const expired = order.status !== 'PENDING' || (order.expiresAt && new Date(order.expiresAt) <= new Date());
   if (!hasProof) {
+    if (!expired && PAID_CLAIM.test(textOf(msg)) && (await remindProof(msg, order))) return;
     if (expired) {
       await reply(jid, { text: `Mohon maaf kak, waktu bayar order ${order.id} sudah habis. Kamu masih bisa mendaftar lagi di ${SITE_URL}/daftar, kami tunggu ya!` }, msg);
     } else {
@@ -316,6 +318,38 @@ async function handleIncoming(msg) {
     return;
   }
   await notifyProof(order, expired, msg);
+}
+
+// Pembeli bilang sudah bayar tapi tanpa gambar bukti: minta screenshot bukti bayarnya (atau kabari kalau buktinya
+// sudah kami terima). Hanya untuk order yang masih menunggu bayar dari chat atau nomor HP yang sama.
+const PAID_CLAIM = /\b(sudah|udah|udh|sdh|dah|telah|barusan|baru)\s*(saya\s*|aku\s*|sy\s*)?(bayar|dibayar|transfer|ditransfer|tf|trf|lunas|scan|payment)|\b(bukti|sudah)\s*(tf|transfer)|\bdone\s*(bayar|tf|transfer)/i;
+async function remindProof(msg, known) {
+  if (!known && !PAID_CLAIM.test(textOf(msg))) return false;
+  const jid = msg.key.remoteJid;
+  let order = known;
+  if (!order) {
+    const phone = digits(msg.key.senderPn || msg.key.remoteJidAlt || jid);
+    const ids = Object.keys(confirmChats).filter((id) => confirmChats[id] === jid);
+    const { rows } = await pool.query(
+      `SELECT o.id FROM "Order" o
+        WHERE o.status = 'PENDING' AND (o.id = ANY($2) OR (length($1) >= 10 AND right(regexp_replace(o."buyerPhone", '\\D', '', 'g'), 10) = right($1, 10)))
+        ORDER BY o."createdAt" DESC LIMIT 1`,
+      [phone, ids],
+    );
+    if (!rows.length) return false;
+    order = await loadOrder(rows[0].id);
+  }
+  if (!order || order.status !== 'PENDING' || recent(`${jid}|${order.id}|klaim`)) return !!order && order.status === 'PENDING';
+  const { rows: proofs } = await pool.query(`SELECT 1 FROM "PaymentProof" WHERE "orderId" = $1 LIMIT 1`, [order.id]);
+  const name = order.buyer ? order.buyer.split(' ')[0] : 'kak';
+  const text = proofs.length
+    ? `Terima kasih Kak ${name}! Bukti bayar pesanan ${order.id} sudah kami terima dan sedang dicek admin. E-ticket dan QR registrasi ulang akan kami kirim ke chat ini setelah pembayaran dikonfirmasi ya 😊`
+    : `Terima kasih Kak ${name}! Supaya pembayaran pesanan ${order.id} (${rupiah(order.total)}) bisa langsung kami cek, boleh kirimkan screenshot bukti bayarnya di chat ini ya 🙏`;
+  confirmChats[order.id] = jid;
+  saveConfirmChats();
+  await reply(jid, { text }, msg);
+  await archive(order.id, proofs.length ? 'pembeli bilang sudah bayar, bukti sudah ada' : 'pembeli bilang sudah bayar, diminta kirim bukti', null, jid);
+  return true;
 }
 
 // Chat biasa dari nomor yang pernah memesan KUWERA diteruskan ke worker CS, kecuali admin baru membalas.
