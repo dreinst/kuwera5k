@@ -738,6 +738,55 @@ async function processReminders() {
   }
 }
 
+// Ajak daftar ulang: order yang lewat batas bayar tanpa bukti bayar dikirimi ajakan sekali, hanya selama harga promo
+// (Early Bird) berlaku. Nomor yang sudah punya order lain setelahnya (lunas atau masih menunggu) dilewati.
+const AJAK_FILE = '/data/ajak-ulang.json';
+let diajak = {};
+try { diajak = JSON.parse(fs.readFileSync(AJAK_FILE, 'utf8')); } catch { diajak = {}; }
+async function processAjakUlang() {
+  if (!connected) return;
+  const { rows: [setting] } = await pool.query(`SELECT value FROM "Setting" WHERE key = 'pricing'`);
+  const promo = setting?.value?.promo;
+  const now = new Date();
+  if (!promo?.enabled || (promo.start && now < new Date(promo.start)) || (promo.end && now >= new Date(promo.end))) return;
+  const { rows } = await pool.query(
+    `SELECT o.id, o."buyerPhone",
+            (SELECT p."fullName" FROM "Participant" p WHERE p."orderId" = o.id ORDER BY p.position LIMIT 1) AS buyer
+       FROM "Order" o
+      WHERE o.status IN ('PENDING', 'EXPIRED') AND NOT o."isTest"
+        AND o."expiresAt" < timezone('UTC', now()) - interval '30 minutes'
+        AND o."expiresAt" > timezone('UTC', now()) - interval '3 days'
+        AND NOT EXISTS (SELECT 1 FROM "PaymentProof" f WHERE f."orderId" = o.id)
+        AND NOT EXISTS (SELECT 1 FROM "Order" b WHERE b.id <> o.id AND b.status IN ('PAID', 'PENDING') AND NOT b."isTest"
+                          AND right(regexp_replace(b."buyerPhone", '\\D', '', 'g'), 10) = right(regexp_replace(o."buyerPhone", '\\D', '', 'g'), 10)
+                          AND b."createdAt" > o."createdAt")`,
+  );
+  for (const o of rows) {
+    if (diajak[o.id]) continue;
+    const jid = buyerChat(o.id, o.buyerPhone);
+    if (!jid) continue;
+    const name = o.buyer ? o.buyer.split(' ')[0] : 'kak';
+    const sampai = promo.end ? ` sampai ${new Date(promo.end).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })} WIB` : '';
+    const text = [
+      `Halo kak ${name} 😊 Pesanan KUWERA 5K kamu (${o.id}) belum sempat dibayar sampai batas waktunya, jadi pesanannya otomatis batal.`,
+      '',
+      `Kabar baiknya, harga ${promo.label || 'Early Bird'} ${rupiah(promo.price)} per tiket masih berlaku${sampai}. Kalau masih mau lari bareng kami, yuk daftar lagi di ${SITE_URL} dan selesaikan pembayarannya ya.`,
+      '',
+      'Setelah bayar, kirim screenshot bukti bayarnya di chat ini supaya bisa langsung kami cek. Sampai jumpa di garis start! 🏃',
+    ].join('\n');
+    try {
+      await reply(jid, { text });
+      diajak[o.id] = Date.now();
+      fs.writeFileSync(AJAK_FILE, JSON.stringify(diajak));
+      await archive(o.id, 'ajakan daftar ulang (lewat batas bayar) dikirim', null, jid);
+      logger.info({ orderId: o.id, jid }, 'ajakan daftar ulang terkirim');
+    } catch (e) {
+      logger.error({ orderId: o.id, err: e.message }, 'gagal kirim ajakan daftar ulang');
+    }
+    await sleep(between(20000, 40000));
+  }
+}
+
 async function paidLoop() {
   for (;;) {
     try { await processPaid(); } catch (e) { logger.error({ err: e.message }, 'proses order lunas gagal'); }
@@ -745,6 +794,7 @@ async function paidLoop() {
     // Pengingat dan kabar otomatis tidak dikirim di jam tutup; balasan admin (outbox, lunas) tetap jalan.
     if (!jamTutup()) {
       try { await processReminders(); } catch (e) { logger.error({ err: e.message }, 'proses pengingat bayar gagal'); }
+      try { await processAjakUlang(); } catch (e) { logger.error({ err: e.message }, 'proses ajakan daftar ulang gagal'); }
       try { await drivetech.tick(); } catch (e) { logger.error({ err: e.message }, 'kabar DriveTech gagal'); }
     }
     try { await perpanjangOrderMalam(); } catch (e) { logger.error({ err: e.message }, 'perpanjang order malam gagal'); }
