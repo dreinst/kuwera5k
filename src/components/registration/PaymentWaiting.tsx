@@ -224,7 +224,7 @@ export default function PaymentWaiting({ order, paymentMode, snap, trackCheckout
             <a href={waLink(manual.waText)} target="_blank" rel="noopener noreferrer" className="mt-5 flex w-full items-center justify-center rounded-full bg-brand-yellow px-6 py-3 text-center text-sm font-semibold text-green-deep">
               Minta QRIS via WhatsApp
             </a>
-            <p className="mt-3 text-xs text-white/75">Belum ada verifikasi otomatis dari payment gateway untuk QRIS manual ini &mdash; superadmin memeriksa dan memverifikasi langsung, maksimal 1x24 jam. Kuota kamu ditahan sampai timer habis.</p>
+            <p className="mt-3 text-xs text-white/75">Belum ada verifikasi otomatis dari payment gateway untuk QRIS manual ini. Superadmin memeriksa dan memverifikasi langsung, maksimal 1x24 jam. Kuota kamu ditahan sampai timer habis.</p>
           </div>
         )}
         {error && <p className="mt-4 text-sm text-yellow-lime">{error}</p>}
