@@ -54,9 +54,9 @@ function rememberContacts(list) {
   }
   if (changed) fs.writeFileSync(CONTACTS_FILE, JSON.stringify(contacts));
 }
-const humanAt = new Map(); // jid -> waktu terakhir admin membalas dari HP
-// ponytail: pesan kiriman Baileys ber-ID "3EB0...", dari HP tidak. Cukup untuk membedakan admin dari bot.
-const byHuman = (msg) => msg.key.fromMe && !String(msg.key.id || '').startsWith('3EB0');
+// ID pesan yang dikirim bot ini, supaya worker CS bisa membedakan balasan bot dari balasan admin (HP atau WhatsApp Web
+// sama-sama ber-ID "3EB0...", jadi format ID tidak bisa dipakai).
+const SENT_IDS = '/data/sent-ids.txt';
 // Arsip per order (bukti bayar, invoice, info.json) plus riwayat.csv; disalin ke NAS oleh kuwera-arsip-nas di VPS.
 const ARCHIVE = '/data/arsip';
 // Sama dengan src/lib/event-data.ts (racePackDates, racePackPlace, racePackHours, jadwal acara).
@@ -320,7 +320,7 @@ async function csInbox(msg) {
   const media = m.imageMessage ? '[gambar]' : m.documentMessage ? '[dokumen]' : m.audioMessage ? '[pesan suara]'
     : m.videoMessage ? '[video]' : m.stickerMessage ? '[stiker]' : m.contactMessage ? '[kontak]' : m.locationMessage ? '[lokasi]' : '';
   const text = [media, textOf(msg).trim()].filter(Boolean).join(' ');
-  if (!text || m.protocolMessage || m.reactionMessage || Date.now() - (humanAt.get(jid) || 0) < 30 * 60_000) return;
+  if (!text || m.protocolMessage || m.reactionMessage) return;
   const phone = digits(msg.key.senderPn || msg.key.remoteJidAlt || jid);
   const known = Object.keys(confirmChats).filter((id) => confirmChats[id] === jid);
   const { rows } = await pool.query(
@@ -530,6 +530,12 @@ async function start() {
   const { version } = await fetchLatestBaileysVersion();
   const s = makeWASocket({ auth: state, version, logger: pino({ level: 'silent' }), browser: ['KUWERA 5K', 'Chrome', '1.0'] });
   s.ev.on('creds.update', saveCreds);
+  const send = s.sendMessage.bind(s);
+  s.sendMessage = async (...args) => {
+    const sent = await send(...args);
+    if (sent?.key?.id) fs.appendFileSync(SENT_IDS, sent.key.id + '\n');
+    return sent;
+  };
   s.ev.on('contacts.upsert', rememberContacts);
   s.ev.on('contacts.update', rememberContacts);
   s.ev.on('connection.update', async ({ connection, lastDisconnect, qr }) => {
@@ -561,6 +567,10 @@ async function start() {
       connected = true;
       pairingRequested = false;
       logger.info('bot KUWERA terhubung ke WhatsApp');
+      // Daftar grup yang diikuti nomor kantor (id -> nama), dipakai worker CS untuk laporan ke grup tim.
+      s.groupFetchAllParticipating()
+        .then((g) => fs.writeFileSync('/data/groups.json', JSON.stringify(Object.fromEntries(Object.values(g).map((x) => [x.id, x.subject])))))
+        .catch((e) => logger.warn({ err: e.message }, 'gagal mengambil daftar grup'));
       // Sekali saja: tarik ulang app state supaya nama kontak dari HP kantor terkirim lewat contacts.upsert.
       if (!fs.existsSync('/data/contacts-synced')) {
         s.resyncAppState(['critical_unblock_low', 'regular_high', 'regular_low', 'critical_block', 'regular'], true)
@@ -571,11 +581,8 @@ async function start() {
   });
   s.ev.on('messages.upsert', async ({ messages, type }) => {
     for (const m of messages) {
-      // SEMENTARA (29 Sep): cari tahu bentuk pesan admin dari HP, hapus setelah deteksi byHuman dipastikan benar.
-      if (m.key.fromMe) logger.info({ idAwal: String(m.key.id || '').slice(0, 6), type, jid: m.key.remoteJid, alt: m.key.remoteJidAlt }, 'debug pesan keluar');
-      if (!byHuman(m) || !m.key.remoteJid || m.key.remoteJid.endsWith('@g.us') || m.key.remoteJid === 'status@broadcast') continue;
-      humanAt.set(m.key.remoteJid, Date.now());
-      // Catat ke worker CS bahwa admin sudah membalas dari HP, supaya pengingat "belum dibalas" tidak muncul.
+      if (!m.key.fromMe || !m.key.remoteJid || m.key.remoteJid.endsWith('@g.us') || m.key.remoteJid === 'status@broadcast') continue;
+      // Semua pesan keluar diteruskan; worker CS mencocokkan ID-nya dengan sent-ids kedua bot untuk tahu mana balasan admin.
       fs.mkdirSync(INBOX, { recursive: true });
       fs.writeFileSync(`${INBOX}/admin-${m.key.id}.json`, JSON.stringify({ tipe: 'admin', id: m.key.id, bot: 'kuwera', jid: m.key.remoteJid,
         phone: digits(m.key.remoteJidAlt || m.key.remoteJid), text: textOf(m).slice(0, 300) || '[media]', waktu: Date.now() }));
