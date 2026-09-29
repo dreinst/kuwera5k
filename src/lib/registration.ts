@@ -79,9 +79,13 @@ export function ageOn(birthDate: string, on: string = RACE_DATE) {
 export const titleName = (v: string) =>
   v.trim().replace(/\s+/g, " ").replace(/\.(?=\S)/g, ". ").toLowerCase().replace(/(^|[^\p{L}'])(\p{L})/gu, (_, a, b) => a + b.toUpperCase());
 
+// Nama harus berupa huruf (boleh titik, koma, petik, tanda hubung, garis miring, dan kurung seperti "Sari (ibu)"),
+// bukan angka atau nomor HP.
+const NAME_RE = /^[\p{L}][\p{L}\s.,'()/-]*$/u;
+
 export const participantSchema = z.object({
-  firstName: z.string().trim().min(2, "Nama depan minimal 2 huruf").max(40, "Nama depan maksimal 40 huruf").transform(titleName),
-  lastName: z.string().trim().max(40, "Nama belakang maksimal 40 huruf").transform(titleName).optional().or(z.literal("")),
+  firstName: z.string().trim().min(2, "Nama depan minimal 2 huruf").max(40, "Nama depan maksimal 40 huruf").regex(NAME_RE, "Nama depan diisi huruf saja, tanpa angka").transform(titleName),
+  lastName: z.string().trim().max(40, "Nama belakang maksimal 40 huruf").regex(NAME_RE, "Nama belakang diisi huruf saja, tanpa angka").transform(titleName).optional().or(z.literal("")),
   idNumber: z.string().trim().regex(/^\d{16}$/, "Nomor identitas (NIK) terdiri dari 16 angka"),
   address: z.string().trim().min(10, "Alamat minimal 10 huruf").max(200, "Alamat maksimal 200 huruf"),
   province: z.enum(PROVINCES, { message: "Provinsinya belum dipilih" }),
@@ -98,7 +102,7 @@ export const participantSchema = z.object({
   phone: phone("Nomor HP"),
   email: z.string().trim().toLowerCase().email("Email tidak valid"),
   jerseySize: z.enum(JERSEY_SIZES, { message: "Ukuran jerseynya belum dipilih" }),
-  emergencyName: z.string().trim().min(3, "Nama kontak darurat minimal 3 huruf").max(80).transform(titleName),
+  emergencyName: z.string().trim().min(3, "Nama kontak darurat minimal 3 huruf").max(80).regex(NAME_RE, "Nama kontak darurat diisi nama orangnya ya, nomornya di kolom sebelah").transform(titleName),
   emergencyPhone: phone("Nomor kontak darurat"),
   community: z.string().trim().max(80, "Maksimal 80 huruf").optional().or(z.literal("")),
 }).superRefine((p, ctx) => {
