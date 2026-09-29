@@ -43,8 +43,14 @@ export default async function DashboardPage() {
         </div>
         <div className="text-right">
           <p className="text-sm text-white/85">
-            Midtrans: <span className={`font-semibold ${s.mode.production ? "text-yellow-lime" : "text-brand-yellow"}`}>{s.mode.production ? "Production" : "Sandbox"}</span>
-            {" "}&middot; mode bayar <span className="font-semibold">{s.mode.payment}</span>
+            Payment gateway:{" "}
+            {s.mode.payment === "manual" ? (
+              <span className="font-semibold text-yellow-lime">GoPay Merchant (QRIS dinamis)</span>
+            ) : s.mode.payment === "midtrans" ? (
+              <span className={`font-semibold ${s.mode.production ? "text-yellow-lime" : "text-brand-yellow"}`}>Midtrans {s.mode.production ? "Production" : "Sandbox"}</span>
+            ) : (
+              <span className="font-semibold text-brand-yellow">{s.mode.payment === "mock" ? "simulasi" : "nonaktif"}</span>
+            )}
           </p>
         </div>
       </div>
