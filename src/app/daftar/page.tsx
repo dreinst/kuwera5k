@@ -30,8 +30,8 @@ export default async function DaftarPage() {
         </h1>
         <p className="mt-3 max-w-xl text-white/70">
           {closed
-            ? "Siapkan KTP atau KIA, kontak darurat, dan ukuran jersey setiap peserta supaya pendaftaran berjalan cepat."
-            : "Cukup empat langkah, sekitar tiga menit. Isianmu tersimpan otomatis di perangkat ini selama 24 jam."}
+            ? "Sambil menunggu, yuk siapkan kartu identitas (KTP atau KIA), kontak darurat, dan ukuran jersey kamu, ya."
+            : "Cukup empat langkah, sekitar tiga menit. Tenang saja, isianmu tersimpan otomatis di perangkat ini selama 24 jam."}
         </p>
         <div className="mt-8">
           {closed ? (
@@ -40,7 +40,7 @@ export default async function DaftarPage() {
               <p className="mt-2 text-white/75">
                 {opensAt
                   ? `Pendaftaran dibuka ${opensAt.toLocaleString("id-ID", { timeZone: "Asia/Jakarta", weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" })} WIB. Sampai jumpa di garis start!`
-                  : "Info pembukaan berikutnya bisa kamu tanyakan ke WhatsApp panitia."}
+                  : "Kalau ingin tahu jadwal pembukaan berikutnya, panitia siap membantu lewat WhatsApp."}
               </p>
             </div>
           ) : (

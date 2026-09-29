@@ -23,14 +23,14 @@ export async function POST(req: Request) {
   const body = await req.json().catch(() => null);
   const parsed = orderInputSchema.safeParse(body);
   if (!parsed.success) {
-    return NextResponse.json({ error: "Periksa kembali isian kamu", fields: issuesToMap(parsed.error.issues) }, { status: 400 });
+    return NextResponse.json({ error: "Ada isian yang perlu dicek lagi, ya", fields: issuesToMap(parsed.error.issues) }, { status: 400 });
   }
   const input = parsed.data;
   const now = new Date();
 
   const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || null;
   if (!(await verifyTurnstile(body?.turnstileToken, ip))) {
-    return NextResponse.json({ error: "Verifikasi bukan robot gagal atau kedaluwarsa. Centang ulang kotaknya lalu coba lagi." }, { status: 400 });
+    return NextResponse.json({ error: "Verifikasi bukan robot belum berhasil. Boleh centang ulang kotaknya lalu coba lagi?" }, { status: 400 });
   }
 
   const category = await prisma.category.findFirst({

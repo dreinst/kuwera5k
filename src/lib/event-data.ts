@@ -68,17 +68,12 @@ export const route = {
 
 export const sponsors = [
   { name: "Profast Fashion Custom", tier: "Utama", logo: "/sponsors/profast.webp" },
-  { name: "Sponsor 2", tier: "Utama" },
-  { name: "Sponsor 3", tier: "Pendukung" },
-  { name: "Sponsor 4", tier: "Pendukung" },
-  { name: "Sponsor 5", tier: "Media" },
-  { name: "Sponsor 6", tier: "Media" },
 ];
 
 export const faqs = [
   {
     q: "Bagaimana cara mendaftar KUWERA 5K?",
-    a: "Klik tombol Daftar, pilih jumlah tiket, isi data setiap peserta, lalu bayar dengan QRIS. E-ticket terbit setelah pembayaran dikonfirmasi; simpan tautannya untuk ambil race pack.",
+    a: "Gampang! Cukup tekan tombol Daftar, pilih jumlah tiket, isi data setiap peserta, lalu bayar dengan QRIS. E-ticket terbit setelah pembayaran dikonfirmasi, dan tautannya bisa kamu simpan untuk pengambilan race pack.",
   },
   {
     q: "Metode pembayaran apa saja yang tersedia?",
@@ -86,11 +81,11 @@ export const faqs = [
   },
   {
     q: "Apakah biaya pendaftaran bisa dikembalikan?",
-    a: "Biaya yang sudah lunas tidak dikembalikan otomatis. Untuk kasus khusus, hubungi panitia lewat WhatsApp.",
+    a: "Biaya yang sudah lunas tidak dikembalikan otomatis. Kalau ada kondisi khusus, panitia siap membantu lewat WhatsApp.",
   },
   {
     q: "Kapan dan di mana pengambilan race pack?",
-    a: `Race pack bisa kamu ambil pada ${eventData.racePackDates} di ${eventData.racePackPlace}. ${eventData.racePackHours} Jangan lupa bawa KTP atau KIA asli dan tunjukkan QR di e-ticket, ya.`,
+    a: `Race pack bisa kamu ambil pada ${eventData.racePackDates} di ${eventData.racePackPlace}. ${eventData.racePackHours} Jangan lupa bawa KTP atau KIA asli dan QR di e-ticket, ya.`,
   },
   {
     q: "Apakah ada kategori kelompok atau komunitas?",

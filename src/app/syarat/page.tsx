@@ -20,7 +20,7 @@ export default function Page() {
           <li>Peserta minimal berusia 12 tahun pada hari lomba dan dalam kondisi sehat untuk berlari 5 km.</li>
           <li>Satu tiket berlaku untuk satu peserta sesuai data yang diisi dan tidak dapat dipindahtangankan. Satu pembelian boleh berisi beberapa tiket.</li>
           <li>Biaya pendaftaran yang sudah lunas tidak dikembalikan secara otomatis. Kasus khusus bisa diajukan ke panitia lewat WhatsApp.</li>
-          <li>Race pack diambil sendiri dengan menunjukkan e-ticket dan KTP atau KIA asli pada jadwal yang ditentukan.</li>
+          <li>Race pack diambil oleh peserta sendiri pada jadwal pengambilan, dengan membawa e-ticket dan KTP atau KIA asli.</li>
           <li>Panitia berhak mengubah rute atau jadwal karena kondisi cuaca atau keamanan.</li>
         </ul>
       </main>

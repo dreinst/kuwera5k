@@ -15,7 +15,7 @@ export default function Sponsors() {
           </h2>
         </Reveal>
 
-        <div className="mt-10 grid grid-cols-2 gap-5 sm:grid-cols-3 lg:grid-cols-6">
+        <div className="mt-10 flex flex-wrap justify-center gap-5">
           {sponsors.map((sponsor, i) => (
             <Reveal
               key={sponsor.name}
@@ -24,7 +24,7 @@ export default function Sponsors() {
                 hidden: { opacity: 0, y: 12 },
                 show: { opacity: 1, y: 0, transition: { duration: 0.4 } },
               }}
-              className="flex h-20 items-center justify-center rounded-2xl bg-cream px-4 text-sm font-semibold text-green-deep"
+              className="flex h-20 w-40 items-center justify-center rounded-2xl bg-cream px-4 text-sm font-semibold text-green-deep sm:w-48"
             >
               {/* mix-blend-multiply: latar putih logo menyatu dengan kartu krem */}
               {"logo" in sponsor && sponsor.logo

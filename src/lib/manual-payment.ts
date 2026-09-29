@@ -24,7 +24,7 @@ export async function qrisPngFor(total: number, width = 720) {
 export function confirmText(o: OrderForManual) {
   const people = [...o.participants].sort((a, b) => a.position - b.position);
   return [
-    "Halo Admin KUWERA 5K, saya mau bayar pendaftaran. Mohon kirim QRIS-nya.",
+    "Halo kak, saya mau membayar pendaftaran KUWERA 5K. Boleh minta QRIS-nya?",
     "",
     `No. order: ${o.id}`,
     `Nama pemesan: ${people[0]?.fullName ?? "-"}`,

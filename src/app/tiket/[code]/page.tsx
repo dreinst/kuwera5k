@@ -51,7 +51,7 @@ export default async function TiketPage({ params }: { params: Promise<{ code: st
           Sampai jumpa di <span className="text-brand-yellow">garis start</span>
         </h1>
         <p className="mt-3 text-white/70">
-          Pembayaran diterima. Simpan halaman ini, tunjukkan QR-nya saat ambil race pack.
+          Pembayaran sudah kami terima, terima kasih! Halaman ini boleh kamu simpan, QR-nya nanti ditunjukkan saat mengambil race pack.
           {tickets.length > 1 && ` Ada ${tickets.length} tiket, masing-masing punya QR sendiri.`}
         </p>
 
@@ -76,7 +76,7 @@ export default async function TiketPage({ params }: { params: Promise<{ code: st
             </div>
           </div>
           <div className="border-t border-dashed border-green-deep/20 px-6 py-5 text-sm sm:px-8">
-            <p><span className="font-semibold">Ambil race pack:</span> {eventData.racePackDates} di {eventData.racePackPlace}. {eventData.racePackHours} Bawa KTP atau KIA asli dan tunjukkan QR ini.</p>
+            <p><span className="font-semibold">Ambil race pack:</span> {eventData.racePackDates} di {eventData.racePackPlace}. {eventData.racePackHours} Jangan lupa bawa KTP atau KIA asli dan QR ini, ya.</p>
             <p className="mt-2 text-green-deep/80">Pertanyaan lain ada di <Link href="/#faq" className="underline">FAQ</Link> atau <a href={waLink(waText.tiket(ticket.code))} target="_blank" rel="noopener noreferrer" className="underline">WhatsApp panitia</a>.</p>
           </div>
           {isMock && (

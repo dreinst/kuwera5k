@@ -285,7 +285,7 @@ async function handleIncoming(msg) {
   const expired = order.status !== 'PENDING' || (order.expiresAt && new Date(order.expiresAt) <= new Date());
   if (!hasProof) {
     if (expired) {
-      await reply(jid, { text: `Waktu bayar order ${order.id} sudah habis. Silakan daftar ulang di ${SITE_URL}/daftar` }, msg);
+      await reply(jid, { text: `Mohon maaf kak, waktu bayar order ${order.id} sudah habis. Kamu masih bisa mendaftar lagi di ${SITE_URL}/daftar, kami tunggu ya!` }, msg);
     } else {
       await sendQris(jid, order, msg);
     }
@@ -342,8 +342,8 @@ async function sendQris(jid, order, quoted) {
     `QRIS pembayaran order ${order.id}`,
     `Nominal: ${rupiah(order.total)} (${order.quantity} tiket)`,
     '',
-    'Scan dari aplikasi bank atau e-wallet apa pun. Nominal sudah terisi otomatis, bayar persis sesuai angka itu.',
-    `Setelah bayar, kirim screenshot bukti bayar di chat ini.${deadline ? ` Batas bayar ${deadline} WIB.` : ''}`,
+    'Silakan scan dari aplikasi bank atau e-wallet apa pun. Nominalnya sudah terisi otomatis, mohon dibayar sesuai angka itu ya.',
+    `Setelah membayar, screenshot bukti bayarnya bisa dikirim di chat ini.${deadline ? ` Kami tunggu pembayarannya sebelum ${deadline} WIB.` : ''}`,
   ].join('\n');
   await reply(jid, { image, caption }, quoted);
   await archive(order.id, 'QRIS/invoice dikirim ke pemesan', { buffer: image, name: 'invoice-qris.png' }, jid);
@@ -436,7 +436,7 @@ async function processPaid() {
       const text = [
         `Pembayaran order ${o.id} sebesar ${rupiah(o.total)} sudah kami terima. Terima kasih, ${o.buyer || 'kak'}!`,
         '',
-        'Nomor QR registrasi ulang (tunjukkan saat ambil race pack):',
+        'Nomor QR registrasi ulang (ditunjukkan saat mengambil race pack):',
         ...tickets.map((t, i) => `${i + 1}. ${t.fullName}: ${t.code}`),
         '',
         `E-ticket lengkap: ${SITE_URL}/tiket/${o.id}`,
@@ -444,7 +444,7 @@ async function processPaid() {
         `Race pack bisa diambil pada ${RACE_PACK}. Jam pengambilannya kami kabarkan lewat WhatsApp ini menjelang hari H. Jangan lupa bawa KTP atau KIA asli setiap peserta, ya.`,
         `Hari lomba: ${RACE_DAY}.`,
         '',
-        'QR tiap peserta kami kirim di bawah ini. Simpan baik-baik.',
+        'QR setiap peserta kami kirim di bawah ini. Disimpan baik-baik ya, sampai jumpa di garis start!',
       ].join('\n');
       const targets = new Set([phoneJid(o.buyerPhone), confirmChats[o.id]].filter(Boolean));
       for (const jid of targets) {

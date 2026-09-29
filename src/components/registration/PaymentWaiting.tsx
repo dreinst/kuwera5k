@@ -119,7 +119,7 @@ export default function PaymentWaiting({ order, paymentMode, snap, trackCheckout
         onSuccess: () => setSnapNote("Pembayaran diterima, menunggu konfirmasi dari Midtrans..."),
         onPending: () => setSnapNote("Instruksi pembayaran sudah dibuat. Halaman ini otomatis pindah ke e-ticket begitu pembayaran masuk."),
         onError: () => setError("Pembayaran gagal di Midtrans, coba metode lain atau ulangi."),
-        onClose: () => setSnapNote("Jendela pembayaran ditutup. Tekan tombol Bayar lagi untuk melihat instruksinya selama timer masih berjalan."),
+        onClose: () => setSnapNote("Jendela pembayaran tertutup. Tombol Bayar bisa kamu tekan lagi untuk melihat instruksinya selama timer masih berjalan."),
       });
     } catch {
       setError("Tidak bisa memuat halaman pembayaran Midtrans, periksa koneksi lalu coba lagi");
@@ -147,12 +147,12 @@ export default function PaymentWaiting({ order, paymentMode, snap, trackCheckout
           : expired
             ? "Kuota untuk order ini sudah dilepas. Silakan daftar ulang, datamu tidak tersimpan di order yang kedaluwarsa."
             : checking
-              ? "Waktu bayar sudah habis. Kami sedang memastikan ke Midtrans apakah pembayaranmu sudah masuk, biasanya tidak sampai tiga menit. Jangan tutup halaman ini."
+              ? "Waktu bayar sudah habis. Kami sedang memastikan ke Midtrans apakah pembayaranmu sudah masuk, biasanya tidak sampai tiga menit. Halaman ini dibiarkan terbuka dulu, ya."
               : `Order ${order.id} menahan kuota kamu sampai timer di bawah habis.`}
       </p>
       {expired && !failed && (canBePaidLate || paymentMode === "manual") && (
         <p className="mt-2 text-white/70">
-          Sudah membayar tapi halaman ini tidak berubah? <a href={waLink(waText.sudahBayar(order.id))} target="_blank" rel="noopener noreferrer" className="text-brand-yellow underline">Hubungi panitia lewat WhatsApp</a>, nomor order sudah otomatis ada di pesannya.
+          Sudah membayar tapi halaman ini tidak berubah? <a href={waLink(waText.sudahBayar(order.id))} target="_blank" rel="noopener noreferrer" className="text-brand-yellow underline">Kabari panitia lewat WhatsApp</a>, nomor order sudah otomatis ada di pesannya.
         </p>
       )}
 
@@ -216,9 +216,9 @@ export default function PaymentWaiting({ order, paymentMode, snap, trackCheckout
         {!expired && paymentMode === "manual" && manual && (
           <div className="mt-6">
             <ol className="list-decimal space-y-1 pl-5 text-sm text-white/80">
-              <li>Tekan tombol di bawah. WhatsApp terbuka dengan pesan pesanan yang sudah terisi.</li>
-              <li>Kirim pesan itu ke nomor panitia +{WA_ADMIN}. Chatbot membalas dengan QRIS berisi nominal <span className="font-semibold text-brand-yellow">{formatRupiah(order.total)}</span>.</li>
-              <li>Bayar QRIS itu persis sesuai nominal, lalu kirim screenshot bukti bayar di chat yang sama.</li>
+              <li>Tekan tombol di bawah, nanti WhatsApp terbuka dengan pesan pesanan yang sudah terisi.</li>
+              <li>Kirimkan pesan itu ke nomor panitia +{WA_ADMIN}, lalu chatbot kami membalas dengan QRIS berisi nominal <span className="font-semibold text-brand-yellow">{formatRupiah(order.total)}</span>.</li>
+              <li>Silakan bayar QRIS itu sesuai nominalnya, lalu kirimkan screenshot bukti bayar di chat yang sama.</li>
               <li>Admin mengecek pembayaran, lalu e-ticket dikirim ke WhatsApp kamu dan halaman ini ikut berubah.</li>
             </ol>
             <a href={waLink(manual.waText)} target="_blank" rel="noopener noreferrer" className="mt-5 flex w-full items-center justify-center rounded-full bg-brand-yellow px-6 py-3 text-center text-sm font-semibold text-green-deep">
