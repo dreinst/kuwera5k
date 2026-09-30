@@ -4,6 +4,8 @@ import { FINANCE, requireAdmin } from "@/lib/admin-auth";
 import { dashboardStats, fmtDateTime } from "@/lib/admin-data";
 import { formatRupiah } from "@/lib/registration";
 import { StatusBadge } from "@/components/admin/Badges";
+import GopayRincian from "@/components/admin/GopayRincian";
+import { gopayRincian } from "@/lib/gopay-rincian";
 
 export const metadata: Metadata = { title: "Dashboard" };
 export const dynamic = "force-dynamic";
@@ -30,7 +32,7 @@ function Card({ title, children }: { title: string; children: React.ReactNode })
 
 export default async function DashboardPage() {
   await requireAdmin(FINANCE);
-  const s = await dashboardStats();
+  const [s, rincian] = await Promise.all([dashboardStats(), gopayRincian()]);
   const maxDaily = Math.max(1, ...s.daily.map((d) => d.count));
   const maxJersey = Math.max(1, ...s.jersey.map((j) => j.count));
 
@@ -69,6 +71,8 @@ export default async function DashboardPage() {
         <Stat label="Sudah ditarik" value={formatRupiah(s.penarikan.masuk)}
           note={s.penarikan.saldo ? `Potongan tarik ${formatRupiah(s.penarikan.potongan)}, saldo belum ditarik ${formatRupiah(s.revenueTotal - s.penarikan.saldo)}` : "Belum ada penarikan tercatat"} />
       </div>
+
+      <GopayRincian d={rincian} />
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Card title="Pendaftar lunas 14 hari terakhir">

@@ -4,15 +4,18 @@ import { prisma } from "@/lib/db";
 import { getPenarikan, ringkasPenarikan } from "@/lib/penarikan";
 import { formatRupiah } from "@/lib/registration";
 import PenarikanManager from "@/components/admin/PenarikanManager";
+import GopayRincian from "@/components/admin/GopayRincian";
+import { gopayRincian } from "@/lib/gopay-rincian";
 
 export const metadata: Metadata = { title: "Penarikan GoPay" };
 export const dynamic = "force-dynamic";
 
 export default async function PenarikanPage() {
   await requireAdmin(SUPER);
-  const [list, sums] = await Promise.all([
+  const [list, sums, rincian] = await Promise.all([
     getPenarikan(),
     prisma.order.aggregate({ where: { status: "PAID", isTest: false }, _sum: { total: true, uniqueCode: true } }),
+    gopayRincian(),
   ]);
   const r = ringkasPenarikan(list);
   const diterima = sums._sum.total ?? 0;
@@ -40,6 +43,7 @@ export default async function PenarikanPage() {
           </div>
         ))}
       </div>
+      <div className="mt-6"><GopayRincian d={rincian} /></div>
       <div className="mt-6"><PenarikanManager list={list} sisaSaldo={diterima - r.saldo} hariIni={new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Jakarta" })} /></div>
     </div>
   );
