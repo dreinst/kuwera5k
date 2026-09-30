@@ -332,12 +332,36 @@ async function perpanjangOrderMalam() {
   if (rowCount) logger.info({ jumlah: rowCount, sampai }, 'jam tutup: tenggat order diperpanjang');
 }
 
+// Blast info event dari dashboard dprochatbot: balasan STOP mencatat nomor di /data/blast-stop/berhenti.jsonl supaya tidak
+// dikirimi blast lagi, MULAI membatalkannya. MULAI hanya ditangani untuk nomor yang pernah STOP.
+const BERHENTI = '/data/blast-stop/berhenti.jsonl';
+function sudahBerhenti(phone) {
+  let last = null;
+  try { for (const l of fs.readFileSync(BERHENTI, 'utf8').split('\n')) { if (!l) continue; const r = JSON.parse(l); if (r.phone === phone) last = r.aksi; } } catch { /* belum ada */ }
+  return last === 'stop';
+}
+async function berhentiBlast(msg, jid) {
+  const teks = textOf(msg).trim();
+  const stop = /^(stop|berhenti|unsubscribe)[.!\s]*$/i.test(teks);
+  if (!stop && !/^(mulai|start)[.!\s]*$/i.test(teks)) return false;
+  const phone = digits(msg.key.senderPn || msg.key.remoteJidAlt || jid);
+  if (!stop && !sudahBerhenti(phone)) return false;
+  fs.mkdirSync('/data/blast-stop', { recursive: true });
+  fs.appendFileSync(BERHENTI, JSON.stringify({ phone, jid, aksi: stop ? 'stop' : 'mulai', waktu: new Date().toISOString() }) + '\n');
+  await reply(jid, { text: stop
+    ? 'Baik Kak, kami tidak akan mengirim info event lagi ke nomor ini 🙏 Kalau suatu saat ingin menerimanya lagi, cukup balas MULAI ya.'
+    : 'Siap Kak, info event dari kami akan kami kirimkan lagi ke nomor ini 😊' }, msg);
+  logger.info({ phone, aksi: stop ? 'stop' : 'mulai' }, 'preferensi blast diperbarui');
+  return true;
+}
+
 async function handleIncoming(msg) {
   const jid = msg.key.remoteJid || '';
   if (msg.key.fromMe || !jid || jid.endsWith('@g.us') || jid === 'status@broadcast' || jid.endsWith('@newsletter')) return;
   if (jamTutup()) return tundaPesan(msg);
   // Kode booking DriveTech (BK-...) atau bukti bayarnya. Kalau API DriveTech gagal, pesan tetap masuk alur biasa (CS).
   if (await drivetech.handle(msg).catch((e) => { logger.error({ err: e.message }, 'DriveTech: pesan gagal diproses'); return false; })) return;
+  if (await berhentiBlast(msg, jid)) return;
   const hasProof = !!(msg.message && (msg.message.imageMessage || msg.message.documentMessage));
   const match = textOf(msg).match(ORDER_RE);
   // Semua file dari pemesan yang terkait order diarsipkan, termasuk kiriman ulang yang tidak dikabarkan lagi.
