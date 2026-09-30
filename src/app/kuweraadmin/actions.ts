@@ -10,6 +10,7 @@ import { MANUAL_GATEWAY, ORDER_LOCK_KEY, getSettings, heldCount, markOrderPaid, 
 import { JERSEY_SIZES, normalizePhone, titleName } from "@/lib/registration";
 import { verifyTurnstile } from "@/lib/turnstile";
 import type { Pricing } from "@/lib/pricing";
+import { PENARIKAN_KEY, getPenarikan } from "@/lib/penarikan";
 
 // Server action = endpoint publik: setiap aksi memeriksa sesi dan perannya sendiri.
 
@@ -348,4 +349,37 @@ export async function cancelKudamAction(orderId: string): Promise<{ ok?: string;
   await logAdmin(admin.username, "batal_kudam", orderId);
   revalidatePath("/kuweraadmin/kudam");
   return { ok: "Dibatalkan" };
+}
+
+// Penarikan GoPay Merchant: disimpan sebagai daftar di Setting "gopay.penarikan" (lihat src/lib/penarikan.ts).
+export async function tambahPenarikanAction(_prev: FormState, form: FormData): Promise<FormState> {
+  const admin = await getAdmin();
+  if (!admin || !allowed(admin.role, SUPER)) return { error: "Hanya superadmin yang bisa mencatat penarikan" };
+  const num = (k: string) => Number(String(form.get(k) ?? "").replace(/\D/g, ""));
+  const tanggal = String(form.get("tanggal") ?? "");
+  const saldo = num("saldo"), masuk = num("masuk");
+  const catatan = String(form.get("catatan") ?? "").trim().slice(0, 120);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(tanggal)) return { error: "Isi tanggal penarikan" };
+  if (!saldo || !masuk) return { error: "Isi saldo yang ditarik dan jumlah yang masuk rekening" };
+  if (masuk > saldo) return { error: "Jumlah masuk rekening tidak mungkin lebih besar dari saldo yang ditarik" };
+  const list = [...(await getPenarikan()), { id: crypto.randomUUID(), tanggal, saldo, masuk, catatan, oleh: admin.username, dibuat: new Date().toISOString() }];
+  await prisma.setting.upsert({ where: { key: PENARIKAN_KEY }, create: { key: PENARIKAN_KEY, value: list }, update: { value: list } });
+  await logAdmin(admin.username, "catat_penarikan", `${tanggal} saldo ${saldo} masuk ${masuk}`);
+  revalidatePath("/kuweraadmin");
+  revalidatePath("/kuweraadmin/penarikan");
+  return { ok: "Penarikan tercatat" };
+}
+
+export async function hapusPenarikanAction(id: string): Promise<FormState> {
+  const admin = await getAdmin();
+  if (!admin || !allowed(admin.role, SUPER)) return { error: "Hanya superadmin yang bisa menghapus penarikan" };
+  const list = await getPenarikan();
+  const hapus = list.find((p) => p.id === id);
+  if (!hapus) return { error: "Catatan tidak ditemukan" };
+  const sisa = list.filter((p) => p.id !== id);
+  await prisma.setting.update({ where: { key: PENARIKAN_KEY }, data: { value: sisa } });
+  await logAdmin(admin.username, "hapus_penarikan", `${hapus.tanggal} saldo ${hapus.saldo} masuk ${hapus.masuk}`);
+  revalidatePath("/kuweraadmin");
+  revalidatePath("/kuweraadmin/penarikan");
+  return { ok: "Catatan dihapus" };
 }

@@ -62,10 +62,12 @@ export default async function DashboardPage() {
         <Stat label="Race pack diambil" value={s.collected.toLocaleString("id-ID")} note={`dari ${s.paid.toLocaleString("id-ID")} peserta lunas`} />
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-3">
-        <Stat label="Pendapatan tiket" value={formatRupiah(s.revenueTicket)} note="Harga dikurangi kode unik (pendapatan bersih)" />
-        <Stat label="Biaya layanan" value={formatRupiah(s.revenueFee)} note="Dibayar peserta, untuk Midtrans" />
-        <Stat label="Total diterima" value={formatRupiah(s.revenueTotal)} note="Sesuai nominal di Payment Gateway" />
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <Stat label="Pendapatan tiket" value={formatRupiah(s.revenueTicket)} note="Harga tiket, tanpa kode unik" />
+        <Stat label="Kode unik terkumpul" value={formatRupiah(s.uniqueCodes)} note="Untuk menutup potongan tarik GoPay" />
+        <Stat label="Total masuk GoPay" value={formatRupiah(s.revenueTotal)} note="Sesuai nominal di GoPay Merchant" />
+        <Stat label="Sudah ditarik" value={formatRupiah(s.penarikan.masuk)}
+          note={s.penarikan.saldo ? `Potongan tarik ${formatRupiah(s.penarikan.potongan)}, saldo belum ditarik ${formatRupiah(s.revenueTotal - s.penarikan.saldo)}` : "Belum ada penarikan tercatat"} />
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
