@@ -6,11 +6,11 @@ type Baris = { label: string; ket?: string; nilai: number; op?: "tambah" | "kura
 
 function Blok({ judul, baris }: { judul: string; baris: Baris[] }) {
   return (
-    <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+    <div className="flex flex-col rounded-2xl border border-white/10 bg-white/5 p-4">
       <p className="text-xs font-semibold tracking-wide text-white/75 uppercase">{judul}</p>
-      <dl className="mt-3 space-y-2 text-sm">
+      <dl className="mt-3 flex flex-1 flex-col gap-2 text-sm">
         {baris.map((b) => (
-          <div key={b.label} className={`grid grid-cols-[3rem_1fr_auto] items-baseline gap-x-2 ${b.hasil ? "border-t border-white/20 pt-2" : ""}`}>
+          <div key={b.label} className={`grid grid-cols-[3rem_1fr_auto] items-baseline gap-x-2 ${b.hasil ? "mt-auto border-t border-white/20 pt-2" : ""}`}>
             <span className={`text-xs ${b.hasil ? "text-brand-yellow" : "text-white/60"}`}>{b.hasil ? "hasil" : b.op ?? ""}</span>
             <dt className={b.hasil ? "font-semibold text-white" : "text-white/85"}>
               {b.label}{b.ket && <span className="block text-xs text-white/60">{b.ket}</span>}

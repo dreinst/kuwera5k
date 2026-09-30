@@ -36,7 +36,7 @@ export default function PricingForm({ pricing }: { pricing: Pricing }) {
           <Field label="Selesai (WIB, kosongkan kalau sampai dimatikan)">
             <input type="datetime-local" name="promoEnd" defaultValue={toWib(pricing.promo.end)} className={inputCls} />
           </Field>
-          <Field label={`Kuota tiket promo (kosongkan kalau tanpa batas)${pricing.promo.quota ? `, terpakai ${pricing.promoUsed ?? 0}` : ""}`}>
+          <Field className="sm:col-span-2" label={`Kuota tiket promo (kosongkan kalau tanpa batas)${pricing.promo.quota ? `, terpakai ${pricing.promoUsed ?? 0}` : ""}`}>
             <input name="promoQuota" inputMode="numeric" defaultValue={pricing.promo.quota ?? ""} placeholder="misalnya 100" className={inputCls} />
           </Field>
         </div>
@@ -64,8 +64,8 @@ export default function PricingForm({ pricing }: { pricing: Pricing }) {
   );
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return <label className="grid gap-2 text-sm font-medium text-white">{label}{children}</label>;
+function Field({ label, children, className = "" }: { label: string; children: React.ReactNode; className?: string }) {
+  return <label className={`grid gap-2 text-sm font-medium text-white ${className}`}>{label}{children}</label>;
 }
 
 function Toggle({ name, label, defaultChecked }: { name: string; label: string; defaultChecked: boolean }) {

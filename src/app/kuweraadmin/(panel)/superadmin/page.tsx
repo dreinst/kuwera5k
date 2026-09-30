@@ -22,9 +22,9 @@ function Stat({ label, value, note }: { label: string; value: string; note?: str
 
 function Card({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <section className="rounded-[20px] border border-glass-border bg-card p-6">
+    <section className="flex flex-col rounded-[20px] border border-glass-border bg-card p-6">
       <h2 className="font-display text-xl text-white uppercase">{title}</h2>
-      <div className="mt-4">{children}</div>
+      <div className="mt-4 flex flex-1 flex-col">{children}</div>
     </section>
   );
 }
@@ -83,9 +83,10 @@ export default async function SuperadminPage() {
 
         <Card title="Aktivitas terbaru">
           {activity.length === 0 ? <p className="text-white/70">Belum ada aktivitas.</p> : (
-            <ul className="space-y-1 text-sm">
+            // Tinggi daftar mengikuti kartu Akun dan peran di sebelahnya; aktivitas yang lebih panjang digulir.
+            <ul className="space-y-1 overflow-y-auto pr-1 text-sm lg:h-0 lg:min-h-full">
               {activity.map((l) => (
-                <li key={l.id} className="text-white/85">
+                <li key={l.id} className="break-words text-white/85 [overflow-wrap:anywhere]">
                   <span className="text-white/65">{fmtDateTime(l.createdAt)}</span> &middot; <span className="font-semibold text-white">{l.username}</span> {l.action.replace(/_/g, " ")}{l.target ? ` (${l.target})` : ""}
                 </li>
               ))}

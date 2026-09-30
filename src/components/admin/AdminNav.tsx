@@ -21,6 +21,9 @@ const LINKS = [
 
 export default function AdminNav({ username, role }: { username: string; role: AdminRole }) {
   const path = usePathname();
+  const links = LINKS.filter((l) => l.roles.includes(role));
+  // Menu panjang (superadmin) pindah ke baris sendiri di bawah logo dan tombol keluar, supaya tidak menyisakan ruang kosong.
+  const panjang = links.length > 5;
   return (
     <header className="sticky top-0 z-40 border-b border-glass-border bg-green-deep/85 px-6 backdrop-blur-md">
       <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-x-6 gap-y-3 py-3">
@@ -29,8 +32,8 @@ export default function AdminNav({ username, role }: { username: string; role: A
           <img src="/brand/kuwera-logo-light.svg" alt="KUWERA Fun Run" width={2400} height={853} className="h-8 w-auto" />
           <span className="rounded-md bg-brand-yellow px-2 py-0.5 text-[10px] font-bold tracking-widest text-green-deep uppercase">Admin</span>
         </Link>
-        <nav className="flex flex-wrap items-center gap-1 text-sm">
-          {LINKS.filter((l) => l.roles.includes(role)).map((l) => {
+        <nav className={`flex flex-wrap items-center gap-1 text-sm ${panjang ? "order-last -mx-4 basis-full" : ""}`}>
+          {links.map((l) => {
             const active = l.href === "/kuweraadmin" ? path === "/kuweraadmin" : path.startsWith(l.href);
             return (
               <Link key={l.href} href={l.href} className={`rounded-full px-4 py-1.5 transition ${active ? "bg-brand-yellow font-semibold text-green-deep" : "text-white/80 hover:text-brand-yellow"}`}>
