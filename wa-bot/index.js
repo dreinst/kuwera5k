@@ -72,6 +72,19 @@ const TUNDA = '/data/tunda';
 // Sama dengan src/lib/event-data.ts (racePackDates, racePackPlace, racePackHours, jadwal acara).
 const RACE_PACK = 'Kamis dan Jumat, 22 dan 23 Oktober 2026 di Kudam V/Brawijaya';
 const RACE_DAY = 'Sabtu, 24 Oktober 2026, 06.00 WIB di Lapangan Rampal';
+// Mode nomor pribadi (PRIBADI=1): nomor kantor sedang dibatasi WhatsApp, jadi bot sementara tertaut ke nomor pribadi
+// superadmin dengan sesi login sendiri (AUTH_DIR). Bot hanya menyentuh chat pembeli KUWERA (nomor order, kata KUWERA,
+// atau nomor HP pembeli/peserta) dan hanya mengirim ke chat yang sudah lebih dulu menghubungi nomor ini, plus nomor di
+// PRIBADI_IZIN (misalnya brief pagi owner). Kiriman lain di outbox (blast, grup, pengingat) ditahan di OUTBOX_TAHAN.
+// Data, arsip, dan log tetap di tempat yang sama dengan mode kantor.
+const PRIBADI = process.env.PRIBADI === '1';
+const AUTH_DIR = process.env.AUTH_DIR || '/data/auth';
+const PRIBADI_IZIN = (process.env.PRIBADI_IZIN || '').split(',').map((x) => x.replace(/\D/g, '')).filter(Boolean);
+const PRIBADI_FILE = '/data/pribadi-chat.json'; // jid -> waktu pertama menghubungi nomor pribadi
+const OUTBOX_TAHAN = '/data/outbox-ditahan';
+const PRIBADI_INFO = process.env.PRIBADI_INFO || 'Halo Kak 🙏 Untuk sementara WhatsApp kantor D\'Production sedang gangguan, jadi layanan KUWERA 5K kami jalankan dari nomor ini dulu ya. Semua pendaftaran dan pembayaran tetap tercatat seperti biasa.';
+let pribadiChat = {};
+try { pribadiChat = JSON.parse(fs.readFileSync(PRIBADI_FILE, 'utf8')); } catch { pribadiChat = {}; }
 
 const caFile = process.env.DB_SSL_CA_FILE;
 const pool = new Pool({
@@ -358,6 +371,7 @@ async function berhentiBlast(msg, jid) {
 async function handleIncoming(msg) {
   const jid = msg.key.remoteJid || '';
   if (msg.key.fromMe || !jid || jid.endsWith('@g.us') || jid === 'status@broadcast' || jid.endsWith('@newsletter')) return;
+  if (PRIBADI && !(await pelangganPribadi(msg))) return; // chat pribadi pemilik nomor, bukan urusan bot
   if (jamTutup()) return tundaPesan(msg);
   // Kode booking DriveTech (BK-...) atau bukti bayarnya. Kalau API DriveTech gagal, pesan tetap masuk alur biasa (CS).
   if (await drivetech.handle(msg).catch((e) => { logger.error({ err: e.message }, 'DriveTech: pesan gagal diproses'); return false; })) return;
@@ -426,6 +440,44 @@ async function handleIncoming(msg) {
     await reply(jid, { text: `Terima kasih kak, bukti bayarnya sudah kami terima. Mohon maaf, pesanan ${order.id} sudah lewat batas waktu bayar sehingga tidak bisa kami proses lagi.\n\n${await promoKalimat()}\n\nKalau kakak sudah terlanjur membayar pesanan ini, tenang saja, admin kami akan menghubungi kakak untuk penyelesaiannya 🙏` }, msg);
   }
   await notifyProof(order, expired, msg);
+}
+
+// Mode pribadi: chat dianggap urusan KUWERA kalau sudah pernah tercatat, menyebut nomor order, kode booking DriveTech,
+// atau "KUWERA 5K" (semua template tombol WhatsApp website memuatnya), atau nomornya milik pembeli/peserta KUWERA.
+// Nomor di PRIBADI_IZIN (owner, staf) tidak pernah dianggap pelanggan.
+// Chat yang pertama kali lolos mendapat kabar sekali bahwa layanan sementara lewat nomor ini.
+async function pelangganPribadi(msg) {
+  const jid = msg.key.remoteJid;
+  if (pribadiChat[jid]) return true;
+  const teks = textOf(msg);
+  const phone = digits(msg.key.senderPn || msg.key.remoteJidAlt || jid);
+  if (PRIBADI_IZIN.some((n) => phone.endsWith(n.slice(-10)))) return false; // owner/staf chat pribadi, bukan pelanggan
+  let kenal = ORDER_RE.test(teks) || /\bBK-|kuwera (fun run )?5k/i.test(teks);
+  if (!kenal) {
+    if (phone.length >= 10) {
+      const { rows } = await pool.query(
+        `SELECT 1 FROM "Order" o WHERE NOT o."isTest" AND right(regexp_replace(o."buyerPhone", '\\D', '', 'g'), 10) = right($1, 10)
+          UNION ALL SELECT 1 FROM "Participant" p JOIN "Order" o ON o.id = p."orderId"
+           WHERE NOT o."isTest" AND right(regexp_replace(p.phone, '\\D', '', 'g'), 10) = right($1, 10) LIMIT 1`,
+        [phone],
+      );
+      kenal = rows.length > 0;
+    }
+  }
+  if (!kenal) return false;
+  pribadiChat[jid] = Date.now();
+  fs.writeFileSync(PRIBADI_FILE, JSON.stringify(pribadiChat));
+  logger.info({ jid }, 'mode pribadi: chat pelanggan KUWERA baru');
+  await reply(jid, { text: PRIBADI_INFO }).catch((e) => logger.error({ jid, err: e.message }, 'gagal kirim kabar nomor sementara'));
+  return true;
+}
+
+// Mode pribadi: kiriman outbox hanya ke chat pelanggan yang sudah menghubungi nomor ini atau nomor PRIBADI_IZIN.
+// Blast, urusan grup, dan tujuan lain dipindah ke OUTBOX_TAHAN (tidak dihapus) untuk dikirim lagi saat nomor kantor aktif.
+function bolehPribadi(item, f) {
+  if (item.tipe || f.includes('-blast-')) return false;
+  if (item.jid) return !item.jid.endsWith('@g.us') && (!!pribadiChat[item.jid] || PRIBADI_IZIN.includes(digits(item.jid)));
+  return !!buyerChat(item.orderId, item.phone);
 }
 
 // Pembeli bilang sudah bayar tapi tanpa gambar bukti: minta screenshot bukti bayarnya (atau kabari kalau buktinya
@@ -650,7 +702,10 @@ async function notifyProof(order, expired, msg) {
 // Satu tujuan per pemesan: chat tempat dia menghubungi bot. Chat itu sering tercatat sebagai ...@lid, sedangkan
 // nomor HP di form menjadi ...@s.whatsapp.net; keduanya orang yang sama, jadi kirim ke dua-duanya membuat pesan dobel.
 // Nomor di form hanya dipakai kalau pemesan belum pernah chat.
-const buyerChat = (orderId, phone) => confirmChats[orderId] || phoneJid(phone);
+// Mode pribadi: hanya chat yang sudah menghubungi nomor pribadi, supaya bot tidak memulai chat baru.
+const buyerChat = (orderId, phone) => (PRIBADI
+  ? (pribadiChat[confirmChats[orderId]] ? confirmChats[orderId] : null)
+  : confirmChats[orderId] || phoneJid(phone));
 
 // Pesan penolakan dari tool kuwera_tolak (cli.js) menunggu di /data/outbox sebagai file JSON.
 async function processOutbox() {
@@ -659,6 +714,12 @@ async function processOutbox() {
   for (const f of fs.readdirSync(OUTBOX).filter((x) => x.endsWith('.json')).sort()) {
     const file = `${OUTBOX}/${f}`;
     const item = JSON.parse(fs.readFileSync(file, 'utf8'));
+    if (PRIBADI && !bolehPribadi(item, f)) {
+      fs.mkdirSync(OUTBOX_TAHAN, { recursive: true });
+      fs.renameSync(file, `${OUTBOX_TAHAN}/${f}`);
+      logger.warn({ f, jid: item.jid, orderId: item.orderId }, 'mode pribadi: kiriman outbox ditahan');
+      continue;
+    }
     if (item.tipe === 'buat-grup') { // grup baru di komunitas internal, lalu deskripsi aturannya
       fs.unlinkSync(file);
       try {
@@ -730,7 +791,8 @@ async function processPaid() {
     [REAL_GATEWAYS],
   );
   for (const o of rows) {
-    if (!o.waNotifiedAt && connected) {
+    // Mode pribadi: tiket menunggu sampai pembeli menghubungi nomor ini (atau nomor kantor aktif lagi).
+    if (!o.waNotifiedAt && connected && buyerChat(o.id, o.buyerPhone)) {
       const { rows: tickets } = await pool.query(
         `SELECT t.code, p."fullName" FROM "Ticket" t JOIN "Participant" p ON p.id = t."participantId"
           WHERE t."orderId" = $1 ORDER BY p.position`,
@@ -919,7 +981,7 @@ async function paidLoop() {
     try { await processPaid(); } catch (e) { logger.error({ err: e.message }, 'proses order lunas gagal'); }
     try { await processOutbox(); } catch (e) { logger.error({ err: e.message }, 'proses outbox gagal'); }
     // Pengingat dan kabar otomatis tidak dikirim di jam tutup; balasan admin (outbox, lunas) tetap jalan.
-    if (!jamTutup()) {
+    if (!jamTutup() && !PRIBADI) {
       try { await processReminders(); } catch (e) { logger.error({ err: e.message }, 'proses pengingat bayar gagal'); }
       try { await processAjakUlang(); } catch (e) { logger.error({ err: e.message }, 'proses ajakan daftar ulang gagal'); }
       try { await drivetech.tick(); } catch (e) { logger.error({ err: e.message }, 'kabar DriveTech gagal'); }
@@ -932,7 +994,7 @@ async function paidLoop() {
 
 let pairingRequested = false;
 async function start() {
-  const { state, saveCreds } = await useMultiFileAuthState('/data/auth');
+  const { state, saveCreds } = await useMultiFileAuthState(AUTH_DIR);
   const { version } = await fetchLatestBaileysVersion();
   const s = makeWASocket({ auth: state, version, logger: pino({ level: 'silent' }), browser: ['KUWERA 5K', 'Chrome', '1.0'] });
   s.ev.on('creds.update', saveCreds);
@@ -942,8 +1004,10 @@ async function start() {
     if (sent?.key?.id) fs.appendFileSync(SENT_IDS, sent.key.id + '\n');
     return sent;
   };
-  s.ev.on('contacts.upsert', rememberContacts);
-  s.ev.on('contacts.update', rememberContacts);
+  if (!PRIBADI) { // kontak HP pribadi tidak disimpan
+    s.ev.on('contacts.upsert', rememberContacts);
+    s.ev.on('contacts.update', rememberContacts);
+  }
   s.ev.on('connection.update', async ({ connection, lastDisconnect, qr }) => {
     if (qr) {
       // Belum tertaut: pakai kode 8 huruf (Perangkat tertaut > Tautkan dengan nomor telepon) kalau
@@ -972,7 +1036,8 @@ async function start() {
       sock = s;
       connected = true;
       pairingRequested = false;
-      logger.info('bot KUWERA terhubung ke WhatsApp');
+      logger.info({ pribadi: PRIBADI }, 'bot KUWERA terhubung ke WhatsApp');
+      if (PRIBADI) return; // grup dan kontak di bawah milik nomor kantor
       // Daftar grup yang diikuti nomor kantor (id -> nama), dipakai worker CS untuk laporan ke grup tim.
       s.groupFetchAllParticipating()
         .then((g) => {
@@ -993,7 +1058,7 @@ async function start() {
   s.ev.on('messages.upsert', async ({ messages, type }) => {
     for (const m of messages) {
       // Nama pengirim di grup (misal Ce Nadia di grup Kuwera Run), supaya worker CS bisa men-tag orang yang tepat.
-      if (!m.key.fromMe && m.key.remoteJid?.endsWith('@g.us') && m.key.participant && m.pushName) {
+      if (!PRIBADI && !m.key.fromMe && m.key.remoteJid?.endsWith('@g.us') && m.key.participant && m.pushName) {
         let senders = {};
         try { senders = JSON.parse(fs.readFileSync('/data/group-senders.json', 'utf8')); } catch { senders = {}; }
         const who = m.key.participantAlt || m.key.participant;
@@ -1003,6 +1068,7 @@ async function start() {
         }
       }
       if (!m.key.fromMe || !m.key.remoteJid || m.key.remoteJid.endsWith('@g.us') || m.key.remoteJid === 'status@broadcast') continue;
+      if (PRIBADI && !pribadiChat[m.key.remoteJid]) continue; // chat pribadi pemilik nomor tidak dicatat
       // Semua pesan keluar diteruskan; worker CS mencocokkan ID-nya dengan sent-ids kedua bot untuk tahu mana balasan admin.
       fs.mkdirSync(INBOX, { recursive: true });
       fs.writeFileSync(`${INBOX}/admin-${m.key.id}.json`, JSON.stringify({ tipe: 'admin', id: m.key.id, bot: 'kuwera', jid: m.key.remoteJid,
@@ -1010,7 +1076,7 @@ async function start() {
     }
     if (type !== 'notify') return;
     for (const msg of messages) {
-      if (msg.key.remoteJid?.endsWith('@g.us')) { try { relayIncoming(msg); } catch (e) { logger.error({ err: e.message }, 'relay grup gagal'); } continue; }
+      if (msg.key.remoteJid?.endsWith('@g.us')) { if (PRIBADI) continue; try { relayIncoming(msg); } catch (e) { logger.error({ err: e.message }, 'relay grup gagal'); } continue; }
       try { await handleIncoming(msg); } catch (e) { logger.error({ err: e.message }, 'gagal memproses pesan masuk'); }
     }
   });
