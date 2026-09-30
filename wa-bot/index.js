@@ -750,7 +750,7 @@ async function promoBerlaku(promo, now = new Date()) {
   if (!promo.quota) return true;
   const { rows: [r] } = await pool.query(
     `SELECT coalesce(sum(quantity), 0)::int AS n FROM "Order"
-      WHERE NOT "isTest" AND subtotal = $1 * quantity
+      WHERE NOT "isTest" AND source = 'web' AND subtotal = $1 * quantity
         AND (status = 'PAID' OR (status = 'PENDING' AND "expiresAt" > timezone('UTC', now())))`,
     [promo.price],
   );
