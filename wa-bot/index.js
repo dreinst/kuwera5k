@@ -375,11 +375,16 @@ async function handleIncoming(msg) {
   if (!hasProof) {
     if (!expired && PAID_CLAIM.test(textOf(msg)) && (await remindProof(msg, order))) return;
     if (expired) {
-      await reply(jid, { text: `Mohon maaf kak, waktu bayar order ${order.id} sudah habis. Kamu masih bisa mendaftar lagi di ${SITE_URL}/daftar, kami tunggu ya!` }, msg);
+      await reply(jid, { text: `Mohon maaf kak, waktu bayar pesanan ${order.id} sudah habis, jadi pesanannya kedaluwarsa dan QRIS lamanya tidak bisa dipakai lagi.\n\n${await promoKalimat()}` }, msg);
     } else {
       await sendQris(jid, order, msg);
     }
     return;
+  }
+  if (expired) {
+    // Bukti bayar untuk pesanan yang sudah kedaluwarsa: pembeli diminta daftar ulang; admin tetap dikabari supaya
+    // uang yang terlanjur masuk bisa dicek dan ditindaklanjuti.
+    await reply(jid, { text: `Terima kasih kak, bukti bayarnya sudah kami terima. Mohon maaf, pesanan ${order.id} sudah lewat batas waktu bayar sehingga tidak bisa kami proses lagi.\n\n${await promoKalimat()}\n\nKalau kakak sudah terlanjur membayar pesanan ini, tenang saja, admin kami akan menghubungi kakak untuk penyelesaiannya 🙏` }, msg);
   }
   await notifyProof(order, expired, msg);
 }
@@ -738,6 +743,21 @@ async function processReminders() {
   }
 }
 
+// Kalimat promo untuk pembeli yang pesanannya kedaluwarsa: harga promo kalau masih berlaku, kalau tidak harga reguler.
+async function promoKalimat() {
+  const { rows: [setting] } = await pool.query(`SELECT value FROM "Setting" WHERE key = 'pricing'`);
+  const pricing = setting?.value || {};
+  const promo = pricing.promo;
+  const now = new Date();
+  const on = !!promo?.enabled && !(promo.start && now < new Date(promo.start)) && !(promo.end && now >= new Date(promo.end));
+  if (on) {
+    const sampai = promo.end ? ` sampai ${new Date(promo.end).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })} WIB` : '';
+    return `Harga ${promo.label || 'Early Bird'} ${rupiah(promo.price)} per tiket sedang berlaku${sampai}, jadi yuk daftar ulang di ${SITE_URL}/daftar dan selesaikan pembayaran dengan QRIS yang baru ya.`;
+  }
+  const reguler = pricing.regular?.price ? ` Harga yang berlaku sekarang ${pricing.regular.label || 'Reguler'} ${rupiah(pricing.regular.price)} per tiket.` : '';
+  return `Harga promonya sudah berakhir.${reguler} Kalau masih mau lari bareng kami, silakan daftar ulang di ${SITE_URL}/daftar lalu bayar sesuai tagihan yang baru ya.`;
+}
+
 // Ajak daftar ulang: order yang lewat batas bayar tanpa bukti bayar dikirimi kabar sekali bahwa pesanannya kedaluwarsa
 // dan cara mendaftar ulang (harga promo disebut kalau masih berlaku). Ordernya sekalian ditandai EXPIRED.
 // Nomor yang sudah punya order lain setelahnya (lunas atau masih menunggu) dilewati.
@@ -774,7 +794,7 @@ async function processAjakUlang() {
       '',
       promoOn
         ? `Kabar baiknya, harga ${promo.label || 'Early Bird'} ${rupiah(promo.price)} per tiket masih berlaku${sampai}. Kalau masih mau lari bareng kami, yuk daftar ulang di ${SITE_URL}/daftar dan selesaikan pembayarannya ya.`
-        : `Kalau masih mau lari bareng kami, kakak bisa daftar ulang di ${SITE_URL}/daftar lalu selesaikan pembayarannya ya. Slotnya masih kami tunggu!`,
+        : await promoKalimat(),
       '',
       'Setelah bayar, kirim screenshot bukti bayarnya di chat ini supaya bisa langsung kami cek. Sampai jumpa di garis start! 🏃',
     ].join('\n');
