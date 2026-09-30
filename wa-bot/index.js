@@ -743,13 +743,27 @@ async function processReminders() {
   }
 }
 
+// Harga promo berlaku: dinyalakan, dalam jendela waktunya, dan kuota tiketnya (promo.quota) belum habis.
+// Sama dengan promoActive() di src/lib/pricing.ts.
+async function promoBerlaku(promo, now = new Date()) {
+  if (!promo?.enabled || (promo.start && now < new Date(promo.start)) || (promo.end && now >= new Date(promo.end))) return false;
+  if (!promo.quota) return true;
+  const { rows: [r] } = await pool.query(
+    `SELECT coalesce(sum(quantity), 0)::int AS n FROM "Order"
+      WHERE NOT "isTest" AND subtotal = $1 * quantity
+        AND (status = 'PAID' OR (status = 'PENDING' AND "expiresAt" > timezone('UTC', now())))`,
+    [promo.price],
+  );
+  return r.n < promo.quota;
+}
+
 // Kalimat promo untuk pembeli yang pesanannya kedaluwarsa: harga promo kalau masih berlaku, kalau tidak harga reguler.
 async function promoKalimat() {
   const { rows: [setting] } = await pool.query(`SELECT value FROM "Setting" WHERE key = 'pricing'`);
   const pricing = setting?.value || {};
   const promo = pricing.promo;
   const now = new Date();
-  const on = !!promo?.enabled && !(promo.start && now < new Date(promo.start)) && !(promo.end && now >= new Date(promo.end));
+  const on = await promoBerlaku(promo, now);
   if (on) {
     const sampai = promo.end ? ` sampai ${new Date(promo.end).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })} WIB` : '';
     return `Harga ${promo.label || 'Early Bird'} ${rupiah(promo.price)} per tiket sedang berlaku${sampai}, jadi yuk daftar ulang di ${SITE_URL}/daftar dan selesaikan pembayaran dengan QRIS yang baru ya.`;
@@ -770,7 +784,7 @@ async function processAjakUlang() {
   const pricing = setting?.value || {};
   const promo = pricing.promo;
   const now = new Date();
-  const promoOn = !!promo?.enabled && !(promo.start && now < new Date(promo.start)) && !(promo.end && now >= new Date(promo.end));
+  const promoOn = await promoBerlaku(promo, now);
   const { rows } = await pool.query(
     `SELECT o.id, o."buyerPhone",
             (SELECT p."fullName" FROM "Participant" p WHERE p."orderId" = o.id ORDER BY p.position LIMIT 1) AS buyer
