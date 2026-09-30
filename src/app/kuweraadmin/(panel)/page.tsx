@@ -23,9 +23,9 @@ function Stat({ label, value, note, accent = false }: { label: string; value: st
 
 function Card({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <section className="rounded-[20px] border border-glass-border bg-card p-6">
+    <section className="flex flex-col rounded-[20px] border border-glass-border bg-card p-6">
       <h2 className="font-display text-xl text-white uppercase">{title}</h2>
-      <div className="mt-4">{children}</div>
+      <div className="mt-4 flex flex-1 flex-col">{children}</div>
     </section>
   );
 }
@@ -59,30 +59,34 @@ export default async function DashboardPage() {
         </div>}
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className={`grid gap-4 sm:grid-cols-2 ${superadmin ? "lg:grid-cols-4" : "lg:grid-cols-5"}`}>
         <Stat accent label="Peserta lunas" value={s.paid.toLocaleString("id-ID")} note={`Sisa kuota ${s.remaining.toLocaleString("id-ID")} dari ${s.quotaTotal.toLocaleString("id-ID")}`} />
         <Stat label="Menunggu bayar" value={s.activePending.toLocaleString("id-ID")} note="Masih dalam batas waktu bayar" />
         <Stat label="Kedaluwarsa / gagal" value={(s.expired + s.failed + s.staleOrders).toLocaleString("id-ID")} note={`${s.expired} kedaluwarsa, ${s.failed} gagal`} />
         <Stat label="Race pack diambil" value={s.collected.toLocaleString("id-ID")} note={`dari ${s.paid.toLocaleString("id-ID")} peserta lunas`} />
+        {!superadmin && <Stat label="Pendapatan tiket" value={formatRupiah(s.revenueTicket)} note="Harga tiket, tanpa kode unik" />}
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      {superadmin && <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Stat label="Pendapatan tiket" value={formatRupiah(s.revenueTicket)} note="Harga tiket, tanpa kode unik" />
         {superadmin && <Stat label="Kode unik terkumpul" value={formatRupiah(s.uniqueCodes)} note="Untuk menutup potongan tarik GoPay" />}
         {superadmin && <Stat label="Total masuk GoPay" value={formatRupiah(s.revenueTotal)} note="Sesuai nominal di GoPay Merchant" />}
         {superadmin && <Stat label="Sudah ditarik" value={formatRupiah(s.penarikan.masuk)}
           note={s.penarikan.saldo ? `Potongan tarik ${formatRupiah(s.penarikan.potongan)}, saldo belum ditarik ${formatRupiah(s.revenueTotal - s.penarikan.saldo)}` : "Belum ada penarikan tercatat"} />}
-      </div>
+      </div>}
 
       {rincian && <GopayRincian d={rincian} />}
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Card title="Pendaftar lunas 14 hari terakhir">
-          <div className="flex h-40 items-end gap-1.5">
+          {/* Grafik mengisi sisa tinggi kartu (sejajar dengan kartu jersey di sebelahnya). */}
+          <div className="flex min-h-40 flex-1 gap-1.5">
             {s.daily.map((d) => (
               <div key={d.key} className="flex flex-1 flex-col items-center gap-1" title={`${d.label}: ${d.count}`}>
-                <span className="text-[10px] text-white/80">{d.count || ""}</span>
-                <div className="w-full rounded-t-md bg-brand-yellow" style={{ height: `${(d.count / maxDaily) * 100}%`, minHeight: d.count ? 4 : 1 }} />
+                <span className="text-[10px] text-white/80">{d.count || "\u00a0"}</span>
+                <div className="relative w-full flex-1">
+                  <div className="absolute inset-x-0 bottom-0 rounded-t-md bg-brand-yellow" style={{ height: `${(d.count / maxDaily) * 100}%`, minHeight: d.count ? 4 : 1 }} />
+                </div>
               </div>
             ))}
           </div>
@@ -106,8 +110,20 @@ export default async function DashboardPage() {
 
       <div className="grid gap-6 lg:grid-cols-3">
         <Card title="Jenis kelamin">
-          <p className="text-white/85">Laki-laki <span className="font-display text-2xl text-brand-yellow">{s.gender.L}</span></p>
-          <p className="mt-1 text-white/85">Perempuan <span className="font-display text-2xl text-brand-yellow">{s.gender.P}</span></p>
+          <div className="space-y-4">
+            {([["Laki-laki", s.gender.L], ["Perempuan", s.gender.P]] as const).map(([label, n]) => {
+              const pct = Math.round((n / Math.max(1, s.gender.L + s.gender.P)) * 100);
+              return (
+                <div key={label}>
+                  <div className="flex items-baseline justify-between text-white/85">
+                    <span>{label}</span>
+                    <span><span className="font-display text-2xl text-brand-yellow">{n}</span> <span className="text-sm text-white/65">{pct}%</span></span>
+                  </div>
+                  <div className="mt-1 h-3 rounded-full bg-white/10"><div className="h-3 rounded-full bg-brand-yellow" style={{ width: `${pct}%` }} /></div>
+                </div>
+              );
+            })}
+          </div>
         </Card>
         <Card title="Golongan darah">
           {s.blood.length === 0 ? <p className="text-white/70">Belum ada data</p> : s.blood.map((b) => (

@@ -33,15 +33,15 @@ export default async function QrPage() {
           <a href="/kuweraadmin/berkas/zip?jenis=bukti" className="rounded-full border border-brand-yellow px-6 py-3 text-sm font-semibold text-brand-yellow">Unduh semua bukti bayar (ZIP)</a>
       </div>
 
-      <div className="mt-6 space-y-5">
-        {orders.length === 0 && <p className="rounded-[20px] border border-glass-border bg-card p-6 text-white/75">Belum ada order lunas atau bukti bayar.</p>}
+      <div className="mt-6 gap-5 lg:columns-2">
+        {orders.length === 0 && <p className="mb-5 break-inside-avoid rounded-[20px] border border-glass-border bg-card p-6 text-white/75">Belum ada order lunas atau bukti bayar.</p>}
         {orders.map((o) => (
-          <section key={o.id} className="rounded-[20px] border border-glass-border bg-card p-5">
+          <section key={o.id} className="mb-5 break-inside-avoid rounded-[20px] border border-glass-border bg-card p-5">
             <div className="flex flex-wrap items-baseline justify-between gap-2">
               <Link href={`/kuweraadmin/peserta/${o.id}`} className="font-mono text-brand-yellow hover:underline">{o.id}</Link>
               <p className="text-sm text-white/75">{o.isTest && <span className="font-semibold text-gold">UJI &middot; </span>}{o.participants[0]?.fullName} &middot; {o.status === "PAID" ? `lunas ${fmtDateTime(o.paidAt)}` : "belum lunas"}</p>
             </div>
-            <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="mt-4 grid grid-cols-2 gap-3">
               {o.participants.filter((p) => p.ticket).map((p) => (
                 <figure key={p.id} className="rounded-2xl bg-white p-3 text-green-deep">
                   {/* eslint-disable-next-line @next/next/no-img-element -- PNG dari route admin, bukan aset statis */}
@@ -53,8 +53,9 @@ export default async function QrPage() {
                   </figcaption>
                 </figure>
               ))}
-              {o.proofs.map((f) => (
-                <figure key={f.id} className="rounded-2xl border border-glass-border bg-white/5 p-3">
+              {o.proofs.map((f, i) => (
+                // Jumlah kotak ganjil: bukti terakhir dibuat selebar dua kolom supaya tidak ada slot kosong.
+                <figure key={f.id} className={`rounded-2xl border border-glass-border bg-white/5 p-3 ${i === o.proofs.length - 1 && (o.participants.filter((p) => p.ticket).length + o.proofs.length) % 2 ? "col-span-2" : ""}`}>
                   {f.mimeType.startsWith("image/") ? (
                     // eslint-disable-next-line @next/next/no-img-element -- gambar dari database lewat route admin
                     <img src={`/kuweraadmin/berkas/bukti/${f.id}`} alt={`Bukti bayar ${o.id}`} loading="lazy" className="max-h-72 w-full rounded-lg object-contain" />

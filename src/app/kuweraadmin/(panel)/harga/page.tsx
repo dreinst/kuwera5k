@@ -23,6 +23,7 @@ export default async function HargaPage() {
         <div className="rounded-[20px] border border-glass-border bg-card p-5">
           <p className="text-sm text-white/70">Status pendaftaran sekarang</p>
           <p className={`font-display mt-1 text-2xl uppercase ${open ? "text-brand-yellow" : "text-white"}`}>{open ? "Dibuka" : "Ditutup"}</p>
+          <p className="mt-1 text-sm text-white/75">{open ? "Peserta bisa mendaftar lewat website dan formulir WhatsApp" : "Website menampilkan pendaftaran ditutup"}</p>
         </div>
         <div className="rounded-[20px] border border-glass-border bg-card p-5">
           <p className="text-sm text-white/70">Harga yang berlaku sekarang</p>
