@@ -738,17 +738,19 @@ async function processReminders() {
   }
 }
 
-// Ajak daftar ulang: order yang lewat batas bayar tanpa bukti bayar dikirimi ajakan sekali, hanya selama harga promo
-// (Early Bird) berlaku. Nomor yang sudah punya order lain setelahnya (lunas atau masih menunggu) dilewati.
+// Ajak daftar ulang: order yang lewat batas bayar tanpa bukti bayar dikirimi kabar sekali bahwa pesanannya kedaluwarsa
+// dan cara mendaftar ulang (harga promo disebut kalau masih berlaku). Ordernya sekalian ditandai EXPIRED.
+// Nomor yang sudah punya order lain setelahnya (lunas atau masih menunggu) dilewati.
 const AJAK_FILE = '/data/ajak-ulang.json';
 let diajak = {};
 try { diajak = JSON.parse(fs.readFileSync(AJAK_FILE, 'utf8')); } catch { diajak = {}; }
 async function processAjakUlang() {
   if (!connected) return;
   const { rows: [setting] } = await pool.query(`SELECT value FROM "Setting" WHERE key = 'pricing'`);
-  const promo = setting?.value?.promo;
+  const pricing = setting?.value || {};
+  const promo = pricing.promo;
   const now = new Date();
-  if (!promo?.enabled || (promo.start && now < new Date(promo.start)) || (promo.end && now >= new Date(promo.end))) return;
+  const promoOn = !!promo?.enabled && !(promo.start && now < new Date(promo.start)) && !(promo.end && now >= new Date(promo.end));
   const { rows } = await pool.query(
     `SELECT o.id, o."buyerPhone",
             (SELECT p."fullName" FROM "Participant" p WHERE p."orderId" = o.id ORDER BY p.position LIMIT 1) AS buyer
@@ -766,16 +768,19 @@ async function processAjakUlang() {
     const jid = buyerChat(o.id, o.buyerPhone);
     if (!jid) continue;
     const name = o.buyer ? o.buyer.split(' ')[0] : 'kak';
-    const sampai = promo.end ? ` sampai ${new Date(promo.end).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })} WIB` : '';
+    const sampai = promoOn && promo.end ? ` sampai ${new Date(promo.end).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })} WIB` : '';
     const text = [
-      `Halo kak ${name} 😊 Pesanan KUWERA 5K kamu (${o.id}) belum sempat dibayar sampai batas waktunya, jadi pesanannya otomatis batal.`,
+      `Halo kak ${name} 😊 Pesanan KUWERA 5K kamu (${o.id}) belum sempat dibayar sampai batas waktunya, jadi pesanannya sudah kedaluwarsa.`,
       '',
-      `Kabar baiknya, harga ${promo.label || 'Early Bird'} ${rupiah(promo.price)} per tiket masih berlaku${sampai}. Kalau masih mau lari bareng kami, yuk daftar lagi di ${SITE_URL} dan selesaikan pembayarannya ya.`,
+      promoOn
+        ? `Kabar baiknya, harga ${promo.label || 'Early Bird'} ${rupiah(promo.price)} per tiket masih berlaku${sampai}. Kalau masih mau lari bareng kami, yuk daftar ulang di ${SITE_URL}/daftar dan selesaikan pembayarannya ya.`
+        : `Kalau masih mau lari bareng kami, kakak bisa daftar ulang di ${SITE_URL}/daftar lalu selesaikan pembayarannya ya. Slotnya masih kami tunggu!`,
       '',
       'Setelah bayar, kirim screenshot bukti bayarnya di chat ini supaya bisa langsung kami cek. Sampai jumpa di garis start! 🏃',
     ].join('\n');
     try {
       await reply(jid, { text });
+      await pool.query(`UPDATE "Order" SET status = 'EXPIRED', "updatedAt" = timezone('UTC', now()) WHERE id = $1 AND status = 'PENDING'`, [o.id]);
       diajak[o.id] = Date.now();
       fs.writeFileSync(AJAK_FILE, JSON.stringify(diajak));
       await archive(o.id, 'ajakan daftar ulang (lewat batas bayar) dikirim', null, jid);

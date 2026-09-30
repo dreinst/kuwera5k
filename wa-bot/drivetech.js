@@ -1,7 +1,7 @@
 // Bayar manual DriveTech lewat bot WhatsApp kantor yang sama (keputusan pemilik 2026-09-29: satu nomor, satu bot).
 //
 // 1. Penyewa menekan "Minta QRIS via WhatsApp" di halaman bayar DriveTech; pesannya berisi kode booking BK-XXXXXXXXXX.
-//    Bot membalas dengan kartu QRIS dinamis (nominal = biaya admin + kode unik 500..999) dari /api/qris/{kode}.
+//    Bot membalas dengan kartu QRIS dinamis (nominal = biaya admin + kode unik 350..500) dari /api/qris/{kode}.
 // 2. Screenshot bukti bayar (dengan kode booking di keterangan, atau menyusul di chat yang sama) diunggah ke
 //    /api/bot/booking/{kode}/bukti lalu diteruskan ke Discord #chatbot dengan tombol Setujui/Tolak
 //    (custom_id drivetech:setujui:{kode}); tombolnya ditangani bot D'Pro Ops di VPS.
