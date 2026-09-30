@@ -3,7 +3,7 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { fullNameOf, orderInputSchema, issuesToMap } from "@/lib/registration";
 import { verifyTurnstile } from "@/lib/turnstile";
-import { currentPrice, getPricing, isOpen } from "@/lib/pricing";
+import { currentPrice, getPricing, isOpen, promoUsed } from "@/lib/pricing";
 import { rateLimit, tooMany } from "@/lib/rate-limit";
 import {
   ORDER_LOCK_KEY, activeOrderWhere, getSettings, heldCount, newOrderId, paymentMode, pickUniqueCode, syncOrderWithMidtrans, validatePromo,
@@ -121,6 +121,17 @@ export async function POST(req: Request) {
         const left = Math.min(category.quota - held, settings.quotaTotal - totalHeld);
         if (left <= 0) return { error: "Kuota sudah penuh", status: 409 };
         if (left < quantity) return { error: `Sisa kuota tinggal ${left} tiket`, status: 409 };
+
+        // Kuota harga promo dicek ulang di dalam kunci supaya pendaftaran bersamaan tidak melewati kuota.
+        if (pricing.promo.quota && unitPrice === pricing.promo.price && unitPrice !== pricing.regular.price) {
+          const sisa = pricing.promo.quota - (await promoUsed(pricing.promo.price, now, tx));
+          if (sisa < quantity) {
+            const message = sisa > 0
+              ? `Kuota ${pricing.promo.label} tinggal ${sisa} tiket, boleh kurangi jumlah tiketnya ya`
+              : `Kuota ${pricing.promo.label} baru saja habis. Silakan muat ulang halaman, harga yang berlaku sekarang ${pricing.regular.label} Rp${pricing.regular.price.toLocaleString("id-ID")}`;
+            return { error: message, status: 409 };
+          }
+        }
 
         let discount = 0;
         let promoCode: string | null = null;

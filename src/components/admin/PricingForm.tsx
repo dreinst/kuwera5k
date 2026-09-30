@@ -36,6 +36,9 @@ export default function PricingForm({ pricing }: { pricing: Pricing }) {
           <Field label="Selesai (WIB, kosongkan kalau sampai dimatikan)">
             <input type="datetime-local" name="promoEnd" defaultValue={toWib(pricing.promo.end)} className={inputCls} />
           </Field>
+          <Field label={`Kuota tiket promo (kosongkan kalau tanpa batas)${pricing.promo.quota ? `, terpakai ${pricing.promoUsed ?? 0}` : ""}`}>
+            <input name="promoQuota" inputMode="numeric" defaultValue={pricing.promo.quota ?? ""} placeholder="misalnya 100" className={inputCls} />
+          </Field>
         </div>
       </fieldset>
 

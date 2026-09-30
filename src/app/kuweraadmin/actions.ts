@@ -156,6 +156,7 @@ export async function savePricingAction(_prev: FormState, form: FormData): Promi
       price: num("promoPrice"),
       start: wibToIso(form.get("promoStart")) ?? null,
       end: wibToIso(form.get("promoEnd")) ?? null,
+      quota: num("promoQuota") || null, // kosong atau 0 = tanpa batas kuota
     },
     regular: { label: text("regularLabel"), price: num("regularPrice") },
   };
