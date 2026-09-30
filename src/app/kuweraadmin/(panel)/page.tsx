@@ -31,8 +31,10 @@ function Card({ title, children }: { title: string; children: React.ReactNode })
 }
 
 export default async function DashboardPage() {
-  await requireAdmin(FINANCE);
-  const [s, rincian] = await Promise.all([dashboardStats(), gopayRincian()]);
+  const admin = await requireAdmin(FINANCE);
+  // Kode unik, penarikan GoPay, dan rinciannya hanya untuk superadmin; admin keuangan melihat pendapatan dan total masuk.
+  const superadmin = admin.role === "superadmin";
+  const [s, rincian] = await Promise.all([dashboardStats(), superadmin ? gopayRincian() : null]);
   const maxDaily = Math.max(1, ...s.daily.map((d) => d.count));
   const maxJersey = Math.max(1, ...s.jersey.map((j) => j.count));
 
@@ -64,15 +66,15 @@ export default async function DashboardPage() {
         <Stat label="Race pack diambil" value={s.collected.toLocaleString("id-ID")} note={`dari ${s.paid.toLocaleString("id-ID")} peserta lunas`} />
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className={`grid gap-4 sm:grid-cols-2 ${superadmin ? "lg:grid-cols-4" : ""}`}>
         <Stat label="Pendapatan tiket" value={formatRupiah(s.revenueTicket)} note="Harga tiket, tanpa kode unik" />
-        <Stat label="Kode unik terkumpul" value={formatRupiah(s.uniqueCodes)} note="Untuk menutup potongan tarik GoPay" />
+        {superadmin && <Stat label="Kode unik terkumpul" value={formatRupiah(s.uniqueCodes)} note="Untuk menutup potongan tarik GoPay" />}
         <Stat label="Total masuk GoPay" value={formatRupiah(s.revenueTotal)} note="Sesuai nominal di GoPay Merchant" />
-        <Stat label="Sudah ditarik" value={formatRupiah(s.penarikan.masuk)}
-          note={s.penarikan.saldo ? `Potongan tarik ${formatRupiah(s.penarikan.potongan)}, saldo belum ditarik ${formatRupiah(s.revenueTotal - s.penarikan.saldo)}` : "Belum ada penarikan tercatat"} />
+        {superadmin && <Stat label="Sudah ditarik" value={formatRupiah(s.penarikan.masuk)}
+          note={s.penarikan.saldo ? `Potongan tarik ${formatRupiah(s.penarikan.potongan)}, saldo belum ditarik ${formatRupiah(s.revenueTotal - s.penarikan.saldo)}` : "Belum ada penarikan tercatat"} />}
       </div>
 
-      <GopayRincian d={rincian} />
+      {rincian && <GopayRincian d={rincian} />}
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Card title="Pendaftar lunas 14 hari terakhir">
