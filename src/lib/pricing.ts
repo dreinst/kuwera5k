@@ -37,7 +37,7 @@ export async function getPricing(): Promise<Pricing> {
 export async function promoUsed(price: number, now = new Date(), db: Prisma.TransactionClient | typeof prisma = prisma) {
   const [r] = await db.$queryRaw<{ n: number }[]>`
     SELECT coalesce(sum(quantity), 0)::int AS n FROM "Order"
-     WHERE NOT "isTest" AND subtotal = ${price} * quantity
+     WHERE NOT "isTest" AND source = 'web' AND subtotal = ${price} * quantity
        AND (status = 'PAID' OR (status = 'PENDING' AND "expiresAt" > ${now}))`;
   return r?.n ?? 0;
 }

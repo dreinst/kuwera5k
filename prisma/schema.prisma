@@ -52,6 +52,7 @@ model Order {
   paidAt      DateTime?
   quantity    Int         @default(1) // jumlah tiket dalam satu pembelian
   isTest      Boolean  @default(false) // data uji sistem: tetap disimpan, tidak ikut dihitung di statistik, kuota, dan pendapatan
+  source      String   @default("web") // "web" = daftar sendiri di website, "kudam" = anggota Kudam diinput superadmin
   uniqueCode  Int         @default(0) // kode unik 3 digit di akhir nominal (bayar manual QRIS)
   waNotifiedAt    DateTime? // bot WA sudah mengirim tautan tiket ke pemesan
   adminNotifiedAt DateTime? // superadmin sudah dikabari lewat Telegram
