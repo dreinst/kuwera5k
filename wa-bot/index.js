@@ -349,6 +349,16 @@ async function handleIncoming(msg) {
   }
   else if (match && !hasProof) await archive(archiveId, 'pesan pesanan masuk (minta QRIS)', null, jid);
   if (!match) {
+    // Website error atau tidak bisa dibuka: kirim formulir pendaftaran lewat WhatsApp; formulir yang sudah diisi
+    // didaftarkan lewat website (/api/bot/daftar) lalu dibalas QRIS seperti pendaftaran biasa.
+    if (!hasProof && BOT_KEY) {
+      const teks = textOf(msg);
+      if (teks.toUpperCase().includes(FORM_HEADER)) return prosesFormulir(jid, msg, teks);
+      if (WEB_ERROR.test(teks)) {
+        if (!recent(`${jid}|formulir`)) await kirimFormulir(jid, msg);
+        return;
+      }
+    }
     // Screenshot bukti bayar yang dikirim menyusul (tanpa nomor order) di chat yang sudah konfirmasi.
     const pending = hasProof && Object.keys(confirmChats).find((id) => confirmChats[id] === jid);
     if (pending && !recent(`${jid}|${pending}|bukti`)) {
@@ -496,6 +506,49 @@ async function qrisCard(orderId) {
     return null;
   }
   return Buffer.from(await res.arrayBuffer());
+}
+
+// --- Formulir pendaftaran lewat WhatsApp (cadangan kalau website tidak bisa dibuka) ---
+const BOT_KEY = process.env.KUWERA_BOT_KEY || '';
+const FORM_HEADER = 'FORMULIR PENDAFTARAN KUWERA 5K';
+const WEB_ERROR = /(web|website|situs|link|halaman|laman|form|formulir|daftar|pendaftaran|kuwera5k).{0,40}(error|eror|gagal|tidak bisa|tdk bisa|gak bisa|ga bisa|gabisa|g bisa|nggak bisa|ngga bisa|blank|loading terus|lemot|macet|stuck|down|not found|404)|(tidak bisa|tdk bisa|gak bisa|ga bisa|gabisa|g bisa|nggak bisa|ngga bisa)\s*(di)?(buka|akses|masuk|daftar|lanjut)|form(ulir)? manual|daftar (lewat|via) (wa|whatsapp|chat)|^formulir$/i;
+
+async function botApi(path, body) {
+  const res = await fetch(`${SITE_URL}/api/bot/${path}`, {
+    method: body ? 'POST' : 'GET', signal: AbortSignal.timeout(30000),
+    headers: { 'x-bot-key': BOT_KEY, 'Content-Type': 'application/json' }, body: body ? JSON.stringify(body) : undefined,
+  });
+  return { status: res.status, data: await res.json().catch(() => ({})) };
+}
+
+async function kirimFormulir(jid, msg) {
+  const { status, data } = await botApi('formulir');
+  if (status !== 200 || !data.template) return logger.error({ status }, 'gagal mengambil template formulir');
+  await reply(jid, { text: 'Mohon maaf atas kendalanya ya Kak 🙏 Kakak tetap bisa mendaftar lewat chat ini. Silakan salin formulir di bawah, isi setelah tanda titik dua, lalu kirim balik ke sini. Satu formulir untuk satu peserta ya Kak. Setelah itu kami kirimkan QRIS pembayarannya 😊' }, msg);
+  await reply(jid, { text: data.template });
+}
+
+async function prosesFormulir(jid, msg, teks) {
+  if (recent(`${jid}|formulir-isi|${teks.length}`)) return; // pesan yang sama terkirim dua kali
+  const terisi = teks.split('\n').filter((l) => /:\s*\S/.test(l) && !/^dengan mengirim/i.test(l.trim())).length;
+  if (terisi < 5) {
+    await reply(jid, { text: 'Formulirnya sepertinya belum diisi ya Kak 😊 Silakan isi setelah setiap tanda titik dua, lalu kirim lagi ke sini.' }, msg);
+    return;
+  }
+  const { status, data } = await botApi('daftar', { text: teks });
+  if (status !== 200 || !data.orderId) {
+    const masalah = Array.isArray(data.masalah) && data.masalah.length ? data.masalah : ['Pendaftaran belum bisa diproses, coba kirim ulang sebentar lagi ya'];
+    await reply(jid, { text: ['Terima kasih Kak, formulirnya sudah kami baca 🙏 Ada yang perlu dilengkapi dulu ya:', '', ...masalah.map((m) => `• ${m}`), '', 'Silakan perbaiki bagian itu lalu kirim ulang formulir lengkapnya ke sini.'].join('\n') }, msg);
+    return;
+  }
+  const order = await loadOrder(data.orderId);
+  if (!order) return logger.error({ orderId: data.orderId }, 'order dari formulir tidak ditemukan');
+  confirmChats[order.id] = jid;
+  saveConfirmChats();
+  await archive(order.id, 'pendaftaran lewat formulir WhatsApp', null, jid);
+  const nama = order.buyer ? order.buyer.split(' ')[0] : '';
+  await reply(jid, { text: `Terima kasih Kak ${nama}! Pendaftarannya sudah kami terima dengan nomor pesanan ${order.id} 🙌 Berikut QRIS untuk pembayarannya ya.` }, msg);
+  await sendQris(jid, order, msg);
 }
 
 async function sendQris(jid, order, quoted) {
