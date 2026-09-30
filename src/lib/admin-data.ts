@@ -23,7 +23,7 @@ export async function dashboardStats(now = new Date()) {
     getSettings(),
     heldCount(null, now),
     prisma.participant.groupBy({ by: ["jerseySize"], where: { order: { status: "PAID", isTest: false } }, _count: { _all: true } }),
-    prisma.participant.groupBy({ by: ["gender"], where: { order: { status: "PAID", isTest: false } }, _count: { _all: true } }),
+    prisma.participant.groupBy({ by: ["gender"], where: { order: { status: "PAID", isTest: false, source: "web" } }, _count: { _all: true } }),
     prisma.participant.groupBy({ by: ["bloodType"], where: { order: { status: "PAID", isTest: false } }, _count: { _all: true } }),
     prisma.participant.groupBy({ by: ["city"], where: { order: { status: "PAID", isTest: false } }, _count: { _all: true }, orderBy: { _count: { city: "desc" } }, take: 5 }),
     prisma.ticket.count({ where: { racepackCollectedAt: { not: null }, order: { isTest: false } } }),

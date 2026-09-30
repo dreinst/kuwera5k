@@ -47,7 +47,7 @@ export default async function PesertaDetailPage({ params }: { params: Promise<{ 
   if (!order) notFound();
   const buyer = order.participants[0];
   // Order bayar manual: QRIS tanpa Snap, belum ada pembayaran Midtrans.
-  const manualOrder = order.uniqueCode > 0 || order.payments.some((x) => x.gateway === MANUAL_GATEWAY);
+  const manualOrder = order.uniqueCode > 0 || order.source === "kudam" || order.payments.some((x) => x.gateway === MANUAL_GATEWAY);
   const verifiedBy = (order.payments.find((x) => x.gateway === MANUAL_GATEWAY)?.rawPayload as { verifiedBy?: string } | undefined)?.verifiedBy;
   const method = PAYMENT_METHODS.find((m) => m.id === order.paymentMethod)?.label ?? order.paymentMethod;
   const usesMidtrans = !!order.snapToken || order.payments.some((x) => x.gateway.startsWith("midtrans"));

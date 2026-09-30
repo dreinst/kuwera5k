@@ -6,7 +6,8 @@ import { prisma } from "@/lib/db";
 import { FINANCE, LOGIN_ERROR, SCAN, SUPER, allowed, attemptLogin, clientIp, deviceName, endSession, getAdmin, hashPassword, homeFor, logAdmin, sha256 } from "@/lib/admin-auth";
 import { rateLimit } from "@/lib/rate-limit";
 import { checkOrderWithMidtrans, type MidtransCheck } from "@/lib/admin-data";
-import { MANUAL_GATEWAY, markOrderPaid, syncOrderWithMidtrans } from "@/lib/orders";
+import { MANUAL_GATEWAY, ORDER_LOCK_KEY, getSettings, heldCount, markOrderPaid, newOrderId, syncOrderWithMidtrans } from "@/lib/orders";
+import { JERSEY_SIZES, normalizePhone, titleName } from "@/lib/registration";
 import { verifyTurnstile } from "@/lib/turnstile";
 import type { Pricing } from "@/lib/pricing";
 
@@ -267,4 +268,84 @@ export async function searchTicketsAction(q: string): Promise<{ tickets?: RegTic
     select: ticketView, orderBy: { code: "asc" }, take: 10,
   });
   return { tickets: rows.map(toRegTicket) };
+}
+
+
+// --- Anggota Kudam (khusus superadmin) ---
+// Diinput superadmin: cukup nama, nomor WA, ukuran jersey. Harga tetap Rp125.000, bayar QRIS statis tanpa kode unik
+// (nominalnya disampaikan superadmin), tidak memakai kuota harga promo tapi tetap masuk kuota total peserta.
+// Batas bayar = hari lomba, jadi tidak ikut kedaluwarsa otomatis maupun pengingat bot.
+const KUDAM_PRICE = 125000;
+const KUDAM_HOLD_UNTIL = new Date("2026-10-24T00:00:00+07:00");
+export type KudamRow = { nama: string; wa: string; jersey: string };
+
+export async function createKudamAction(rows: KudamRow[]): Promise<{ ok?: string; error?: string }> {
+  const admin = await getAdmin();
+  if (!admin || !allowed(admin.role, SUPER)) return { error: "Hanya superadmin yang bisa menambah anggota Kudam" };
+  const clean: KudamRow[] = [];
+  for (const [i, r] of rows.entries()) {
+    const nama = titleName(r.nama ?? "");
+    const wa = normalizePhone(r.wa);
+    if (!r.nama?.trim() && !r.wa?.trim()) continue; // baris kosong dilewati
+    if (!/^[\p{L}][\p{L}\s.,'()/-]*$/u.test(nama) || nama.length < 2) return { error: `Baris ${i + 1}: nama diisi huruf, minimal 2 huruf` };
+    if (!/^08\d{8,11}$/.test(wa)) return { error: `Baris ${i + 1}: nomor WA diawali 08 dan berisi 10 sampai 13 angka` };
+    if (!(JERSEY_SIZES as readonly string[]).includes(r.jersey)) return { error: `Baris ${i + 1}: ukuran jersey belum dipilih` };
+    clean.push({ nama, wa, jersey: r.jersey });
+  }
+  if (!clean.length) return { error: "Belum ada anggota yang diisi" };
+  const category = await prisma.category.findFirst({ where: { isActive: true }, orderBy: { price: "asc" } });
+  if (!category) return { error: "Kategori pendaftaran tidak ditemukan" };
+  const settings = await getSettings();
+  const now = new Date();
+  const r = await prisma.$transaction(async (tx) => {
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(${ORDER_LOCK_KEY})`;
+    const left = Math.min(category.quota - (await heldCount(category.id, now, tx)), settings.quotaTotal - (await heldCount(null, now, tx)));
+    if (left < clean.length) return { error: `Sisa kuota peserta tinggal ${Math.max(0, left)}` };
+    for (const m of clean) {
+      await tx.order.create({
+        data: {
+          id: newOrderId(), categoryId: category.id, status: "PENDING", subtotal: KUDAM_PRICE, discount: 0, fee: 0, total: KUDAM_PRICE,
+          quantity: 1, uniqueCode: 0, paymentMethod: "qris", buyerEmail: "", buyerPhone: m.wa, expiresAt: KUDAM_HOLD_UNTIL, source: "kudam",
+          participants: { create: [{
+            position: 1, fullName: m.nama, firstName: m.nama, phone: m.wa, email: "", jerseySize: m.jersey,
+            birthDate: new Date("2000-01-01T00:00:00+07:00"), gender: "L", emergencyName: "-", emergencyPhone: "-", community: "Kudam V/Brawijaya",
+          }] },
+        },
+      });
+    }
+    return { ok: `${clean.length} anggota Kudam ditambahkan` };
+  }, { timeout: 20_000 });
+  if (r.ok) await logAdmin(admin.username, "tambah_kudam", `${clean.length} anggota: ${clean.map((m) => m.nama).join(", ").slice(0, 300)}`);
+  revalidatePath("/kuweraadmin/kudam");
+  return r;
+}
+
+// Tandai lunas beberapa anggota sekaligus. Superadmin mengetik ulang total yang masuk (jumlah x Rp125.000) sebagai
+// konfirmasi; setelah lunas bot WA mengirim e-ticket dan QR registrasi ulang ke nomor WA tiap anggota.
+export async function markKudamPaidAction(orderIds: string[], confirmTotal: number): Promise<{ ok?: string; error?: string }> {
+  const admin = await getAdmin();
+  if (!admin || !allowed(admin.role, SUPER)) return { error: "Hanya superadmin yang bisa menandai lunas" };
+  const orders = await prisma.order.findMany({ where: { id: { in: orderIds }, source: "kudam", status: "PENDING" }, select: { id: true, total: true } });
+  if (!orders.length || orders.length !== orderIds.length) return { error: "Ada anggota yang sudah lunas atau tidak ditemukan, muat ulang halaman" };
+  const total = orders.reduce((n, o) => n + o.total, 0);
+  if (confirmTotal !== total) return { error: `Total yang diketik berbeda dengan tagihan (Rp${total.toLocaleString("id-ID")})` };
+  for (const o of orders) {
+    await markOrderPaid(o.id, {
+      gateway: MANUAL_GATEWAY, gatewayRef: null, method: "qris", amount: o.total,
+      rawPayload: { verifiedBy: admin.username, via: "kudam", verifiedAt: new Date().toISOString(), note: "Anggota Kudam, bayar QRIS statis" },
+    });
+  }
+  await logAdmin(admin.username, "lunas_kudam", `${orders.length} anggota Rp${total}`);
+  revalidatePath("/kuweraadmin/kudam");
+  return { ok: `${orders.length} anggota ditandai lunas. E-ticket dikirim bot ke WhatsApp masing-masing.` };
+}
+
+export async function cancelKudamAction(orderId: string): Promise<{ ok?: string; error?: string }> {
+  const admin = await getAdmin();
+  if (!admin || !allowed(admin.role, SUPER)) return { error: "Hanya superadmin yang bisa membatalkan" };
+  const r = await prisma.order.updateMany({ where: { id: orderId, source: "kudam", status: "PENDING" }, data: { status: "EXPIRED", expiresAt: new Date() } });
+  if (!r.count) return { error: "Anggota ini sudah lunas atau tidak ditemukan" };
+  await logAdmin(admin.username, "batal_kudam", orderId);
+  revalidatePath("/kuweraadmin/kudam");
+  return { ok: "Dibatalkan" };
 }
