@@ -441,7 +441,7 @@ function FormSteps({ categories, fees, methods, paymentMode, trackCheckout, maxT
                 <Line k="Harga tiket" v={quantity > 1 ? `${quantity} × ${formatRupiah(category.price)} = ${formatRupiah(subtotal)}` : formatRupiah(subtotal)} />
                 {discount > 0 && <Line k={`Diskon ${promo?.code}`} v={`\u2212${formatRupiah(discount)}`} />}
                 {manual
-                  ? <Line k="Kode unik" v="beberapa rupiah, muncul di halaman bayar" muted />
+                  ? <Line k="Kode unik" v="Rp200 sampai Rp349, muncul di halaman bayar" muted />
                   : <Line k="Biaya layanan" v="ditentukan di langkah pembayaran" muted />}
               </div>
 
@@ -493,7 +493,7 @@ function FormSteps({ categories, fees, methods, paymentMode, trackCheckout, maxT
               <div className="mt-6 rounded-2xl bg-white/5 p-4 text-sm">
                 <Line k="Harga tiket" v={quantity > 1 ? `${quantity} × ${formatRupiah(category.price)}` : formatRupiah(subtotal)} />
                 {discount > 0 && <Line k={`Diskon ${promo?.code}`} v={`\u2212${formatRupiah(discount)}`} />}
-                {manual ? <Line k="Kode unik" v="+ beberapa rupiah di halaman bayar" muted /> : <Line k="Biaya layanan" v={formatRupiah(fee)} />}
+                {manual ? <Line k="Kode unik" v="+ Rp200 sampai Rp349 di halaman bayar" muted /> : <Line k="Biaya layanan" v={formatRupiah(fee)} />}
                 <div className="mt-2 flex items-center justify-between border-t border-white/10 pt-3">
                   <span className="font-semibold text-white">{manual ? "Total sebelum kode unik" : "Total bayar"}</span>
                   <span className="font-display text-2xl text-brand-yellow">{formatRupiah(total)}</span>

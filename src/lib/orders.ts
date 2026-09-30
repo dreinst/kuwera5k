@@ -153,18 +153,21 @@ export async function markOrderPaid(orderId: string, pay: { gateway: string; gat
 }
 
 // Kode unik supaya setiap order PENDING punya nominal yang berbeda; admin mencocokkan uang masuk di GoPay Merchant
-// dari nominalnya. Dipilih dari 1..99 supaya tambahannya kecil; baru memakai 100..499 kalau 1..99 sedang habis
-// dipakai order lain dengan harga dasar sama. Kode 500..999 milik DriveTech (merchant GoPay yang sama), jadi nominal
-// kedua acara tidak pernah kembar. Dipanggil di dalam kunci pembuatan order.
+// dari nominalnya. Kode 200..349 ikut menutup biaya tarik tunai (keputusan Donny 30 Sep 2026); 350..500 milik
+// DriveTech (merchant GoPay yang sama), jadi nominal kedua acara tidak pernah kembar. Dipanggil di dalam kunci
+// pembuatan order.
 export async function pickUniqueCode(base: number, now: Date, db: Db) {
   const rows = await db.order.findMany({ where: { status: "PENDING", expiresAt: { gt: now }, uniqueCode: { gt: 0 } }, select: { total: true } });
   const taken = new Set(rows.map((r) => r.total));
-  for (const [from, to] of [[1, 99], [100, 499]]) {
-    const free = [];
-    for (let c = from; c <= to; c++) if (!taken.has(base + c)) free.push(c);
-    if (free.length) return free[randomInt(free.length)];
-  }
-  return null;
+  const free = [];
+  for (let c = 200; c <= 349; c++) if (!taken.has(base + c)) free.push(c);
+  return free.length ? free[randomInt(free.length)] : null;
+}
+
+// Order bayar manual yang lewat batas bayar ditandai EXPIRED (sebelumnya tetap PENDING sampai ada yang menyentuhnya),
+// supaya admin melihat status yang benar dan kuotanya jelas lepas. Idempoten, dipanggil saat halaman admin dibuka.
+export async function expireStaleOrders(now = new Date()) {
+  await prisma.order.updateMany({ where: { status: "PENDING", uniqueCode: { gt: 0 }, expiresAt: { lt: now } }, data: { status: "EXPIRED" } });
 }
 
 type SyncOrder = { id: string; total: number; status: OrderStatus; paymentMethod: string | null; expiresAt: Date | null };

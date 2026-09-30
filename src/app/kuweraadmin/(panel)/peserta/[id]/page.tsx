@@ -9,7 +9,7 @@ import { StatusBadge } from "@/components/admin/Badges";
 import MidtransPanel from "@/components/admin/MidtransPanel";
 import RacepackButton from "@/components/admin/RacepackButton";
 import ManualPayPanel from "@/components/admin/ManualPayPanel";
-import { MANUAL_GATEWAY } from "@/lib/orders";
+import { MANUAL_GATEWAY, expireStaleOrders } from "@/lib/orders";
 
 export const metadata: Metadata = { title: "Detail peserta" };
 export const dynamic = "force-dynamic";
@@ -35,6 +35,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 export default async function PesertaDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const admin = await requireAdmin(FINANCE);
   const { id } = await params;
+  await expireStaleOrders();
   const order = await prisma.order.findUnique({
     where: { id },
     include: {
