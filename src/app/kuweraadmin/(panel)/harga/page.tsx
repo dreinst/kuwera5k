@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { SUPER, requireAdmin } from "@/lib/admin-auth";
-import { currentPrice, getPricing, isOpen } from "@/lib/pricing";
+import { currentPrice, getPricing, isOpen, promoLeft } from "@/lib/pricing";
 import { formatRupiah } from "@/lib/registration";
 import PricingForm from "@/components/admin/PricingForm";
 
@@ -27,6 +27,11 @@ export default async function HargaPage() {
         <div className="rounded-[20px] border border-glass-border bg-card p-5">
           <p className="text-sm text-white/70">Harga yang berlaku sekarang</p>
           <p className="font-display mt-1 text-2xl text-brand-yellow">{formatRupiah(now.price)} <span className="text-white">&middot; {now.label}</span></p>
+          {pricing.promo.quota ? (
+            <p className="mt-1 text-sm text-white/75">
+              Kuota {pricing.promo.label}: {(pricing.promoUsed ?? 0).toLocaleString("id-ID")} dari {pricing.promo.quota.toLocaleString("id-ID")} tiket terpakai, sisa {promoLeft(pricing)?.toLocaleString("id-ID")}
+            </p>
+          ) : null}
         </div>
       </div>
       <div className="mt-6 rounded-[20px] border border-glass-border bg-card p-6">
