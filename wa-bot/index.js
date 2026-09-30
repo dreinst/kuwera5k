@@ -351,13 +351,18 @@ async function handleIncoming(msg) {
   if (!match) {
     // Website error atau tidak bisa dibuka: kirim formulir pendaftaran lewat WhatsApp; formulir yang sudah diisi
     // didaftarkan lewat website (/api/bot/daftar) lalu dibalas QRIS seperti pendaftaran biasa.
+    // Seperti admin: keluhan pertama dijawab chatbot CS dulu (minta screenshot, coba refresh, ganti browser Chrome).
+    // Formulir baru dikirim kalau pelanggan bilang masih tidak bisa dalam 3 jam, atau memintanya sendiri.
     if (!hasProof && BOT_KEY) {
       const teks = textOf(msg);
       if (teks.toUpperCase().includes(FORM_HEADER)) return prosesFormulir(jid, msg, teks);
-      if (WEB_ERROR.test(teks)) {
-        if (!recent(`${jid}|formulir`)) await kirimFormulir(jid, msg);
+      const lanjutan = webKendala[jid] && Date.now() - webKendala[jid] < 3 * 3600_000 && (WEB_ERROR.test(teks) || MASIH.test(teks));
+      if (MINTA_FORMULIR.test(teks) || lanjutan) {
+        delete webKendala[jid];
+        if (!recent(`${jid}|formulir`)) await kirimFormulir(jid, msg, lanjutan);
         return;
       }
+      if (WEB_ERROR.test(teks)) webKendala[jid] = Date.now(); // diteruskan ke chatbot CS di bawah
     }
     // Screenshot bukti bayar yang dikirim menyusul (tanpa nomor order) di chat yang sudah konfirmasi.
     const pending = hasProof && Object.keys(confirmChats).find((id) => confirmChats[id] === jid);
@@ -511,7 +516,10 @@ async function qrisCard(orderId) {
 // --- Formulir pendaftaran lewat WhatsApp (cadangan kalau website tidak bisa dibuka) ---
 const BOT_KEY = process.env.KUWERA_BOT_KEY || '';
 const FORM_HEADER = 'FORMULIR PENDAFTARAN KUWERA 5K';
-const WEB_ERROR = /(web|website|situs|link|halaman|laman|form|formulir|daftar|pendaftaran|kuwera5k).{0,40}(error|eror|gagal|tidak bisa|tdk bisa|gak bisa|ga bisa|gabisa|g bisa|nggak bisa|ngga bisa|blank|loading terus|lemot|macet|stuck|down|not found|404)|(tidak bisa|tdk bisa|gak bisa|ga bisa|gabisa|g bisa|nggak bisa|ngga bisa)\s*(di)?(buka|akses|masuk|daftar|lanjut)|form(ulir)? manual|daftar (lewat|via) (wa|whatsapp|chat)|^formulir$/i;
+const WEB_ERROR = /(web|website|situs|link|halaman|laman|form|daftar|pendaftaran|kuwera5k).{0,40}(error|eror|gagal|tidak bisa|tdk bisa|gak bisa|ga bisa|gabisa|g bisa|nggak bisa|ngga bisa|blank|loading terus|lemot|macet|stuck|down|not found|404)|(tidak bisa|tdk bisa|gak bisa|ga bisa|gabisa|g bisa|nggak bisa|ngga bisa)\s*(di)?(buka|akses|masuk|daftar|lanjut)/i;
+const MINTA_FORMULIR = /form(ulir)? manual|daftar (lewat|via|di) (wa|whatsapp|chat)|^\s*formulir\s*$/i;
+const MASIH = /(masih|tetap|tetep)\s*(tidak|tdk|gak|ga|g|nggak|ngga|belum)?\s*(bisa|error|eror|gagal|blank|loading)|sama (aja|saja)|(sudah|udah|udh|sdh)\s*(coba|dicoba|refresh|pakai chrome|pake chrome|ganti browser)/i;
+const webKendala = {}; // jid -> waktu keluhan website pertama (tahap 1 dijawab chatbot CS seperti admin)
 
 async function botApi(path, body) {
   const res = await fetch(`${SITE_URL}/api/bot/${path}`, {
@@ -521,10 +529,13 @@ async function botApi(path, body) {
   return { status: res.status, data: await res.json().catch(() => ({})) };
 }
 
-async function kirimFormulir(jid, msg) {
+async function kirimFormulir(jid, msg, masihKendala = false) {
   const { status, data } = await botApi('formulir');
   if (status !== 200 || !data.template) return logger.error({ status }, 'gagal mengambil template formulir');
-  await reply(jid, { text: 'Mohon maaf atas kendalanya ya Kak 🙏 Kakak tetap bisa mendaftar lewat chat ini. Silakan salin formulir di bawah, isi setelah tanda titik dua, lalu kirim balik ke sini. Satu formulir untuk satu peserta ya Kak. Setelah itu kami kirimkan QRIS pembayarannya 😊' }, msg);
+  const pembuka = masihKendala
+    ? 'Mohon maaf websitenya masih belum bisa dipakai ya Kak 🙏 Supaya Kakak tidak ketinggalan, pendaftarannya bisa lewat chat ini saja.'
+    : 'Siap Kak, pendaftarannya bisa lewat chat ini 😊';
+  await reply(jid, { text: `${pembuka} Silakan salin formulir di bawah, isi setelah tanda titik dua, lalu kirim balik ke sini. Satu formulir untuk satu peserta ya Kak. Setelah itu kami kirimkan QRIS pembayarannya.` }, msg);
   await reply(jid, { text: data.template });
 }
 
