@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { fetchTransactionStatus, mapTransactionStatus, midtrans } from "@/lib/midtrans";
 import { MANUAL_GATEWAY, expireStaleOrders, getSettings, heldCount } from "@/lib/orders";
 import { JERSEY_SIZES } from "@/lib/registration";
+import { getPenarikan, ringkasPenarikan } from "@/lib/penarikan";
 import { STATUS_LABEL, type MidtransCheck } from "@/lib/admin-shared";
 
 export { STATUS_LABEL, type MidtransCheck };
@@ -16,10 +17,11 @@ export const maskNik = (nik: string | null | undefined) => (nik ? `${nik.slice(0
 
 export async function dashboardStats(now = new Date()) {
   await expireStaleOrders(now);
-  const [byStatus, activePending, paidSums, settings, held, jersey, gender, blood, cities, collected, recent] = await Promise.all([
+  const [byStatus, activePending, paidSums, penarikan, settings, held, jersey, gender, blood, cities, collected, recent] = await Promise.all([
     prisma.order.groupBy({ by: ["status"], where: { isTest: false }, _count: { _all: true } }),
     prisma.order.count({ where: { status: "PENDING", isTest: false, expiresAt: { gt: now } } }),
-    prisma.order.aggregate({ where: { status: "PAID", isTest: false }, _sum: { subtotal: true, discount: true, fee: true, total: true } }),
+    prisma.order.aggregate({ where: { status: "PAID", isTest: false }, _sum: { subtotal: true, discount: true, fee: true, total: true, uniqueCode: true } }),
+    getPenarikan(),
     getSettings(),
     heldCount(null, now),
     prisma.participant.groupBy({ by: ["jerseySize"], where: { order: { status: "PAID", isTest: false } }, _count: { _all: true } }),
@@ -50,8 +52,9 @@ export async function dashboardStats(now = new Date()) {
     paid, activePending, expired: count("EXPIRED"), failed: count("FAILED"), refunded: count("REFUNDED"),
     staleOrders: count("PENDING") - activePending,
     revenueTicket: (paidSums._sum.subtotal ?? 0) - (paidSums._sum.discount ?? 0),
-    revenueFee: paidSums._sum.fee ?? 0,
     revenueTotal: paidSums._sum.total ?? 0,
+    uniqueCodes: paidSums._sum.uniqueCode ?? 0,
+    penarikan: ringkasPenarikan(penarikan),
     quotaTotal: settings.quotaTotal,
     remaining: Math.max(0, settings.quotaTotal - held),
     jersey: JERSEY_SIZES.map((s) => ({ size: s, count: jersey.find((j) => j.jerseySize === s)?._count._all ?? 0 })),
