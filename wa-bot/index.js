@@ -101,7 +101,7 @@ const saveConfirmChats = () => fs.writeFileSync(CONFIRM_FILE, JSON.stringify(con
 const REMIND_FILE = '/data/pengingat.json';
 let reminded = {};
 try { reminded = JSON.parse(fs.readFileSync(REMIND_FILE, 'utf8')); } catch { reminded = {}; }
-const REMIND_MINUTES = 15;
+const REMIND_MINUTES = 60;
 let proofMessages = {};
 try { proofMessages = JSON.parse(fs.readFileSync(PROOF_FILE, 'utf8')); } catch { proofMessages = {}; }
 const saveProofMessages = () => fs.writeFileSync(PROOF_FILE, JSON.stringify(proofMessages));
@@ -784,7 +784,7 @@ async function processPaid() {
   }
 }
 
-// Pengingat bayar: order yang batas bayarnya tinggal 15 menit dan belum ada bukti bayar dikirimi panduan sekali.
+// Pengingat bayar: order yang batas bayarnya tinggal 60 menit dan belum ada bukti bayar dikirimi panduan sekali.
 // Belum pernah chat bot = panduan minta QRIS lewat halaman bayar; sudah menerima QRIS = ajakan bayar dan kirim bukti.
 async function processReminders() {
   if (!connected) return;
