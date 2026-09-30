@@ -1,7 +1,7 @@
 import type { OrderStatus, Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { fetchTransactionStatus, mapTransactionStatus, midtrans } from "@/lib/midtrans";
-import { MANUAL_GATEWAY, getSettings, heldCount } from "@/lib/orders";
+import { MANUAL_GATEWAY, expireStaleOrders, getSettings, heldCount } from "@/lib/orders";
 import { JERSEY_SIZES } from "@/lib/registration";
 import { STATUS_LABEL, type MidtransCheck } from "@/lib/admin-shared";
 
@@ -15,6 +15,7 @@ export const fmtDateTime = (d: Date | null | undefined) =>
 export const maskNik = (nik: string | null | undefined) => (nik ? `${nik.slice(0, 4)}********${nik.slice(-4)}` : "-");
 
 export async function dashboardStats(now = new Date()) {
+  await expireStaleOrders(now);
   const [byStatus, activePending, paidSums, settings, held, jersey, gender, blood, cities, collected, recent] = await Promise.all([
     prisma.order.groupBy({ by: ["status"], where: { isTest: false }, _count: { _all: true } }),
     prisma.order.count({ where: { status: "PENDING", isTest: false, expiresAt: { gt: now } } }),
@@ -83,6 +84,7 @@ export function registrantWhere(q: string, status: string): Prisma.OrderWhereInp
 }
 
 export async function listRegistrants(q: string, status: string, page: number) {
+  await expireStaleOrders();
   const where = registrantWhere(q, status);
   const [total, rows] = await Promise.all([
     prisma.order.count({ where }),
