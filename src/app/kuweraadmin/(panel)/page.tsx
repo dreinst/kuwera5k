@@ -32,7 +32,7 @@ function Card({ title, children }: { title: string; children: React.ReactNode })
 
 export default async function DashboardPage() {
   const admin = await requireAdmin(FINANCE);
-  // Kode unik, penarikan GoPay, dan rinciannya hanya untuk superadmin; admin keuangan melihat pendapatan dan total masuk.
+  // Semua angka GoPay (total masuk, kode unik, penarikan, rincian) hanya untuk superadmin; admin keuangan cukup pendapatan tiket.
   const superadmin = admin.role === "superadmin";
   const [s, rincian] = await Promise.all([dashboardStats(), superadmin ? gopayRincian() : null]);
   const maxDaily = Math.max(1, ...s.daily.map((d) => d.count));
@@ -45,7 +45,7 @@ export default async function DashboardPage() {
           <p className="text-xs font-semibold tracking-wide text-gold uppercase">KUWERA Fun Run 5K</p>
           <h1 className="font-display mt-1 text-4xl text-white uppercase">Dashboard <span className="text-brand-yellow">pendaftar</span></h1>
         </div>
-        <div className="text-right">
+        {superadmin && <div className="text-right">
           <p className="text-sm text-white/85">
             Payment gateway:{" "}
             {s.mode.payment === "manual" ? (
@@ -56,7 +56,7 @@ export default async function DashboardPage() {
               <span className="font-semibold text-brand-yellow">{s.mode.payment === "mock" ? "simulasi" : "nonaktif"}</span>
             )}
           </p>
-        </div>
+        </div>}
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -66,10 +66,10 @@ export default async function DashboardPage() {
         <Stat label="Race pack diambil" value={s.collected.toLocaleString("id-ID")} note={`dari ${s.paid.toLocaleString("id-ID")} peserta lunas`} />
       </div>
 
-      <div className={`grid gap-4 sm:grid-cols-2 ${superadmin ? "lg:grid-cols-4" : ""}`}>
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Stat label="Pendapatan tiket" value={formatRupiah(s.revenueTicket)} note="Harga tiket, tanpa kode unik" />
         {superadmin && <Stat label="Kode unik terkumpul" value={formatRupiah(s.uniqueCodes)} note="Untuk menutup potongan tarik GoPay" />}
-        <Stat label="Total masuk GoPay" value={formatRupiah(s.revenueTotal)} note="Sesuai nominal di GoPay Merchant" />
+        {superadmin && <Stat label="Total masuk GoPay" value={formatRupiah(s.revenueTotal)} note="Sesuai nominal di GoPay Merchant" />}
         {superadmin && <Stat label="Sudah ditarik" value={formatRupiah(s.penarikan.masuk)}
           note={s.penarikan.saldo ? `Potongan tarik ${formatRupiah(s.penarikan.potongan)}, saldo belum ditarik ${formatRupiah(s.revenueTotal - s.penarikan.saldo)}` : "Belum ada penarikan tercatat"} />}
       </div>
