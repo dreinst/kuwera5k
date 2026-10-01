@@ -77,6 +77,25 @@ export default async function DashboardPage() {
 
       {rincian && <GopayRincian d={rincian} />}
 
+      <Card title="Peserta per harga tiket">
+        <div className="flex h-3 overflow-hidden rounded-full bg-white/10">
+          {s.priceTiers.map((t, i) => (
+            <div key={`${t.kudam}-${t.price}`} className={i % 2 ? "bg-white" : "bg-brand-yellow"} style={{ width: `${(t.tiket / Math.max(1, s.paid)) * 100}%` }} />
+          ))}
+        </div>
+        <div className={`mt-4 grid gap-4 ${s.priceTiers.length > 2 ? "sm:grid-cols-3" : "sm:grid-cols-2"}`}>
+          {s.priceTiers.length === 0 ? <p className="text-white/70">Belum ada peserta lunas.</p> : s.priceTiers.map((t, i) => (
+            <div key={`${t.kudam}-${t.price}`} className="rounded-2xl border border-white/10 bg-white/5 p-4">
+              <p className="flex items-center gap-2 text-xs font-semibold tracking-wide text-white/75 uppercase">
+                <span className={`h-2.5 w-2.5 rounded-full ${i % 2 ? "bg-white" : "bg-brand-yellow"}`} />{t.label} &middot; {formatRupiah(t.price)}
+              </p>
+              <p className="mt-1 text-white/85"><span className="font-display text-4xl text-white">{t.tiket}</span> peserta</p>
+              <p className="text-sm text-white/70">{t.transaksi} transaksi, {Math.round((t.tiket / Math.max(1, s.paid)) * 100)}% dari peserta lunas</p>
+            </div>
+          ))}
+        </div>
+      </Card>
+
       <div className="grid gap-6 lg:grid-cols-2">
         <Card title="Pendaftar lunas 14 hari terakhir">
           {/* Grafik mengisi sisa tinggi kartu (sejajar dengan kartu jersey di sebelahnya). */}

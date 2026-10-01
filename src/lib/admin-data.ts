@@ -4,6 +4,7 @@ import { fetchTransactionStatus, mapTransactionStatus, midtrans } from "@/lib/mi
 import { MANUAL_GATEWAY, expireStaleOrders, getSettings, heldCount } from "@/lib/orders";
 import { JERSEY_SIZES } from "@/lib/registration";
 import { getPenarikan, ringkasPenarikan } from "@/lib/penarikan";
+import { getPricing } from "@/lib/pricing";
 import { STATUS_LABEL, type MidtransCheck } from "@/lib/admin-shared";
 
 export { STATUS_LABEL, type MidtransCheck };
@@ -32,6 +33,23 @@ export async function dashboardStats(now = new Date()) {
     prisma.order.findMany({ orderBy: { createdAt: "desc" }, take: 8, include: { participants: { where: { position: 1 }, select: { fullName: true } } } }),
   ]);
   const count = (s: OrderStatus) => byStatus.find((b) => b.status === s)?._count._all ?? 0;
+  // Peserta lunas per harga tiket yang dibayar (harga satuan saat order dibuat), dipisah web dan anggota Kudam.
+  const [paidOrders, pricing] = await Promise.all([
+    prisma.order.findMany({ where: { status: "PAID", isTest: false }, select: { subtotal: true, discount: true, quantity: true, source: true } }),
+    getPricing(),
+  ]);
+  const tiers = new Map<string, { price: number; kudam: boolean; tiket: number; transaksi: number }>();
+  for (const o of paidOrders) {
+    const price = Math.round((o.subtotal - o.discount) / Math.max(1, o.quantity));
+    const kudam = o.source === "kudam";
+    const key = `${kudam}-${price}`;
+    const t = tiers.get(key) ?? { price, kudam, tiket: 0, transaksi: 0 };
+    t.tiket += o.quantity; t.transaksi += 1; tiers.set(key, t);
+  }
+  const tierLabel = (t: { price: number; kudam: boolean }) =>
+    t.kudam ? "Anggota Kudam" : t.price === pricing.promo.price ? pricing.promo.label : t.price === pricing.regular.price ? pricing.regular.label : "Harga lain";
+  const priceTiers = [...tiers.values()].sort((a, b) => a.price - b.price || Number(a.kudam) - Number(b.kudam)).map((t) => ({ ...t, label: tierLabel(t) }));
+
   // Peserta lunas dihitung per tiket (satu order bisa beberapa tiket).
   const paid = await prisma.participant.count({ where: { order: { status: "PAID", isTest: false } } });
 
@@ -62,6 +80,7 @@ export async function dashboardStats(now = new Date()) {
     blood: blood.map((b) => ({ type: b.bloodType ?? "Tidak diisi", count: b._count._all })),
     cities: cities.map((c) => ({ city: c.city ?? "Tidak diisi", count: c._count._all })),
     collected,
+    priceTiers,
     daily,
     recent,
     mode: { payment: process.env.PAYMENT_MODE ?? "off", production: midtrans.isProduction },
