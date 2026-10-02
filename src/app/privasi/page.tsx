@@ -5,7 +5,7 @@ import Footer from "@/components/sections/Footer";
 
 export const metadata: Metadata = {
   title: "Kebijakan Privasi",
-  description: "Cara KUWERA Fun Run 5K Malang mengumpulkan, memakai, dan menjaga data peserta, termasuk pembayaran, konfirmasi lewat WhatsApp, dan pengukuran iklan.",
+  description: "Cara KUWERA Fun Run 5K Malang mengumpulkan, memakai, dan menjaga data peserta, termasuk pembayaran, konfirmasi lewat WhatsApp, chat Instagram, dan pengukuran iklan.",
   ...pageMeta("/privasi"),
 };
 
@@ -25,6 +25,7 @@ export default function Page() {
           <li>Pembayaran QRIS diproses oleh aplikasi bank atau e-wallet milik pembayar dan diterima lewat GoPay Merchant (atau Midtrans, kalau pembayaran online aktif). Panitia tidak menerima maupun menyimpan nomor kartu, PIN, atau kata sandi e-wallet.</li>
           <li>Konfirmasi pembayaran lewat WhatsApp ke nomor panitia: pesan berisi nomor order, nama peserta, ukuran jersey, dan bukti bayar yang kamu kirim sendiri. Bot panitia membalas otomatis dengan QRIS dan mengirim tautan e-ticket ke nomor pemesan setelah pembayaran dikonfirmasi.</li>
           <li>Saat iklan berjalan, situs ini memakai Meta Pixel untuk mengukur hasil iklan di Facebook dan Instagram, misalnya berapa kunjungan yang berujung pendaftaran. Meta menerima alamat halaman yang dibuka (di halaman pembayaran dan e-ticket termasuk nomor order), alamat IP, jenis perangkat dan browser, cookie Meta, serta kategori, metode, dan nilai pembayaran. Isi formulir pendaftaran seperti nama, email, dan nomor HP tidak kami kirimkan ke Meta.</li>
+          <li>Pesan langsung (DM) dan komentar ke Instagram @kuwerafunrun bisa dibalas oleh asisten virtual panitia. Yang kami terima dari Instagram hanya username, isi pesan atau komentar, dan gambar yang kamu kirim sendiri. Data ini dipakai untuk menjawab pertanyaanmu dan diteruskan ke admin panitia kalau perlu ditangani langsung. Riwayat chat disimpan paling lama tiga hari. Kalau ingin datanya dihapus lebih cepat, cukup kirim DM &quot;hapus data saya&quot; ke @kuwerafunrun atau WhatsApp panitia, nanti kami bantu hapus.</li>
         </ul>
       </main>
       <Footer />
