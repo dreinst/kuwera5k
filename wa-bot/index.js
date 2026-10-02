@@ -911,8 +911,25 @@ async function processReminders() {
 
 // Harga promo berlaku: dinyalakan, dalam jendela waktunya, dan kuota tiketnya (promo.quota) belum habis.
 // Sama dengan promoActive() di src/lib/pricing.ts.
+// Jam "HH:MM" WIB pada tanggal WIB yang sama dengan `day`.
+function pukulWib(day, hhmm) {
+  const d = new Date(day.getTime() + 7 * 3600_000);
+  d.setUTCHours(Number(hhmm.slice(0, 2)), Number(hhmm.slice(3, 5)), 0, 0);
+  return new Date(d.getTime() - 7 * 3600_000);
+}
+
+// Akhir harga promo yang sedang berlaku: jam selesai harian hari ini atau promo.end, mana yang lebih dulu.
+function promoSampai(promo, now = new Date()) {
+  const ends = [promo.end && new Date(promo.end), promo.daily && pukulWib(now, promo.daily.to)].filter(Boolean);
+  if (!ends.length) return '';
+  const t = new Date(Math.min(...ends));
+  const hari = t.toLocaleDateString('id-ID', { timeZone: 'Asia/Jakarta' }) === now.toLocaleDateString('id-ID', { timeZone: 'Asia/Jakarta' });
+  return ` sampai ${hari ? 'hari ini pukul ' : ''}${t.toLocaleString('id-ID', { timeZone: 'Asia/Jakarta', ...(hari ? {} : { day: 'numeric', month: 'long' }), hour: '2-digit', minute: '2-digit' })} WIB`;
+}
+
 async function promoBerlaku(promo, now = new Date()) {
   if (!promo?.enabled || (promo.start && now < new Date(promo.start)) || (promo.end && now >= new Date(promo.end))) return false;
+  if (promo.daily && (now < pukulWib(now, promo.daily.from) || now >= pukulWib(now, promo.daily.to))) return false;
   if (!promo.quota) return true;
   const { rows: [r] } = await pool.query(
     `SELECT coalesce(sum(quantity), 0)::int AS n FROM "Order"
@@ -931,10 +948,16 @@ async function promoKalimat() {
   const now = new Date();
   const on = await promoBerlaku(promo, now);
   if (on) {
-    const sampai = promo.end ? ` sampai ${new Date(promo.end).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })} WIB` : '';
+    const sampai = promoSampai(promo, now);
     return `Harga ${promo.label || 'Early Bird'} ${rupiah(promo.price)} per tiket sedang berlaku${sampai}, jadi yuk daftar ulang di ${SITE_URL}/daftar dan selesaikan pembayaran dengan QRIS yang baru ya.`;
   }
   const reguler = pricing.regular?.price ? ` Harga yang berlaku sekarang ${pricing.regular.label || 'Reguler'} ${rupiah(pricing.regular.price)} per tiket.` : '';
+  // Promo harian yang masih berlanjut di hari lain: kabari jamnya, bukan "sudah berakhir".
+  if (promo?.enabled && promo.daily && (!promo.end || now < new Date(promo.end))) {
+    const jam = (v) => v.replace(':', '.');
+    const sampaiTgl = promo.end ? ` sampai ${new Date(promo.end).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta', day: 'numeric', month: 'long' })}` : '';
+    return `Harga ${promo.label || 'Early Bird'} ${rupiah(promo.price)} hadir tiap hari pukul ${jam(promo.daily.from)} sampai ${jam(promo.daily.to)} WIB${sampaiTgl}, selama kuotanya masih ada.${reguler} Kalau masih mau lari bareng kami, silakan daftar ulang di ${SITE_URL}/daftar lalu bayar sesuai tagihan yang baru ya.`;
+  }
   return `Harga promonya sudah berakhir.${reguler} Kalau masih mau lari bareng kami, silakan daftar ulang di ${SITE_URL}/daftar lalu bayar sesuai tagihan yang baru ya.`;
 }
 
@@ -968,7 +991,7 @@ async function processAjakUlang() {
     const jid = buyerChat(o.id, o.buyerPhone);
     if (!jid) continue;
     const name = o.buyer ? o.buyer.split(' ')[0] : 'kak';
-    const sampai = promoOn && promo.end ? ` sampai ${new Date(promo.end).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })} WIB` : '';
+    const sampai = promoOn ? promoSampai(promo, now) : '';
     const text = [
       `Halo kak ${name} 😊 Pesanan KUWERA 5K kamu (${o.id}) belum sempat dibayar sampai batas waktunya, jadi pesanannya sudah kedaluwarsa.`,
       '',

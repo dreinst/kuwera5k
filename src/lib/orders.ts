@@ -108,7 +108,8 @@ export function newOrderId(year = new Date().getFullYear()) {
 export async function validatePromo(code: string, price: number, now = new Date(), db: Db = prisma, quantity = 1) {
   const promo = await db.promoCode.findUnique({ where: { code } });
   if (!promo || !promo.isActive) return { ok: false as const, message: "Kode promo tidak dikenal" };
-  if (now < promo.validFrom || now > promo.validUntil) return { ok: false as const, message: "Kode promo sudah tidak berlaku" };
+  if (now < promo.validFrom) return { ok: false as const, message: `Kode promo ini baru bisa dipakai mulai ${promo.validFrom.toLocaleString("id-ID", { timeZone: "Asia/Jakarta", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" })} WIB` };
+  if (now > promo.validUntil) return { ok: false as const, message: "Kode promo sudah tidak berlaku" };
   const agg = await db.order.aggregate({ _sum: { quantity: true }, where: { promoCode: promo.code, ...activeOrderWhere(now) } });
   const left = promo.quota - (agg._sum.quantity ?? 0);
   if (left <= 0) return { ok: false as const, message: "Kuota kode promo sudah habis" };

@@ -36,6 +36,12 @@ export default function PricingForm({ pricing }: { pricing: Pricing }) {
           <Field label="Selesai (WIB, kosongkan kalau sampai dimatikan)">
             <input type="datetime-local" name="promoEnd" defaultValue={toWib(pricing.promo.end)} className={inputCls} />
           </Field>
+          <Field label="Jam harian mulai (WIB, kosongkan kalau sepanjang hari)">
+            <input type="time" name="promoDailyFrom" defaultValue={pricing.promo.daily?.from ?? ""} className={inputCls} />
+          </Field>
+          <Field label="Jam harian selesai (WIB)">
+            <input type="time" name="promoDailyTo" defaultValue={pricing.promo.daily?.to ?? ""} className={inputCls} />
+          </Field>
           <Field className="sm:col-span-2" label={`Kuota tiket promo (kosongkan kalau tanpa batas)${pricing.promo.quota ? `, terpakai ${pricing.promoUsed ?? 0}` : ""}`}>
             <input name="promoQuota" inputMode="numeric" defaultValue={pricing.promo.quota ?? ""} placeholder="misalnya 100" className={inputCls} />
           </Field>

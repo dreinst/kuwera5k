@@ -11,6 +11,8 @@ export const eventData = {
   paidCount: 214,
   // Jumlah pendaftar baru ditampilkan di beranda setelah mencapai angka ini; sebelumnya kartu berisi ajakan Early Bird.
   publicCountFrom: 100,
+  // Kode promo satu hari yang diumumkan di beranda sampai hari promonya lewat (data kodenya di tabel PromoCode).
+  promoDay: { code: "KUWERA10.10", text: "diskon 10%", dayLabel: "Sabtu, 10 Oktober", untilIso: "2026-10-10T23:59:59+07:00" },
   // Tutup H-1 minggu (ukuran jersey dikirim ke vendor untuk dicetak), atau lebih awal kalau kuota penuh.
   registrationCloseLabel: "Sabtu, 17 Oktober 2026 pukul 23.59 WIB", // sama dengan registrationCloseIso
   racePackDates,

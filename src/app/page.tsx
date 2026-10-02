@@ -12,7 +12,7 @@ import { homeJsonLd } from "@/lib/structured-data";
 import { pageMeta } from "@/lib/site";
 import { getPublicStats, isLive, paymentMode } from "@/lib/orders";
 import { eventData, remainingQuota } from "@/lib/event-data";
-import { DEFAULT_PRICING, currentPrice, getPricing } from "@/lib/pricing";
+import { DEFAULT_PRICING, currentPrice, getPricing, nextPromoAt, promoEndsAt } from "@/lib/pricing";
 
 export const metadata: Metadata = pageMeta("/");
 
@@ -34,7 +34,9 @@ export default async function Home() {
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: homeJsonLd(live ? stats?.remaining ?? null : null, price.price) }} />
       <Navbar />
       <main className="flex flex-1 flex-col">
-        <Hero stats={stats} price={price} promoEnd={price.promo ? pricing.promo.end : null} noFee={paymentMode() === "manual"} />
+        <Hero stats={stats} price={price} promoEnd={promoEndsAt(pricing)}
+          promoNext={nextPromoAt(pricing)} promo={pricing.promo}
+          promoDay={new Date() <= new Date(eventData.promoDay.untilIso) ? eventData.promoDay : null} noFee={paymentMode() === "manual"} />
         <RouteDetail />
         <DateBanner />
         <Schedule />
