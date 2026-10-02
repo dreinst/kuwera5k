@@ -1,6 +1,8 @@
 // Nomor admin panitia dan template pesan WhatsApp. Pesan diawali sapaan yang sama supaya panitia
 // langsung tahu konteksnya; bagian setelah titik dua diisi peserta sendiri.
-export const WA_ADMIN = "6282232999900";
+// Sementara nomor superadmin (Andrew) selama nomor kantor 6282232999900 dibatasi WhatsApp (1 Okt 2026).
+// Kembalikan ke nomor kantor setelah pembatasan selesai dan bot kantor tertaut lagi.
+export const WA_ADMIN = "6282228555254";
 
 export const waLink = (text: string) => `https://wa.me/${WA_ADMIN}?text=${encodeURIComponent(text)}`;
 
