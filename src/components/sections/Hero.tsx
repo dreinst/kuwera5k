@@ -58,7 +58,14 @@ const HEADLINE = [
 
 export type HeroPrice = { label: string; price: number; promo: boolean; regular: { label: string; price: number } };
 
-export default function Hero({ stats, price, promoEnd = null, noFee = false }: { stats: { paid: number; remaining: number } | null; price: HeroPrice; promoEnd?: string | null; noFee?: boolean }) {
+// Waktu WIB untuk teks jadwal promo, misalnya "Sabtu, 3 Oktober pukul 09.00".
+const wib = (iso: string, opts: Intl.DateTimeFormatOptions) => new Date(iso).toLocaleString("id-ID", { timeZone: "Asia/Jakarta", ...opts });
+
+export default function Hero({ stats, price, promoEnd = null, promoNext = null, promo = null, promoDay = null, noFee = false }: {
+  stats: { paid: number; remaining: number } | null; price: HeroPrice; promoEnd?: string | null; noFee?: boolean;
+  promoNext?: string | null; promo?: { label: string; price: number; end: string | null; daily: { from: string; to: string } | null } | null;
+  promoDay?: { code: string; text: string; dayLabel: string } | null;
+}) {
   // Angka pendaftar baru tampil setelah cukup banyak; sisa kuota hanya terlihat di halaman admin.
   const showCount = !!stats && stats.paid >= eventData.publicCountFrom;
   return (
@@ -156,6 +163,11 @@ export default function Hero({ stats, price, promoEnd = null, noFee = false }: {
               <p className="mt-2 text-sm font-medium text-green-deep">
                 Sudah termasuk jersey, BIB, dan medali finisher. {noFee ? "Pembayaran lewat QRIS, tanpa biaya layanan." : "Belum termasuk biaya layanan pembayaran."}
               </p>
+              {promoDay && (
+                <p className="mt-3 rounded-xl bg-green-deep px-3 py-2 text-sm font-semibold text-brand-yellow">
+                  Khusus {promoDay.dayLabel}: pakai kode {promoDay.code}, {promoDay.text}!
+                </p>
+              )}
             </motion.div>
           </div>
 
@@ -178,6 +190,17 @@ export default function Hero({ stats, price, promoEnd = null, noFee = false }: {
                   <p className="text-xs font-semibold tracking-[0.2em] text-white/80 uppercase">{price.label} berakhir dalam</p>
                   <div className="mt-2"><EarlyBirdTimer to={promoEnd} /></div>
                   <p className="mt-3 text-lg text-white/85">Kuota terbatas {eventData.quotaTotal.toLocaleString("id-ID")} pelari, yuk amankan slotmu!</p>
+                </>
+              ) : promoNext && promo?.daily ? (
+                <>
+                  <p className="text-xs font-semibold tracking-[0.2em] text-white/80 uppercase">{promo.label} Rp{promo.price.toLocaleString("id-ID")}</p>
+                  <p className="font-display mt-2 text-3xl leading-tight text-brand-yellow uppercase">
+                    Buka lagi {wib(promoNext, { weekday: "long", day: "numeric", month: "long" })} pukul {promo.daily.from.replace(":", ".")} WIB
+                  </p>
+                  <p className="mt-3 text-lg text-white/85">
+                    Harga {promo.label} hadir tiap hari pukul {promo.daily.from.replace(":", ".")} sampai {promo.daily.to.replace(":", ".")} WIB
+                    {promo.end ? `, hingga ${wib(promo.end, { day: "numeric", month: "long" })}` : ""}, kuotanya terbatas. Pasang pengingat, ya!
+                  </p>
                 </>
               ) : (
                 <>

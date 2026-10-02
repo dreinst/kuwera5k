@@ -4,7 +4,7 @@ import Navbar from "@/components/sections/Navbar";
 import Footer from "@/components/sections/Footer";
 import RegistrationForm from "@/components/registration/RegistrationForm";
 import { getOpenCategories, getSettings, paymentMode, trackCheckout } from "@/lib/orders";
-import { getPricing, isOpen } from "@/lib/pricing";
+import { getPricing, isOpen, nextPromoAt } from "@/lib/pricing";
 import { prisma } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
@@ -20,11 +20,12 @@ export default async function DaftarPage() {
   const now = new Date();
   const [categories, settings, pricing, promoCount] = await Promise.all([
     getOpenCategories(), getSettings(), getPricing(),
-    prisma.promoCode.count({ where: { isActive: true, validUntil: { gt: now } } }),
+    prisma.promoCode.count({ where: { isActive: true, validFrom: { lte: now }, validUntil: { gt: now } } }),
   ]);
   const closed = !isOpen(pricing);
   const opensAt = closed && pricing.open && pricing.openAt ? new Date(pricing.openAt) : null;
   const mode = paymentMode();
+  const promoNext = nextPromoAt(pricing, now);
   return (
     <div className="relative flex flex-1 flex-col">
       <Navbar />
@@ -38,6 +39,13 @@ export default async function DaftarPage() {
             ? "Sambil menunggu, yuk siapkan kartu identitas (KTP atau KIA), kontak darurat, dan ukuran jersey kamu, ya."
             : "Cukup empat langkah, sekitar tiga menit. Tenang saja, isianmu tersimpan otomatis di perangkat ini selama 24 jam."}
         </p>
+        {!closed && promoNext && pricing.promo.daily && (
+          <p className="mt-3 max-w-xl text-sm font-semibold text-brand-yellow">
+            Harga {pricing.promo.label} Rp{pricing.promo.price.toLocaleString("id-ID")} buka lagi{" "}
+            {new Date(promoNext).toLocaleString("id-ID", { timeZone: "Asia/Jakarta", weekday: "long", day: "numeric", month: "long" })} pukul{" "}
+            {pricing.promo.daily.from.replace(":", ".")} sampai {pricing.promo.daily.to.replace(":", ".")} WIB, kuotanya terbatas.
+          </p>
+        )}
         <div className="mt-8">
           {closed ? (
             <div className="rounded-[20px] border border-glass-border bg-card p-8 text-center">

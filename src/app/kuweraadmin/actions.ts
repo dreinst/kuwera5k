@@ -149,6 +149,8 @@ export async function savePricingAction(_prev: FormState, form: FormData): Promi
   if (!admin || !allowed(admin.role, SUPER)) return { error: "Hanya superadmin yang bisa mengubah harga" };
   const num = (k: string) => Number(String(form.get(k) ?? "").replace(/\D/g, ""));
   const text = (k: string) => String(form.get(k) ?? "").trim().slice(0, 40);
+  const jam = (k: string) => { const v = String(form.get(k) ?? "").trim(); return /^([01]\d|2[0-3]):[0-5]\d$/.test(v) ? v : ""; };
+  const dailyFrom = jam("promoDailyFrom"), dailyTo = jam("promoDailyTo");
   const pricing: Pricing = {
     open: form.get("open") === "on",
     openAt: wibToIso(form.get("openAt")) ?? null,
@@ -159,12 +161,14 @@ export async function savePricingAction(_prev: FormState, form: FormData): Promi
       start: wibToIso(form.get("promoStart")) ?? null,
       end: wibToIso(form.get("promoEnd")) ?? null,
       quota: num("promoQuota") || null, // kosong atau 0 = tanpa batas kuota
+      daily: dailyFrom && dailyTo ? { from: dailyFrom, to: dailyTo } : null,
     },
     regular: { label: text("regularLabel"), price: num("regularPrice") },
   };
   if ([form.get("openAt"), form.get("promoStart"), form.get("promoEnd")].some((v) => wibToIso(v) === undefined)) return { error: "Format waktu tidak valid" };
   if (!pricing.regular.label || !pricing.promo.label) return { error: "Nama harga tidak boleh kosong" };
   if (pricing.regular.price < 1000 || pricing.promo.price < 1000) return { error: "Harga minimal Rp1.000" };
+  if ((dailyFrom || dailyTo) && !(dailyFrom && dailyTo && dailyFrom < dailyTo)) return { error: "Jam harian promo perlu diisi keduanya, dan jam selesai setelah jam mulai" };
   if (pricing.promo.start && pricing.promo.end && pricing.promo.end <= pricing.promo.start) return { error: "Waktu selesai promo harus setelah waktu mulai" };
   await prisma.setting.upsert({ where: { key: "pricing" }, create: { key: "pricing", value: pricing }, update: { value: pricing } });
   await logAdmin(admin.username, "ubah_harga", JSON.stringify(pricing).slice(0, 500));
