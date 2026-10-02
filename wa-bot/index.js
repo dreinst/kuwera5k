@@ -738,6 +738,15 @@ async function processOutbox() {
       await sleep(between(3000, 6000));
       continue;
     }
+    if (item.tipe === 'kontak') { // simpan kontak pelanggan (antrean dari dprochatbot), ikut tersimpan di buku kontak HP kantor
+      fs.unlinkSync(file);
+      try {
+        await sock.addOrEditContact(item.jid, { fullName: item.nama, firstName: item.nama, saveOnPrimaryAddressbook: true });
+        logger.info({ jid: item.jid, nama: item.nama }, 'kontak disimpan');
+      } catch (e) { logger.error({ jid: item.jid, err: e.message }, 'gagal menyimpan kontak'); }
+      await sleep(between(2000, 4000));
+      continue;
+    }
     if (item.tipe === 'ubah-deskripsi') { // hanya deskripsi grup, tanpa kirim pesan
       fs.unlinkSync(file);
       try { await sock.groupUpdateDescription(item.jid, item.description); logger.info({ jid: item.jid }, 'deskripsi grup diubah'); }
