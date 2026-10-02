@@ -62,8 +62,6 @@ export const route = {
     { label: "Start", place: "Lapangan Rampal, sisi Jl. Urip Sumoharjo", km: 0 },
     { label: "1 KM", place: "Jl. Panglima Sudirman", km: 1 },
     { label: "2 KM", place: "Jl. Kesatrian", km: 2 },
-    // Satu-satunya water station (keputusan panitia 23 Sep 2026); pin di peta mengikuti km ini.
-    { label: "Water station", place: "Denzibang", km: 2.5 },
     { label: "3 KM", place: "Jl. Hamid Rusdi Timur", km: 3 },
     { label: "4 KM", place: "Permukiman utara Rampal, menuju Jl. Lapangan", km: 4 },
     { label: "Finish", place: "Lapangan Rampal, di titik yang sama dengan start", km: 5 },

@@ -5,7 +5,7 @@ import Footer from "@/components/sections/Footer";
 
 export const metadata: Metadata = {
   title: "Syarat dan Ketentuan",
-  description: "Syarat dan ketentuan KUWERA Fun Run 5K Malang 2026: batas usia peserta, satu tiket untuk satu peserta, pengembalian dana, pengambilan race pack, dan perubahan rute.",
+  description: "Syarat dan ketentuan KUWERA Fun Run 5K Malang 2026: ketentuan usia peserta, satu tiket untuk satu peserta, pengembalian dana, pengambilan race pack, dan perubahan rute.",
   ...pageMeta("/syarat"),
 };
 
@@ -17,7 +17,8 @@ export default function Page() {
         <h1 className="font-display text-4xl text-white uppercase">Syarat dan ketentuan</h1>
         <p className="mt-3 text-white/70">Naskah final dari panitia menyusul. Poin di bawah adalah draf sementara.</p>
         <ul className="mt-6 list-disc space-y-3 pl-5 text-white/80">
-          <li>Peserta minimal berusia 12 tahun pada hari lomba dan dalam kondisi sehat untuk berlari 5 km.</li>
+          <li>Tidak ada batasan usia, dan kami sarankan peserta mulai usia SD. Peserta usia SMP ke atas wajib terdaftar dan membayar biaya pendaftaran. Anak usia SD boleh ikut berlari tanpa tiket (tanpa jersey, BIB, dan medali), atau mendaftar dan membayar seperti peserta lain kalau ingin mendapatkan jersey, BIB, dan medali finisher.</li>
+          <li>Peserta dalam kondisi sehat untuk berlari 5 km.</li>
           <li>Satu tiket berlaku untuk satu peserta sesuai data yang diisi dan tidak dapat dipindahtangankan. Satu pembelian boleh berisi beberapa tiket.</li>
           <li>Biaya pendaftaran yang sudah lunas tidak dikembalikan secara otomatis. Kasus khusus bisa diajukan ke panitia lewat WhatsApp.</li>
           <li>Race pack diambil oleh peserta sendiri pada jadwal pengambilan, dengan membawa e-ticket dan KTP atau KIA asli.</li>
