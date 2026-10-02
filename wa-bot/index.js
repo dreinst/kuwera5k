@@ -80,6 +80,8 @@ const RACE_DAY = 'Sabtu, 24 Oktober 2026, 06.00 WIB di Lapangan Rampal';
 const PRIBADI = process.env.PRIBADI === '1';
 const AUTH_DIR = process.env.AUTH_DIR || '/data/auth';
 const PRIBADI_IZIN = (process.env.PRIBADI_IZIN || '').split(',').map((x) => x.replace(/\D/g, '')).filter(Boolean);
+// Grup yang tetap dilayani saat mode pribadi (keputusan Donny 1 Okt: grup Documents Generator).
+const PRIBADI_GRUP = (process.env.PRIBADI_GRUP || '').split(',').map((x) => x.trim()).filter(Boolean);
 const PRIBADI_FILE = '/data/pribadi-chat.json'; // jid -> waktu pertama menghubungi nomor pribadi
 const OUTBOX_TAHAN = '/data/outbox-ditahan';
 const PRIBADI_INFO = process.env.PRIBADI_INFO || 'Halo Kak 🙏 Untuk sementara WhatsApp kantor D\'Production sedang gangguan, jadi layanan KUWERA 5K kami jalankan dari nomor ini dulu ya. Semua pendaftaran dan pembayaran tetap tercatat seperti biasa.';
@@ -475,8 +477,10 @@ async function pelangganPribadi(msg) {
 // Mode pribadi: kiriman outbox hanya ke chat pelanggan yang sudah menghubungi nomor ini atau nomor PRIBADI_IZIN.
 // Blast, urusan grup, dan tujuan lain dipindah ke OUTBOX_TAHAN (tidak dihapus) untuk dikirim lagi saat nomor kantor aktif.
 function bolehPribadi(item, f) {
-  if (item.tipe || f.includes('-blast-')) return false;
-  if (item.jid) return !item.jid.endsWith('@g.us') && (!!pribadiChat[item.jid] || PRIBADI_IZIN.includes(digits(item.jid)));
+  if (f.includes('-blast-')) return false;
+  if (item.tipe) return ['panduan-grup', 'ubah-deskripsi'].includes(item.tipe) && PRIBADI_GRUP.includes(item.jid);
+  if (item.jid) return item.jid.endsWith('@g.us') ? PRIBADI_GRUP.includes(item.jid)
+    : (!!pribadiChat[item.jid] || PRIBADI_IZIN.includes(digits(item.jid)));
   return !!buyerChat(item.orderId, item.phone);
 }
 
@@ -567,7 +571,8 @@ function relayIncoming(msg) {
   try { sentIds = fs.readFileSync(SENT_IDS, 'utf8'); } catch { sentIds = ''; }
   const replyToBot = !!ctx?.stanzaId && sentIds.includes(ctx.stanzaId);
   const isAdmin = (cfg.allowed || []).some((a) => sender.endsWith(String(a).slice(-10)));
-  const staffCall = (cfg.openGroups || []).includes(group) && (/^(@\d+[\s,:]*)*hermes\b/i.test(text) || replyToBot);
+  // #BUAT dan #DAFTAR (pembuat dokumen) boleh dipakai staf tanpa kata panggil "hermes"
+  const staffCall = (cfg.openGroups || []).includes(group) && (/^(@\d+[\s,:]*)*hermes\b/i.test(text) || replyToBot || /^#(buat|daftar)\b/im.test(text));
   if (!(isAdmin || staffCall) || !text) {
     logger.info({ grup: cfg.groups[group], sender, allowed, replyToBot, awal: text.slice(0, 30) }, 'pesan grup tidak diteruskan');
     return;
@@ -757,10 +762,12 @@ async function processOutbox() {
     if (item.jid) { // balasan worker CS
       // audio (voice note, ogg opus) atau gambar: file ada di /data/media, dibuat bot D'Pro Ops
       const media = item.audio ? { audio: fs.readFileSync(`/data/media/${item.audio}`), mimetype: 'audio/ogg; codecs=opus', ptt: true }
-        : item.image ? { image: fs.readFileSync(`/data/media/${item.image}`), caption: item.text || undefined } : null;
+        : item.image ? { image: fs.readFileSync(`/data/media/${item.image}`), caption: item.text || undefined }
+        : item.document ? { document: fs.readFileSync(`/data/media/${item.document}`), fileName: item.fileName || item.document,
+            mimetype: item.mimetype || 'application/octet-stream', caption: item.text || undefined } : null;
       try {
         if (media) await reply(item.jid, media);
-        if (item.text && !item.image) await reply(item.jid, { text: item.text, ...(item.mentions ? { mentions: item.mentions } : {}) });
+        if (item.text && !item.image && !item.document) await reply(item.jid, { text: item.text, ...(item.mentions ? { mentions: item.mentions } : {}) });
       } catch (e) { logger.error({ jid: item.jid, err: e.message }, 'gagal kirim balasan CS'); }
       fs.unlinkSync(file);
       logger.info({ jid: item.jid, topik: item.topik }, 'balasan CS terkirim');
@@ -1076,7 +1083,7 @@ async function start() {
     }
     if (type !== 'notify') return;
     for (const msg of messages) {
-      if (msg.key.remoteJid?.endsWith('@g.us')) { if (PRIBADI) continue; try { relayIncoming(msg); } catch (e) { logger.error({ err: e.message }, 'relay grup gagal'); } continue; }
+      if (msg.key.remoteJid?.endsWith('@g.us')) { if (PRIBADI && !PRIBADI_GRUP.includes(msg.key.remoteJid)) continue; try { relayIncoming(msg); } catch (e) { logger.error({ err: e.message }, 'relay grup gagal'); } continue; }
       try { await handleIncoming(msg); } catch (e) { logger.error({ err: e.message }, 'gagal memproses pesan masuk'); }
     }
   });
