@@ -374,7 +374,7 @@ function FormSteps({ categories, fees, methods, paymentMode, trackCheckout, maxT
                   <input inputMode="numeric" maxLength={5} className={inputCls} value={participant.postalCode} onChange={(e) => set("postalCode", e.target.value.replace(/\D/g, ""))} onBlur={() => blur("postalCode")} autoComplete="postal-code" placeholder="5 angka" />
                 </Field>
                 <Field label="Tanggal lahir" error={errors["birthDate"]}>
-                  <input type="date" className={inputCls} value={participant.birthDate} onChange={(e) => set("birthDate", e.target.value)} onBlur={() => blur("birthDate")} max="2020-12-31" min="1930-01-01" autoComplete="bday" />
+                  <input type="date" className={inputCls} value={participant.birthDate} onChange={(e) => set("birthDate", e.target.value)} onBlur={() => blur("birthDate")} max="2026-10-23" min="1930-01-01" autoComplete="bday" />
                 </Field>
                 <Field label="Jenis kelamin" error={errors["gender"]}>
                   <Select value={participant.gender} onChange={(v) => set("gender", v)} onBlur={() => blur("gender")} placeholder="Pilih jenis kelamin" options={[["L", "Laki-laki"], ["P", "Perempuan"]]} />

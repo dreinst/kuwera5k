@@ -1,9 +1,8 @@
 import { z } from "zod";
 import { KAB_KOTA } from "@/lib/wilayah";
 
-// Keputusan sementara (lihat docs/PRD.md bagian 12): usia minimal dan biaya layanan per metode
-// bisa diubah panitia lewat tabel Setting tanpa deploy ulang.
-export const MIN_AGE = 12;
+// Tidak ada batas usia (Donny, 2 Okt 2026): disarankan mulai usia SD, wajib bayar mulai usia SMP.
+// Anak usia SD boleh lari tanpa tiket, atau daftar dan bayar penuh kalau ingin jersey, BIB, dan medali.
 export const RACE_DATE = "2026-10-24";
 
 // Size chart O-neck reguler dari Donny (24 Sep 2026), dalam cm. Jersey berlengan pendek,
@@ -96,7 +95,7 @@ export const participantSchema = z.object({
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/, "Tanggal lahirnya belum diisi")
     .refine((v) => !Number.isNaN(new Date(v).getTime()), "Tanggal lahir tidak valid")
-    .refine((v) => ageOn(v) >= MIN_AGE, `Usia minimal ${MIN_AGE} tahun saat hari lomba`)
+    .refine((v) => v < RACE_DATE, "Tanggal lahirnya sepertinya kurang tepat, boleh dicek lagi?")
     .refine((v) => ageOn(v) <= 90, "Tanggal lahirnya sepertinya kurang tepat, boleh dicek lagi?"),
   gender: z.enum(["L", "P"], { message: "Jenis kelaminnya belum dipilih" }),
   phone: phone("Nomor HP"),
