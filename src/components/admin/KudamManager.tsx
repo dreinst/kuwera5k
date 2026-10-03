@@ -4,10 +4,10 @@ import { useState, useTransition } from "react";
 import { cancelKudamAction, createKudamAction, markKudamPaidAction, type KudamRow } from "@/app/kuweraadmin/actions";
 import { JERSEY_SIZES, formatRupiah } from "@/lib/registration";
 
-type Member = { id: string; nama: string; wa: string; jersey: string; status: string; tiket: string | null; dibuat: string };
+type Member = { id: string; nama: string; wa: string; email: string; jersey: string; status: string; tiket: string | null; dibuat: string };
 
 const inputCls = "w-full rounded-xl border border-glass-border bg-white/5 px-3 py-2 text-sm text-white placeholder:text-white/40 focus:border-brand-yellow focus:outline-none";
-const empty = (): KudamRow => ({ nama: "", wa: "", jersey: "" });
+const empty = (): KudamRow => ({ nama: "", wa: "", email: "", jersey: "" });
 
 export default function KudamManager({ members, price }: { members: Member[]; price: number }) {
   const [rows, setRows] = useState<KudamRow[]>([empty(), empty(), empty()]);
@@ -39,12 +39,13 @@ export default function KudamManager({ members, price }: { members: Member[]; pr
     <div className="space-y-6">
       <section className="rounded-[20px] border border-glass-border bg-card p-6">
         <h2 className="font-display text-xl text-white uppercase">Tambah anggota</h2>
-        <p className="mt-1 text-sm text-white/70">Cukup nama, nomor WA, dan ukuran jersey. Harga {formatRupiah(price)} per orang, bayar lewat QRIS statis tanpa kode unik.</p>
+        <p className="mt-1 text-sm text-white/70">Isi nama, nomor WA, email, dan ukuran jersey. E-ticket dikirim ke email itu setelah lunas. Harga {formatRupiah(price)} per orang, bayar lewat QRIS statis tanpa kode unik.</p>
         <div className="mt-4 space-y-2">
           {rows.map((r, i) => (
-            <div key={i} className="grid gap-2 sm:grid-cols-[1fr_1fr_8rem]">
+            <div key={i} className="grid gap-2 sm:grid-cols-[1fr_1fr_1fr_8rem]">
               <input className={inputCls} placeholder={`Nama anggota ${i + 1}`} value={r.nama} onChange={(e) => set(i, "nama", e.target.value)} />
               <input className={inputCls} placeholder="Nomor WA, contoh 0812..." inputMode="tel" value={r.wa} onChange={(e) => set(i, "wa", e.target.value)} />
+              <input className={inputCls} placeholder="Email, contoh nama@gmail.com" type="email" inputMode="email" autoComplete="off" value={r.email} onChange={(e) => set(i, "email", e.target.value)} />
               <select className={`${inputCls} [&>option]:bg-green-deep`} value={r.jersey} onChange={(e) => set(i, "jersey", e.target.value)}>
                 <option value="">Jersey</option>
                 {JERSEY_SIZES.map((s) => <option key={s} value={s}>{s}</option>)}
@@ -72,14 +73,14 @@ export default function KudamManager({ members, price }: { members: Member[]; pr
         </div>
         {members.length === 0 ? <p className="mt-4 text-white/70">Belum ada anggota Kudam.</p> : (
           <div className="mt-4 overflow-x-auto">
-            <table className="w-full min-w-[640px] text-left text-sm">
+            <table className="w-full min-w-[760px] text-left text-sm">
               <thead className="text-xs text-white/65 uppercase">
                 <tr>
                   <th className="py-2 pr-3">
                     <input type="checkbox" aria-label="Pilih semua yang belum bayar" checked={unpaid.length > 0 && picked.length === unpaid.length}
                       onChange={(e) => setPicked(e.target.checked ? unpaid.map((m) => m.id) : [])} />
                   </th>
-                  <th className="py-2 pr-3">Nama</th><th className="py-2 pr-3">WA</th><th className="py-2 pr-3">Jersey</th>
+                  <th className="py-2 pr-3">Nama</th><th className="py-2 pr-3">WA</th><th className="py-2 pr-3">Email</th><th className="py-2 pr-3">Jersey</th>
                   <th className="py-2 pr-3">Status</th><th className="py-2" />
                 </tr>
               </thead>
@@ -94,6 +95,7 @@ export default function KudamManager({ members, price }: { members: Member[]; pr
                     </td>
                     <td className="py-2 pr-3 font-semibold text-white"><a href={`/kuweraadmin/peserta/${m.id}`} className="hover:underline">{m.nama}</a></td>
                     <td className="py-2 pr-3 text-white/85">{m.wa}</td>
+                    <td className="py-2 pr-3 text-white/85">{m.email || "(belum ada)"}</td>
                     <td className="py-2 pr-3 text-white/85">{m.jersey}</td>
                     <td className="py-2 pr-3">
                       {m.status === "PAID" ? <span className="font-semibold text-yellow-lime">Lunas{m.tiket ? ` · ${m.tiket}` : ""}</span>

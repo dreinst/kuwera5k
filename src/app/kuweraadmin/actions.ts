@@ -282,7 +282,7 @@ export async function searchTicketsAction(q: string): Promise<{ tickets?: RegTic
 // Batas bayar = hari lomba, jadi tidak ikut kedaluwarsa otomatis maupun pengingat bot.
 const KUDAM_PRICE = 125000;
 const KUDAM_HOLD_UNTIL = new Date("2026-10-24T00:00:00+07:00");
-export type KudamRow = { nama: string; wa: string; jersey: string };
+export type KudamRow = { nama: string; wa: string; email: string; jersey: string };
 
 export async function createKudamAction(rows: KudamRow[]): Promise<{ ok?: string; error?: string }> {
   const admin = await getAdmin();
@@ -291,11 +291,14 @@ export async function createKudamAction(rows: KudamRow[]): Promise<{ ok?: string
   for (const [i, r] of rows.entries()) {
     const nama = titleName(r.nama ?? "");
     const wa = normalizePhone(r.wa);
-    if (!r.nama?.trim() && !r.wa?.trim()) continue; // baris kosong dilewati
+    const email = (r.email ?? "").trim().toLowerCase();
+    if (!r.nama?.trim() && !r.wa?.trim() && !email) continue; // baris kosong dilewati
     if (!/^[\p{L}][\p{L}\s.,'()/-]*$/u.test(nama) || nama.length < 2) return { error: `Baris ${i + 1}: nama diisi huruf, minimal 2 huruf` };
     if (!/^08\d{8,11}$/.test(wa)) return { error: `Baris ${i + 1}: nomor WA diawali 08 dan berisi 10 sampai 13 angka` };
+    // E-ticket dikirim lewat email (bot WhatsApp tidak aktif), jadi email wajib diisi.
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email) || email.length > 120) return { error: `Baris ${i + 1}: email belum benar, contoh nama@gmail.com` };
     if (!(JERSEY_SIZES as readonly string[]).includes(r.jersey)) return { error: `Baris ${i + 1}: ukuran jersey belum dipilih` };
-    clean.push({ nama, wa, jersey: r.jersey });
+    clean.push({ nama, wa, email, jersey: r.jersey });
   }
   if (!clean.length) return { error: "Belum ada anggota yang diisi" };
   const category = await prisma.category.findFirst({ where: { isActive: true }, orderBy: { price: "asc" } });
@@ -310,9 +313,9 @@ export async function createKudamAction(rows: KudamRow[]): Promise<{ ok?: string
       await tx.order.create({
         data: {
           id: newOrderId(), categoryId: category.id, status: "PENDING", subtotal: KUDAM_PRICE, discount: 0, fee: 0, total: KUDAM_PRICE,
-          quantity: 1, uniqueCode: 0, paymentMethod: "qris", buyerEmail: "", buyerPhone: m.wa, expiresAt: KUDAM_HOLD_UNTIL, source: "kudam",
+          quantity: 1, uniqueCode: 0, paymentMethod: "qris", buyerEmail: m.email, buyerPhone: m.wa, expiresAt: KUDAM_HOLD_UNTIL, source: "kudam",
           participants: { create: [{
-            position: 1, fullName: m.nama, firstName: m.nama, phone: m.wa, email: "", jerseySize: m.jersey,
+            position: 1, fullName: m.nama, firstName: m.nama, phone: m.wa, email: m.email, jerseySize: m.jersey,
             birthDate: new Date("2000-01-01T00:00:00+07:00"), gender: "L", emergencyName: "-", emergencyPhone: "-", community: "Kudam V/Brawijaya",
           }] },
         },
@@ -326,7 +329,7 @@ export async function createKudamAction(rows: KudamRow[]): Promise<{ ok?: string
 }
 
 // Tandai lunas beberapa anggota sekaligus. Superadmin mengetik ulang total yang masuk (jumlah x Rp125.000) sebagai
-// konfirmasi; setelah lunas bot WA mengirim e-ticket dan QR registrasi ulang ke nomor WA tiap anggota.
+// konfirmasi; setelah lunas e-ticket dan QR registrasi ulang dikirim ke email tiap anggota (kuwera-email-tiket di VPS).
 export async function markKudamPaidAction(orderIds: string[], confirmTotal: number): Promise<{ ok?: string; error?: string }> {
   const admin = await getAdmin();
   if (!admin || !allowed(admin.role, SUPER)) return { error: "Hanya superadmin yang bisa menandai lunas" };
@@ -342,7 +345,7 @@ export async function markKudamPaidAction(orderIds: string[], confirmTotal: numb
   }
   await logAdmin(admin.username, "lunas_kudam", `${orders.length} anggota Rp${total}`);
   revalidatePath("/kuweraadmin/kudam");
-  return { ok: `${orders.length} anggota ditandai lunas. Bot WhatsApp sedang tidak aktif, jadi tautan e-ticket perlu dibagikan sendiri dari halaman peserta.` };
+  return { ok: `${orders.length} anggota ditandai lunas. E-ticket dikirim ke email tiap anggota dalam sekitar satu menit.` };
 }
 
 export async function cancelKudamAction(orderId: string): Promise<{ ok?: string; error?: string }> {
