@@ -23,7 +23,7 @@ export default async function KudamPage() {
       <h1 className="font-display text-4xl text-white uppercase">Anggota <span className="text-brand-yellow">Kudam</span></h1>
       <p className="mt-3 max-w-2xl text-white/80">
         Pendaftaran khusus anggota Kudam V/Brawijaya dengan harga tetap Rp125.000 per orang. Tidak memakai kuota Early Bird,
-        tetapi tetap masuk kuota total peserta. Setelah ditandai lunas, e-ticket dan QR registrasi ulang dikirim ke WhatsApp tiap anggota.
+        tetapi tetap masuk kuota total peserta. Setelah ditandai lunas, tautan e-ticket dan QR registrasi ulang ada di halaman peserta untuk dibagikan ke tiap anggota (bot WhatsApp sedang tidak aktif).
       </p>
       <div className="mt-6"><KudamManager members={members} price={125000} /></div>
     </div>

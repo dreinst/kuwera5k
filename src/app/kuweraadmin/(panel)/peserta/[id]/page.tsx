@@ -140,7 +140,7 @@ export default async function PesertaDetailPage({ params }: { params: Promise<{ 
           {(manualOrder || order.proofs.length > 0) && (
             <Section title="Bukti bayar">
               {order.proofs.length === 0 ? (
-                <p className="text-white/75">Belum ada bukti bayar yang dikirim lewat WhatsApp.</p>
+                <p className="text-white/75">Belum ada bukti bayar yang diunggah pemesan.</p>
               ) : (
                 <div className="grid gap-4 sm:grid-cols-2">
                   {order.proofs.map((f) => (
