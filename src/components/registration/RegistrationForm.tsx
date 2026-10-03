@@ -320,7 +320,7 @@ function FormSteps({ categories, fees, methods, paymentMode, trackCheckout, maxT
               <h2 className="font-display text-2xl text-white uppercase">{quantity > 1 ? `Data peserta ${active + 1} dari ${quantity}` : "Data peserta"}</h2>
               <p className="mt-1 text-sm text-white/75">
                 Mohon diisi sesuai KTP atau KIA, ya. Data ini kami pakai untuk BIB, asuransi, dan verifikasi saat pengambilan race pack.
-                {quantity > 1 && active === 0 && " Peserta 1 juga menjadi pemesan yang dihubungi lewat WhatsApp."}
+                {quantity > 1 && active === 0 && " Peserta 1 juga menjadi pemesan yang menerima e-ticket lewat email."}
               </p>
               {quantity > 1 && (
                 <div className="mt-4 flex flex-wrap gap-2">
@@ -458,7 +458,7 @@ function FormSteps({ categories, fees, methods, paymentMode, trackCheckout, maxT
                 <>
                   <h2 className="font-display text-2xl text-white uppercase">Pembayaran QRIS</h2>
                   <p className="mt-1 text-sm text-white/75">
-                    Di halaman berikutnya ada ringkasan pembayaran. Cukup kirimkan pesan pesanan ke WhatsApp panitia, lalu chatbot kami membalas dengan QRIS bernominal yang bisa dibayar dari aplikasi bank atau e-wallet apa pun.
+                    Di halaman berikutnya ada QRIS bernominal yang bisa dibayar dari aplikasi bank atau e-wallet apa pun. Setelah membayar, unggah screenshot bukti bayarnya di halaman itu.
                   </p>
                 </>
               ) : (

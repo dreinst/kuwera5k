@@ -342,7 +342,7 @@ export async function markKudamPaidAction(orderIds: string[], confirmTotal: numb
   }
   await logAdmin(admin.username, "lunas_kudam", `${orders.length} anggota Rp${total}`);
   revalidatePath("/kuweraadmin/kudam");
-  return { ok: `${orders.length} anggota ditandai lunas. E-ticket dikirim bot ke WhatsApp masing-masing.` };
+  return { ok: `${orders.length} anggota ditandai lunas. Bot WhatsApp sedang tidak aktif, jadi tautan e-ticket perlu dibagikan sendiri dari halaman peserta.` };
 }
 
 export async function cancelKudamAction(orderId: string): Promise<{ ok?: string; error?: string }> {

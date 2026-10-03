@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { PAYMENT_METHODS, formatRupiah } from "@/lib/registration";
-import { WA_ADMIN, waLink, waText } from "@/lib/whatsapp";
+import { waLink, waText } from "@/lib/whatsapp";
 import { trackPixel } from "@/lib/meta-pixel";
 import { useNow } from "@/lib/use-now";
 
@@ -12,7 +12,7 @@ type Order = {
   expiresAt: string | null; paymentMethod: string | null; category: string; name: string; email: string;
   hasSnap: boolean; quantity: number;
 };
-type Manual = { waText: string; lines: [string, string][] } | null;
+type Manual = { lines: [string, string][]; bukti: number } | null;
 
 // Setelah timer habis, order yang sudah membuka Snap masih dicek ke Midtrans selama ini sebelum
 // dinyatakan habis, karena pembayaran di detik terakhir bisa baru dikonfirmasi sesudahnya.
@@ -44,6 +44,8 @@ export default function PaymentWaiting({ order, paymentMode, snap, trackCheckout
   const [snapNote, setSnapNote] = useState("");
   const [serverStatus, setServerStatus] = useState(order.status);
   const [snapOpened, setSnapOpened] = useState(false);
+  const [terunggah, setTerunggah] = useState(manual?.bukti ?? 0);
+  const fileRef = useRef<HTMLInputElement>(null);
   const expiresAt = order.expiresAt ? new Date(order.expiresAt).getTime() : null;
   const remaining = expiresAt && now ? Math.max(0, expiresAt - now) : 0;
   const timeUp = expiresAt !== null && now !== null && remaining === 0;
@@ -90,6 +92,25 @@ export default function PaymentWaiting({ order, paymentMode, snap, trackCheckout
       .catch(() => {});
     return () => { cancelled = true; };
   }, [expired, serverStatus, canBePaidLate, order.id, router]);
+
+  const unggah = async () => {
+    const file = fileRef.current?.files?.[0];
+    if (!file) { setError("Pilih gambar bukti bayarnya dulu, ya."); return; }
+    setBusy(true); setError("");
+    try {
+      const body = new FormData();
+      body.append("bukti", file);
+      const res = await fetch(`/api/orders/${order.id}/bukti`, { method: "POST", body });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) { setError(data.error ?? "Bukti bayar belum berhasil diunggah. Coba lagi sebentar, ya."); return; }
+      setTerunggah((n) => n + 1);
+      if (fileRef.current) fileRef.current.value = "";
+    } catch {
+      setError("Koneksi terputus saat mengunggah. Coba lagi sebentar, ya.");
+    } finally {
+      setBusy(false);
+    }
+  };
 
   const simulate = async () => {
     setBusy(true); setError("");
@@ -216,15 +237,35 @@ export default function PaymentWaiting({ order, paymentMode, snap, trackCheckout
         {!expired && paymentMode === "manual" && manual && (
           <div className="mt-6">
             <ol className="list-decimal space-y-1 pl-5 text-sm text-white/80">
-              <li>Tekan tombol di bawah, nanti WhatsApp terbuka dengan pesan pesanan yang sudah terisi.</li>
-              <li>Kirimkan pesan itu ke nomor panitia +{WA_ADMIN}, lalu chatbot kami membalas dengan QRIS berisi nominal <span className="font-semibold text-brand-yellow">{formatRupiah(order.total)}</span>.</li>
-              <li>Silakan bayar QRIS itu sesuai nominalnya, lalu kirimkan screenshot bukti bayar di chat yang sama.</li>
-              <li>Admin mengecek pembayaran, lalu e-ticket dikirim ke WhatsApp kamu dan halaman ini ikut berubah.</li>
+              <li>Scan QRIS di bawah dari aplikasi bank atau e-wallet apa pun. Kalau membayar dari HP yang sama, tekan Simpan QRIS lalu unggah gambarnya di aplikasi pembayaranmu.</li>
+              <li>Nominalnya sudah terisi otomatis, <span className="font-semibold text-brand-yellow">{formatRupiah(order.total)}</span>. Mohon dibayar sesuai angka itu, ya.</li>
+              <li>Setelah membayar, unggah screenshot bukti bayarnya di bawah.</li>
+              <li>Admin mengecek pembayaran, lalu halaman ini berubah menjadi e-ticket dan e-ticket juga dikirim ke email {order.email}.</li>
             </ol>
-            <a href={waLink(manual.waText)} target="_blank" rel="noopener noreferrer" className="mt-5 flex w-full items-center justify-center rounded-full bg-brand-yellow px-6 py-3 text-center text-sm font-semibold text-green-deep">
-              Minta QRIS via WhatsApp
+            {/* eslint-disable-next-line @next/next/no-img-element -- kartu bayar dibuat rute /qris, bukan aset statis */}
+            <img src={`/api/orders/${order.id}/qris`} alt={`QRIS pembayaran order ${order.id} sebesar ${formatRupiah(order.total)}`} className="mx-auto mt-5 w-full max-w-xs rounded-2xl" />
+            <a href={`/api/orders/${order.id}/qris`} download={`QRIS-${order.id}.png`} className="mt-4 flex w-full items-center justify-center rounded-full border border-brand-yellow px-6 py-3 text-center text-sm font-semibold text-brand-yellow">
+              Simpan QRIS
             </a>
-            <p className="mt-3 text-xs text-white/75">Belum ada verifikasi otomatis dari payment gateway untuk QRIS manual ini. Superadmin memeriksa dan memverifikasi langsung, maksimal 1x24 jam. Kuota kamu ditahan sampai timer habis.</p>
+            <div className="mt-6 rounded-2xl bg-white/5 p-4">
+              <p className="text-sm font-semibold text-white">Unggah bukti bayar</p>
+              {terunggah > 0 && (
+                <p className="mt-2 rounded-xl border border-brand-yellow/40 bg-brand-yellow/10 px-4 py-3 text-sm text-brand-yellow">
+                  Bukti bayar sudah kami terima. Admin mengeceknya paling lama 1x24 jam, dan halaman ini berubah menjadi e-ticket begitu terverifikasi.
+                </p>
+              )}
+              <input
+                ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" aria-label="Gambar bukti bayar"
+                className="mt-3 block w-full text-sm text-white/80 file:mr-3 file:rounded-full file:border-0 file:bg-white/15 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white"
+              />
+              <button type="button" onClick={unggah} disabled={busy} className="mt-3 w-full rounded-full bg-brand-yellow px-6 py-3 text-sm font-semibold text-green-deep disabled:opacity-60">
+                {busy ? "Mengunggah..." : terunggah > 0 ? "Unggah bukti lain" : "Kirim bukti bayar"}
+              </button>
+            </div>
+            <p className="mt-3 text-xs text-white/75">
+              Pembayaran QRIS ini dicek langsung oleh admin, belum otomatis, maksimal 1x24 jam. Kuota kamu ditahan sampai timer habis.
+              Ada kendala? <a href={waLink(waText.bayar(order.id))} target="_blank" rel="noopener noreferrer" className="text-brand-yellow underline">Chat panitia di WhatsApp</a>, dibalas langsung oleh admin.
+            </p>
           </div>
         )}
         {error && <p className="mt-4 text-sm text-yellow-lime">{error}</p>}

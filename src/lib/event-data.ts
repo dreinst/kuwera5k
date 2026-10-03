@@ -17,7 +17,7 @@ export const eventData = {
   registrationCloseLabel: "Sabtu, 17 Oktober 2026 pukul 23.59 WIB", // sama dengan registrationCloseIso
   racePackDates,
   racePackPlace: "Kudam V/Brawijaya",
-  racePackHours: "Jam pengambilannya kami kabarkan lewat WhatsApp menjelang hari H.",
+  racePackHours: "Jam pengambilannya kami kabarkan lewat email dan Instagram menjelang hari H.",
   // Untuk data terstruktur (schema.org) dan metadata; sumber koordinat: OpenStreetMap way 295948065.
   startIso: "2026-10-24T06:00:00+07:00",
   registrationOpenIso: "2026-09-01T00:00:00+07:00", // jendela jual kategori di seed

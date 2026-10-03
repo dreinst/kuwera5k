@@ -1,0 +1,7 @@
+[Unit]
+Description=Kirim e-ticket KUWERA lewat email ke order yang baru lunas
+After=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/kuwera-email-tiket

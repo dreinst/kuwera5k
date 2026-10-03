@@ -2,7 +2,7 @@ import QRCode from "qrcode";
 import { dynamicQris, qrisStatic } from "@/lib/qris";
 import { formatRupiah } from "@/lib/registration";
 
-// Bahan halaman /bayar dan kartu bayar untuk mode manual (QRIS dinamis + konfirmasi lewat WhatsApp).
+// Bahan halaman /bayar dan kartu bayar untuk mode manual (QRIS dinamis + unggah bukti bayar di halaman).
 
 type OrderForManual = {
   id: string; total: number; subtotal: number; discount: number; uniqueCode: number; quantity: number; promoCode: string | null;
