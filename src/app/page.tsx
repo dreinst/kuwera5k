@@ -36,7 +36,7 @@ export default async function Home() {
       <main className="flex flex-1 flex-col">
         <Hero stats={stats} price={price} promoEnd={promoEndsAt(pricing)}
           promoNext={nextPromoAt(pricing)} promo={pricing.promo}
-          promoDay={new Date() <= new Date(eventData.promoDay.untilIso) ? eventData.promoDay : null} noFee={paymentMode() === "manual"} />
+          promoDay={new Date() >= new Date(eventData.promoDay.fromIso) && new Date() <= new Date(eventData.promoDay.untilIso) ? eventData.promoDay : null} noFee={paymentMode() === "manual"} />
         <RouteDetail />
         <DateBanner />
         <Schedule />
