@@ -380,6 +380,18 @@ async function handleIncoming(msg) {
   if (await berhentiBlast(msg, jid)) return;
   const hasProof = !!(msg.message && (msg.message.imageMessage || msg.message.documentMessage));
   const match = textOf(msg).match(ORDER_RE);
+  // Bukti bayar tanpa nomor order dari chat yang belum tercatat (misalnya QRIS dikirim admin lebih dulu): dicocokkan
+  // ke order yang masih menunggu bayar lewat nomor HP pengirim, supaya tidak jatuh ke chatbot CS.
+  if (hasProof && !match && !Object.values(confirmChats).includes(jid)) {
+    const phone = digits(msg.key.senderPn || msg.key.remoteJidAlt || jid);
+    const { rows } = phone.length < 10 ? { rows: [] } : await pool.query(
+      `SELECT o.id FROM "Order" o
+        WHERE o.status = 'PENDING' AND NOT o."isTest" AND right(regexp_replace(o."buyerPhone", '\\D', '', 'g'), 10) = right($1, 10)
+        ORDER BY o."createdAt" DESC LIMIT 1`,
+      [phone],
+    );
+    if (rows[0]) { confirmChats[rows[0].id] = jid; saveConfirmChats(); }
+  }
   // Semua file dari pemesan yang terkait order diarsipkan, termasuk kiriman ulang yang tidak dikabarkan lagi.
   const archiveId = match ? match[0].toUpperCase() : hasProof && Object.keys(confirmChats).find((id) => confirmChats[id] === jid);
   if (hasProof && archiveId) {
