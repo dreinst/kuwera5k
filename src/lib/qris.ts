@@ -38,4 +38,5 @@ export function dynamicQris(staticPayload: string, amount: number) {
 }
 
 // Payload QRIS statis disimpan di env supaya bisa diganti tanpa mengubah kode.
-export const qrisStatic = () => process.env.QRIS_STATIC_PAYLOAD?.trim() || "";
+// Coolify menulis tanda petik di env sebagai \' (nama merchant "D'Production"), jadi dikembalikan dulu.
+export const qrisStatic = () => process.env.QRIS_STATIC_PAYLOAD?.trim().replaceAll("\\'", "'") || "";
