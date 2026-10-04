@@ -15,6 +15,7 @@ const LINKS = [
   { href: "/kuweraadmin/kudam", label: "Anggota Kudam", roles: SUPER },
   { href: "/kuweraadmin/harga", label: "Harga", roles: SUPER },
   { href: "/kuweraadmin/penarikan", label: "Penarikan GoPay", roles: SUPER },
+  { href: "/kuweraadmin/cocok", label: "Cocokkan GoPay", roles: SUPER },
   { href: "/kuweraadmin/promo", label: "Kode promo", roles: SUPER },
   { href: "/kuweraadmin/verifikasi", label: "Verifikasi Midtrans", roles: SUPER },
 ];
