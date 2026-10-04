@@ -34,7 +34,7 @@ model Category {
 }
 
 model Order {
-  id          String      @id // format KWR-{tahun}-{6 acak}, juga jadi kode tiket
+  id          String      @id // format KWR-{tahun}-{6 acak}; kode tiket = {id}-{urutan peserta}
   category    Category    @relation(fields: [categoryId], references: [id])
   categoryId  String
   status      OrderStatus @default(DRAFT)
@@ -50,9 +50,16 @@ model Order {
   buyerPhone  String
   expiresAt   DateTime?
   paidAt      DateTime?
-  participant Participant?
+  quantity    Int         @default(1) // jumlah tiket dalam satu pembelian
+  isTest      Boolean  @default(false) // data uji sistem: tetap disimpan, tidak ikut dihitung di statistik, kuota, dan pendapatan
+  source      String   @default("web") // "web" = daftar sendiri di website, "kudam" = anggota Kudam diinput superadmin
+  uniqueCode  Int         @default(0) // kode unik 3 digit di akhir nominal (bayar manual QRIS)
+  waNotifiedAt    DateTime? // bot WA sudah mengirim tautan tiket ke pemesan
+  adminNotifiedAt DateTime? // superadmin sudah dikabari lewat Telegram
+  participants Participant[]
   payments    Payment[]
-  ticket      Ticket?
+  proofs      PaymentProof[]
+  tickets     Ticket[]
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
 
@@ -63,7 +70,9 @@ model Order {
 model Participant {
   id             String   @id @default(cuid())
   order          Order    @relation(fields: [orderId], references: [id])
-  orderId        String   @unique
+  orderId        String
+  position       Int      @default(1) // urutan peserta dalam order; peserta 1 = pemesan
+  ticket         Ticket?
   fullName       String
   // Kolom tambahan form 24 Sep 2026; nullable supaya aman untuk baris lama (form mewajibkan semuanya kecuali nama belakang).
   firstName      String?
@@ -83,13 +92,16 @@ model Participant {
   emergencyPhone String
   community      String?
   createdAt      DateTime @default(now())
+
+  @@unique([orderId, position])
+  @@index([idNumber])
 }
 
 model Payment {
   id         String   @id @default(cuid())
   order      Order    @relation(fields: [orderId], references: [id])
   orderId    String
-  gateway    String // "midtrans"
+  gateway    String // "midtrans", "midtrans-sandbox", "qris-manual", "mock"
   gatewayRef String? // transaction_id dari Midtrans
   method     String // qris, bca_va, gopay, dst.
   amount     Int
@@ -99,16 +111,35 @@ model Payment {
   @@index([orderId])
 }
 
+// Bukti bayar QRIS manual yang dikirim pemesan ke WhatsApp; disimpan bot WA supaya bisa dilihat dan diunduh di admin.
+model PaymentProof {
+  id        String   @id @default(cuid())
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  orderId   String
+  fileName  String
+  mimeType  String
+  data      Bytes
+  source    String   @default("whatsapp")
+  note      String? // keterangan yang tampil di admin, misalnya "Kekurangan Rp12.500, dibayar superadmin"
+  createdAt DateTime @default(now())
+
+  @@index([orderId])
+}
+
 model Ticket {
   id                 String    @id @default(cuid())
   order              Order     @relation(fields: [orderId], references: [id])
-  orderId            String    @unique
+  orderId            String
+  participant        Participant? @relation(fields: [participantId], references: [id])
+  participantId      String?   @unique
   code               String    @unique
   bibNumber          String?   @unique
   qrSvg              String
   racepackCollectedAt DateTime?
   collectedBy        String?
   createdAt          DateTime  @default(now())
+
+  @@index([orderId])
 }
 
 model PromoCode {
@@ -140,7 +171,7 @@ model Setting {
 model AdminUser {
   id             String    @id @default(cuid())
   username       String    @unique
-  role           String // "admin" (semua fitur) | "panitia" (lihat, cek Midtrans, tandai race pack)
+  role           String // "superadmin" (semua fitur) | "admin" (keuangan) | "petugas" (reg ulang race pack)
   passwordHash   String?
   setupTokenHash String?   @unique
   setupExpires   DateTime?

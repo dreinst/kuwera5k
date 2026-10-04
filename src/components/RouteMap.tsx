@@ -4,17 +4,11 @@ import { useRef } from "react";
 import { motion, useInView } from "framer-motion";
 import { routeMap } from "@/lib/route-map";
 import { marshalPosts } from "@/lib/marshal-posts";
-import { route } from "@/lib/event-data";
-import { pointAtT, tAtKm } from "@/lib/route-geo";
 
 const [, , vbW, vbH] = routeMap.viewBox.split(" ").map(Number);
 const DRAW_SECONDS = 2.6;
 const reach = (t: number) => 0.2 + t * DRAW_SECONDS;
 
-// Water station diambil dari daftar checkpoint (km), lalu ditempatkan di titik km itu pada jalur.
-const waterStations = route.checkpoints
-  .filter((c) => c.label === "Water station")
-  .map((c) => { const t = tAtKm(c.km); return { ...pointAtT(t), t }; });
 
 const pop = (delay: number) => ({
   hidden: { scale: 0, opacity: 0 },
@@ -144,17 +138,6 @@ export default function RouteMap({ compact = false }: { compact?: boolean }) {
           <rect x={m.ix - 62} y={m.iy - 62} width={124} height={124} rx={22} fill="#0B4A2C" stroke="#FDFBF5" strokeWidth={6} />
           <circle cx={m.ix} cy={m.iy - 16} r={22} fill="#FDFBF5" />
           <path d={`M${m.ix - 40},${m.iy + 46} a40,36 0 0 1 80,0 z`} fill="#FDFBF5" />
-        </motion.g>
-      ))}
-
-      {!compact && waterStations.map((w, i) => (
-        <motion.g key={`water-${i}`} variants={pop(reach(w.t))}>
-          <path
-            d={`M${w.x},${w.y} c-70,-95 -110,-135 -110,-195 a110,110 0 0 1 220,0 c0,60 -40,100 -110,195 z`}
-            fill="#FDFBF5" stroke="#0B4A2C" strokeWidth={6}
-          />
-          <rect x={w.x - 30} y={w.y - 250} width={60} height={92} rx={14} fill="#1C6B06" />
-          <rect x={w.x - 14} y={w.y - 268} width={28} height={22} rx={6} fill="#1C6B06" />
         </motion.g>
       ))}
 

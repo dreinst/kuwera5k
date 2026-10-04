@@ -6,7 +6,7 @@ import ArrowCircle from "@/components/ArrowCircle";
 import { eventData } from "@/lib/event-data";
 
 // Kartu gelap dengan foto pelari di kanan, seperti banner ajakan daftar di konsep.
-export default function CtaBanner() {
+export default function CtaBanner({ price }: { price: number }) {
   return (
     <section className="px-6 py-20">
       <Reveal
@@ -31,7 +31,7 @@ export default function CtaBanner() {
             </h2>
             <p className="mt-4 text-white/85">
               Kuota {eventData.quotaTotal.toLocaleString("id-ID")} peserta, biaya pendaftaran Rp
-              {eventData.price.toLocaleString("id-ID")} per orang.
+              {price.toLocaleString("id-ID")} per orang.
             </p>
             <a
               href="/daftar"

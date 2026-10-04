@@ -5,8 +5,8 @@ import { siteName, siteUrl } from "@/lib/site";
 // JSON-LD beranda (PRD bagian 10) dalam satu @graph: SportsEvent, WebSite (nama situs di hasil Google), dan
 // FAQPage (isinya sama dengan FAQ yang tampil). Harga event mengikuti aturan Google: harga terendah termasuk
 // biaya wajib, jadi tiket ditambah biaya layanan termurah. Kalau biaya layanan di tabel Setting diubah, angka
-// ini baru ikut setelah deploy ulang. `remaining` = sisa kuota dari database (null sebelum go-live).
-export function homeJsonLd(remaining: number | null) {
+// ini baru ikut setelah deploy ulang. `remaining` = sisa kuota dari database (null sebelum go-live), `price` = harga tiket yang berlaku.
+export function homeJsonLd(remaining: number | null, price: number) {
   const lowestFee = Math.min(...Object.values(DEFAULT_FEES));
   const v = eventData.venue;
   const start = new Date(eventData.startIso);
@@ -19,7 +19,7 @@ export function homeJsonLd(remaining: number | null) {
     name: eventData.name,
     description:
       `Fun run ${route.distanceKm}K di ${eventData.city}, start dan finish di ${v.name} pada ${eventData.dateLabel} ` +
-      `pukul ${eventData.timeLabel}. Rp${eventData.price.toLocaleString("id-ID")} per peserta, sudah termasuk jersey, BIB, ` +
+      `pukul ${eventData.timeLabel}. Rp${price.toLocaleString("id-ID")} per peserta, sudah termasuk jersey, BIB, ` +
       `dan medali finisher. Biaya layanan pembayaran tergantung metode.`,
     sport: "Running",
     startDate: eventData.startIso,
@@ -46,7 +46,7 @@ export function homeJsonLd(remaining: number | null) {
     offers: {
       "@type": "Offer",
       url: `${siteUrl}/daftar`,
-      price: String(eventData.price + lowestFee),
+      price: String(price + lowestFee),
       priceCurrency: "IDR",
       availability: remaining === 0 ? "https://schema.org/SoldOut" : "https://schema.org/InStock",
       validFrom: eventData.registrationOpenIso,

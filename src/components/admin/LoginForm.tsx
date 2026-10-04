@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
-import { loginAction, type FormState } from "@/app/admin/actions";
+import { loginAction, type FormState } from "@/app/kuweraadmin/actions";
 import Turnstile from "@/components/registration/Turnstile";
 
 const noop = () => {};

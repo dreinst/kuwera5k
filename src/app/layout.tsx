@@ -24,7 +24,7 @@ export const metadata: Metadata = {
     template: "%s | KUWERA Fun Run 5K Malang",
   },
   description:
-    "Fun run 5K di Malang, Sabtu 24 Oktober 2026, 06.00 WIB di Lapangan Rampal. Rp125.000 di luar biaya layanan, sudah termasuk jersey, BIB, dan medali finisher.",
+    "Fun run 5K di Malang, Sabtu 24 Oktober 2026, 06.00 WIB di Lapangan Rampal. Tiket sudah termasuk jersey, BIB, dan medali finisher.",
   applicationName: siteName,
   // og:title dan og:description diwarisi dari title dan description tiap halaman; gambar dari opengraph-image.jpg.
   openGraph: openGraphBase,

@@ -7,6 +7,7 @@ import Counter from "@/components/Counter";
 import JerseyTexture from "@/components/JerseyTexture";
 import ArrowCircle from "@/components/ArrowCircle";
 import Countdown from "@/components/Countdown";
+import EarlyBirdTimer from "@/components/EarlyBirdTimer";
 
 const wordVariants = {
   hidden: { y: 30, opacity: 0, clipPath: "inset(100% 0 0 0)" },
@@ -55,7 +56,18 @@ const HEADLINE = [
   { word: "5K", outline: true },
 ];
 
-export default function Hero({ stats }: { stats: { paid: number; remaining: number } | null }) {
+export type HeroPrice = { label: string; price: number; promo: boolean; regular: { label: string; price: number } };
+
+// Waktu WIB untuk teks jadwal promo, misalnya "Sabtu, 3 Oktober pukul 09.00".
+const wib = (iso: string, opts: Intl.DateTimeFormatOptions) => new Date(iso).toLocaleString("id-ID", { timeZone: "Asia/Jakarta", ...opts });
+
+export default function Hero({ stats, price, promoEnd = null, promoNext = null, promo = null, promoDay = null, noFee = false }: {
+  stats: { paid: number; remaining: number } | null; price: HeroPrice; promoEnd?: string | null; noFee?: boolean;
+  promoNext?: string | null; promo?: { label: string; price: number; end: string | null; daily: { from: string; to: string } | null } | null;
+  promoDay?: { code: string; text: string; dayLabel: string } | null;
+}) {
+  // Angka pendaftar baru tampil setelah cukup banyak; sisa kuota hanya terlihat di halaman admin.
+  const showCount = !!stats && stats.paid >= eventData.publicCountFrom;
   return (
     <section id="hero" className="relative overflow-hidden px-6 pt-32 pb-20">
       {/* Latar hero memudar di bagian bawah ke tekstur halaman, jadi tidak ada garis batas saat digulir. */}
@@ -141,11 +153,21 @@ export default function Hero({ stats }: { stats: { paid: number; remaining: numb
               className="rounded-[20px] p-6"
               style={{ background: "linear-gradient(135deg, #F4E71D 0%, #C6DA2A 50%, #8DBF2A 100%)" }}
             >
-              <p className="text-xs font-semibold tracking-wide text-green-deep uppercase">Biaya pendaftaran</p>
-              <p className="font-display mt-1 text-5xl text-green-deep">Rp{eventData.price.toLocaleString("id-ID")}</p>
+              <p className="text-xs font-semibold tracking-wide text-green-deep uppercase">Biaya pendaftaran &middot; {price.label}</p>
+              <p className="font-display mt-1 text-5xl text-green-deep">Rp{price.price.toLocaleString("id-ID")}</p>
+              {price.promo && price.regular.price !== price.price && (
+                <p className="mt-1 text-sm font-semibold text-green-deep">
+                  {price.regular.label} <span className="line-through">Rp{price.regular.price.toLocaleString("id-ID")}</span>
+                </p>
+              )}
               <p className="mt-2 text-sm font-medium text-green-deep">
-                Sudah termasuk jersey, BIB, dan medali finisher. Belum termasuk biaya layanan pembayaran.
+                Sudah termasuk jersey, BIB, dan medali finisher. {noFee ? "Pembayaran lewat QRIS, tanpa biaya layanan." : "Belum termasuk biaya layanan pembayaran."}
               </p>
+              {promoDay && (
+                <p className="mt-3 rounded-xl bg-green-deep px-3 py-2 text-sm font-semibold text-brand-yellow">
+                  Khusus {promoDay.dayLabel}: pakai kode {promoDay.code}, {promoDay.text}!
+                </p>
+              )}
             </motion.div>
           </div>
 
@@ -155,18 +177,36 @@ export default function Hero({ stats }: { stats: { paid: number; remaining: numb
               className="rounded-[20px] border border-glass-border bg-glass p-6 backdrop-blur-md"
               style={{ backgroundImage: "radial-gradient(circle at 100% 0%, rgba(244,231,29,0.28), transparent 60%)" }}
             >
-              {stats ? (
+              {showCount ? (
                 <>
                   <p className="flex items-baseline gap-3">
-                    <span className="font-display text-6xl leading-none text-brand-yellow"><Counter to={stats.paid} /></span>
+                    <span className="font-display text-6xl leading-none text-brand-yellow"><Counter to={stats!.paid} /></span>
                     <span className="font-display text-2xl text-white uppercase">Peserta</span>
                   </p>
                   <p className="mt-2 text-lg text-white/85">sudah terdaftar</p>
                 </>
+              ) : promoEnd ? (
+                <>
+                  <p className="text-xs font-semibold tracking-[0.2em] text-white/80 uppercase">{price.label} berakhir dalam</p>
+                  <div className="mt-2"><EarlyBirdTimer to={promoEnd} /></div>
+                  <p className="mt-3 text-lg text-white/85">Kuota terbatas {eventData.quotaTotal.toLocaleString("id-ID")} pelari, yuk amankan slotmu!</p>
+                </>
+              ) : promoNext && promo?.daily ? (
+                <>
+                  <p className="text-xs font-semibold tracking-[0.2em] text-white/80 uppercase">{promo.label} Rp{promo.price.toLocaleString("id-ID")}</p>
+                  <p className="font-display mt-2 text-3xl leading-tight text-brand-yellow uppercase">
+                    Buka lagi {wib(promoNext, { weekday: "long", day: "numeric", month: "long" })} pukul {promo.daily.from.replace(":", ".")} WIB
+                  </p>
+                  <p className="mt-3 text-lg text-white/85">
+                    Harga {promo.label} hadir tiap hari pukul {promo.daily.from.replace(":", ".")} sampai {promo.daily.to.replace(":", ".")} WIB
+                    {promo.end ? `, hingga ${wib(promo.end, { day: "numeric", month: "long" })}` : ""}, kuotanya terbatas. Pasang pengingat, ya!
+                  </p>
+                </>
               ) : (
-                <p className="font-display text-4xl leading-tight text-brand-yellow uppercase">
-                  Kuota {eventData.quotaTotal.toLocaleString("id-ID")} peserta
-                </p>
+                <>
+                  <p className="font-display text-4xl leading-tight text-brand-yellow uppercase">Kuota terbatas {eventData.quotaTotal.toLocaleString("id-ID")} pelari</p>
+                  <p className="mt-2 text-lg text-white/85">Yuk amankan slotmu sebelum kehabisan!</p>
+                </>
               )}
               <a
                 href="/daftar"
@@ -175,7 +215,6 @@ export default function Hero({ stats }: { stats: { paid: number; remaining: numb
                 Daftar sekarang
                 <ArrowCircle />
               </a>
-              {stats && <p className="mt-3 text-center text-sm text-white/75">Sisa kuota {stats.remaining.toLocaleString("id-ID")}</p>}
             </motion.div>
 
             <motion.div
