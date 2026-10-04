@@ -23,6 +23,14 @@ const nextConfig: NextConfig = {
   // Build Docker untuk VPS (lihat Dockerfile) memakai output standalone; build Vercel tidak terpengaruh.
   output: process.env.NEXT_OUTPUT === "standalone" ? "standalone" : undefined,
   poweredByHeader: false,
+  // Font dan logo dibaca dari disk saat menggambar kartu bayar QRIS.
+  outputFileTracingIncludes: {
+    "/api/orders/[id]/qris": [
+      "./src/assets/fonts/Anton-Regular.ttf",
+      "./node_modules/next/dist/compiled/@vercel/og/Geist-Regular.ttf",
+      "./public/brand/kuwera-logo-funrun.png",
+    ],
+  },
   async headers() {
     return [
       {
@@ -39,6 +47,8 @@ const nextConfig: NextConfig = {
           ...(process.env.SITE_NOINDEX === "1" ? [{ key: "X-Robots-Tag", value: "noindex, nofollow" }] : []),
         ],
       },
+      // Halaman reg ulang butuh kamera untuk membaca QR; header ini menimpa camera=() di atas khusus untuk halaman itu.
+      { source: "/kuweraadmin/regulang", headers: [{ key: "Permissions-Policy", value: "camera=(self), microphone=(), geolocation=()" }] },
     ];
   },
 };

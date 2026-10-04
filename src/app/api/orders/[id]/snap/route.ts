@@ -13,9 +13,10 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   if (paymentMode() !== "midtrans") return NextResponse.json({ error: "Pembayaran Midtrans tidak aktif" }, { status: 403 });
   if (!(await rateLimit("snap", 30, 600))) return tooMany();
   const { id } = await params;
-  const order = await prisma.order.findUnique({ where: { id }, include: { participant: true, category: true, ticket: true } });
-  if (!order || !order.participant) return NextResponse.json({ error: "Order tidak ditemukan" }, { status: 404 });
-  if (order.status === "PAID" && order.ticket) return NextResponse.json({ paid: true, code: order.ticket.code });
+  const order = await prisma.order.findUnique({ where: { id }, include: { participants: { where: { position: 1 } }, category: true } });
+  const buyer = order?.participants[0];
+  if (!order || !buyer) return NextResponse.json({ error: "Order tidak ditemukan" }, { status: 404 });
+  if (order.status === "PAID") return NextResponse.json({ paid: true, code: order.id });
   const now = new Date();
   if (order.status !== "PENDING" || !order.expiresAt || order.expiresAt <= now || !order.paymentMethod) {
     return NextResponse.json({ error: "Order sudah kedaluwarsa, silakan daftar ulang" }, { status: 410 });
@@ -32,8 +33,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   try {
     const snap = await createSnapToken({
       id: order.id, subtotal: order.subtotal, discount: order.discount, fee: order.fee, total: order.total,
-      categoryName: order.category.name, paymentMethod: order.paymentMethod as PaymentMethodId, expiresAt: order.expiresAt,
-      participant: { fullName: order.participant.fullName, email: order.participant.email, phone: order.participant.phone },
+      categoryName: order.category.name, quantity: order.quantity, paymentMethod: order.paymentMethod as PaymentMethodId, expiresAt: order.expiresAt,
+      participant: { fullName: buyer.fullName, email: buyer.email, phone: buyer.phone },
       finishUrl: `${origin}/bayar/${order.id}`,
     });
     const saved = await prisma.order.updateMany({

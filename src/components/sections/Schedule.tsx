@@ -17,7 +17,7 @@ const SCHEDULE = [
     title: "Pengambilan race pack",
     date: eventData.racePackDates,
     // "e\u2011ticket" memakai tanda hubung tak terputus supaya tidak terbelah di ujung baris.
-    note: `Lokasinya di ${eventData.racePackPlace}. Bawa KTP atau KIA asli dan tunjukkan QR di e\u2011ticket.`,
+    note: `Ambil race pack kamu di ${eventData.racePackPlace} dengan membawa KTP atau KIA asli dan QR di e\u2011ticket. ${eventData.racePackHours}`,
   },
   {
     title: "Hari lomba",
@@ -26,7 +26,7 @@ const SCHEDULE = [
   },
 ];
 
-// Jadwal lomba seperti referensi (tiga kartu lalu tombol daftar), memakai kartu dan judul gaya beranda.
+// Jadwal acara seperti referensi (tiga kartu lalu tombol daftar), memakai kartu dan judul gaya beranda.
 export default function Schedule() {
   return (
     <section id="jadwal" className="scroll-mt-16 px-6 py-20">
@@ -34,7 +34,7 @@ export default function Schedule() {
         <Reveal className="mx-auto max-w-2xl text-center">
           <h2 className="font-display text-4xl text-white uppercase sm:text-5xl">
             Jadwal{" "}
-            <span className="text-brand-yellow underline decoration-brand-yellow decoration-4 underline-offset-8">Lomba</span>
+            <span className="text-brand-yellow underline decoration-brand-yellow decoration-4 underline-offset-8">Acara</span>
           </h2>
           <p className="mt-5 text-white/80">Tandai tanggal-tanggal ini di kalendermu.</p>
         </Reveal>

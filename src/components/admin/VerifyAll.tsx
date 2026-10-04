@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState, useTransition } from "react";
-import { verifyAllAction } from "@/app/admin/actions";
+import { verifyAllAction } from "@/app/kuweraadmin/actions";
 import type { MidtransCheck } from "@/lib/admin-shared";
 import { VERDICT, VerdictBadge } from "@/components/admin/Badges";
 
@@ -53,7 +53,7 @@ export default function VerifyAll() {
                 <tbody>
                   {shown.map((r) => (
                     <tr key={r.orderId} className="border-t border-white/10">
-                      <td className="px-4 py-3 font-mono"><Link href={`/admin/peserta/${r.orderId}`} className="text-brand-yellow hover:underline">{r.orderId}</Link></td>
+                      <td className="px-4 py-3 font-mono"><Link href={`/kuweraadmin/peserta/${r.orderId}`} className="text-brand-yellow hover:underline">{r.orderId}</Link></td>
                       <td className="px-4 py-3"><VerdictBadge verdict={r.verdict} /></td>
                       <td className="px-4 py-3 text-white/85">{r.note}</td>
                     </tr>

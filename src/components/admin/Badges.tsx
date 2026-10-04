@@ -10,8 +10,14 @@ const STATUS_CLS: Record<OrderStatus, string> = {
   REFUNDED: "bg-gold/25 text-cream",
 };
 
-export function StatusBadge({ status }: { status: OrderStatus }) {
-  return <span className={`inline-block rounded-full px-3 py-1 text-xs font-semibold whitespace-nowrap ${STATUS_CLS[status]}`}>{STATUS_LABEL[status]}</span>;
+// `test`: order data uji, tetap tampil di daftar tapi tidak ikut dihitung di statistik.
+export function StatusBadge({ status, test = false }: { status: OrderStatus; test?: boolean }) {
+  return (
+    <span className="inline-flex flex-wrap gap-1">
+      <span className={`inline-block rounded-full px-3 py-1 text-xs font-semibold whitespace-nowrap ${STATUS_CLS[status]}`}>{STATUS_LABEL[status]}</span>
+      {test && <span className="inline-block rounded-full border border-gold px-3 py-1 text-xs font-semibold whitespace-nowrap text-gold">UJI</span>}
+    </span>
+  );
 }
 
 export const VERDICT: Record<MidtransCheck["verdict"], { label: string; cls: string }> = {

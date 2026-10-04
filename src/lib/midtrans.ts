@@ -42,6 +42,7 @@ export type SnapOrder = {
   fee: number;
   total: number;
   categoryName: string;
+  quantity: number;
   paymentMethod: PaymentMethodId;
   expiresAt: Date;
   participant: { fullName: string; email: string; phone: string };
@@ -54,7 +55,7 @@ export async function createSnapToken(order: SnapOrder) {
   // Route /snap menolak membuat token kalau sisa waktu kurang dari 1 menit.
   const minutes = Math.max(1, Math.floor((order.expiresAt.getTime() - now.getTime()) / 60_000));
   const items = [
-    { id: "tiket", price: order.subtotal - order.discount, quantity: 1, name: `KUWERA 5K ${order.categoryName}`.slice(0, 50) },
+    { id: "tiket", price: order.subtotal - order.discount, quantity: 1, name: `KUWERA 5K ${order.categoryName}${order.quantity > 1 ? ` x${order.quantity}` : ""}`.slice(0, 50) },
   ];
   if (order.fee > 0) items.push({ id: "fee", price: order.fee, quantity: 1, name: "Biaya layanan pembayaran" });
   const body = {

@@ -1,9 +1,8 @@
 import { z } from "zod";
 import { KAB_KOTA } from "@/lib/wilayah";
 
-// Keputusan sementara (lihat docs/PRD.md bagian 12): usia minimal dan biaya layanan per metode
-// bisa diubah panitia lewat tabel Setting tanpa deploy ulang.
-export const MIN_AGE = 12;
+// Tidak ada batas usia (Donny, 2 Okt 2026): disarankan mulai usia SD, wajib bayar mulai usia SMP.
+// Anak usia SD boleh lari tanpa tiket, atau daftar dan bayar penuh kalau ingin jersey, BIB, dan medali.
 export const RACE_DATE = "2026-10-24";
 
 // Size chart O-neck reguler dari Donny (24 Sep 2026), dalam cm. Jersey berlengan pendek,
@@ -62,8 +61,10 @@ export const DEFAULT_FEES: Record<PaymentMethodId, number> = {
   gopay: 4000, shopeepay: 4000, credit_card: 7500,
 };
 
+// Spasi, strip, titik, kurung, dan awalan +62/62 dirapikan dulu, jadi "+62 812-3456-7890" diterima sebagai 081234567890.
+export const normalizePhone = (v: unknown) => String(v ?? "").replace(/[\s.\-()]/g, "").replace(/^\+?62/, "0");
 const phone = (label: string) =>
-  z.string().trim().regex(/^08\d{8,11}$/, `${label} ditulis 08xxxxxxxxxx (10 sampai 13 digit)`);
+  z.preprocess(normalizePhone, z.string().regex(/^08\d{8,11}$/, `${label} diawali 08 dan berisi 10 sampai 13 angka, contoh 081234567890`));
 
 export function ageOn(birthDate: string, on: string = RACE_DATE) {
   const b = new Date(birthDate), d = new Date(on);
@@ -72,32 +73,41 @@ export function ageOn(birthDate: string, on: string = RACE_DATE) {
   return age;
 }
 
+// Nama ditulis rapi: huruf besar di awal setiap kata, sisanya kecil, satu spasi antarkata, dan spasi setelah titik
+// singkatan. "FACHRI ZAINUAR ANUGRAH" jadi "Fachri Zainuar Anugrah", "r.hendro mukti" jadi "R. Hendro Mukti".
+export const titleName = (v: string) =>
+  v.trim().replace(/\s+/g, " ").replace(/\.(?=\S)/g, ". ").toLowerCase().replace(/(^|[^\p{L}'])(\p{L})/gu, (_, a, b) => a + b.toUpperCase());
+
+// Nama harus berupa huruf (boleh titik, koma, petik, tanda hubung, garis miring, dan kurung seperti "Sari (ibu)"),
+// bukan angka atau nomor HP.
+const NAME_RE = /^[\p{L}][\p{L}\s.,'()/-]*$/u;
+
 export const participantSchema = z.object({
-  firstName: z.string().trim().min(2, "Nama depan minimal 2 huruf").max(40, "Nama depan maksimal 40 huruf"),
-  lastName: z.string().trim().max(40, "Nama belakang maksimal 40 huruf").optional().or(z.literal("")),
-  idNumber: z.string().trim().regex(/^\d{16}$/, "Nomor identitas (NIK) harus 16 angka"),
+  firstName: z.string().trim().min(2, "Nama depan minimal 2 huruf").max(40, "Nama depan maksimal 40 huruf").regex(NAME_RE, "Nama depan diisi huruf saja, tanpa angka").transform(titleName),
+  lastName: z.string().trim().max(40, "Nama belakang maksimal 40 huruf").regex(NAME_RE, "Nama belakang diisi huruf saja, tanpa angka").transform(titleName).optional().or(z.literal("")),
+  idNumber: z.string().trim().regex(/^\d{16}$/, "Nomor identitas (NIK) terdiri dari 16 angka"),
   address: z.string().trim().min(10, "Alamat minimal 10 huruf").max(200, "Alamat maksimal 200 huruf"),
-  province: z.enum(PROVINCES, { message: "Pilih provinsi" }),
-  city: z.string().trim().min(1, "Pilih kota/kabupaten"),
-  postalCode: z.string().trim().regex(/^\d{5}$/, "Kode pos harus 5 angka"),
-  bloodType: z.enum(BLOOD_TYPES, { message: "Pilih golongan darah" }),
+  province: z.enum(PROVINCES, { message: "Provinsinya belum dipilih" }),
+  city: z.string().trim().min(1, "Kota/kabupatennya belum dipilih"),
+  postalCode: z.string().trim().regex(/^\d{5}$/, "Kode pos terdiri dari 5 angka"),
+  bloodType: z.enum(BLOOD_TYPES, { message: "Golongan darahnya belum dipilih" }),
   birthDate: z
     .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/, "Tanggal lahir wajib diisi")
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "Tanggal lahirnya belum diisi")
     .refine((v) => !Number.isNaN(new Date(v).getTime()), "Tanggal lahir tidak valid")
-    .refine((v) => ageOn(v) >= MIN_AGE, `Usia minimal ${MIN_AGE} tahun saat hari lomba`)
-    .refine((v) => ageOn(v) <= 90, "Cek lagi tanggal lahirnya"),
-  gender: z.enum(["L", "P"], { message: "Pilih jenis kelamin" }),
+    .refine((v) => v < RACE_DATE, "Tanggal lahirnya sepertinya kurang tepat, boleh dicek lagi?")
+    .refine((v) => ageOn(v) <= 90, "Tanggal lahirnya sepertinya kurang tepat, boleh dicek lagi?"),
+  gender: z.enum(["L", "P"], { message: "Jenis kelaminnya belum dipilih" }),
   phone: phone("Nomor HP"),
   email: z.string().trim().toLowerCase().email("Email tidak valid"),
-  jerseySize: z.enum(JERSEY_SIZES, { message: "Pilih ukuran jersey" }),
-  emergencyName: z.string().trim().min(3, "Nama kontak darurat minimal 3 huruf").max(80),
+  jerseySize: z.enum(JERSEY_SIZES, { message: "Ukuran jerseynya belum dipilih" }),
+  emergencyName: z.string().trim().min(3, "Nama kontak darurat minimal 3 huruf").max(80).regex(NAME_RE, "Nama kontak darurat diisi nama orangnya ya, nomornya di kolom sebelah").transform(titleName),
   emergencyPhone: phone("Nomor kontak darurat"),
   community: z.string().trim().max(80, "Maksimal 80 huruf").optional().or(z.literal("")),
 }).superRefine((p, ctx) => {
   // Kota/kabupaten harus salah satu wilayah di provinsi yang dipilih (daftar di src/lib/wilayah.ts).
   if (p.city && !(KAB_KOTA[p.province] ?? []).includes(p.city)) {
-    ctx.addIssue({ code: "custom", path: ["city"], message: "Pilih kota/kabupaten dari daftar provinsi yang dipilih" });
+    ctx.addIssue({ code: "custom", path: ["city"], message: "Kota/kabupaten ini belum sesuai dengan provinsi yang dipilih" });
   }
 });
 export type ParticipantInput = z.infer<typeof participantSchema>;
@@ -105,12 +115,24 @@ export type ParticipantInput = z.infer<typeof participantSchema>;
 export type ParticipantForm = Record<keyof ParticipantInput, string>;
 export const fullNameOf = (p: { firstName: string; lastName?: string | null }) => `${p.firstName} ${p.lastName ?? ""}`.trim();
 
+// Batas atas teknis; batas yang berlaku diatur panitia lewat Setting registration.maxTickets.
+export const MAX_TICKETS_HARD = 20;
+
 export const orderInputSchema = z.object({
-  categoryId: z.string().min(1, "Pilih kategori"),
-  participant: participantSchema,
+  categoryId: z.string().min(1, "Kategorinya belum dipilih"),
+  // Satu pembelian bisa beberapa tiket; peserta pertama sekaligus pemesan.
+  participants: z.array(participantSchema).min(1, "Data peserta belum diisi").max(MAX_TICKETS_HARD).superRefine((list, ctx) => {
+    // Satu NIK satu tiket, termasuk di dalam pembelian yang sama.
+    const seen = new Map<string, number>();
+    list.forEach((p, i) => {
+      const first = seen.get(p.idNumber);
+      if (first !== undefined) ctx.addIssue({ code: "custom", path: [i, "idNumber"], message: `NIK ini sama dengan peserta ${first + 1}` });
+      else seen.set(p.idNumber, i);
+    });
+  }),
   promoCode: z.string().trim().toUpperCase().max(30).optional().or(z.literal("")),
-  paymentMethod: z.enum(PAYMENT_METHOD_IDS, { message: "Pilih metode pembayaran" }),
-  agreeTerms: z.literal(true, { message: "Wajib menyetujui syarat dan ketentuan" }),
+  paymentMethod: z.enum(PAYMENT_METHOD_IDS, { message: "Metode pembayarannya belum dipilih" }),
+  agreeTerms: z.literal(true, { message: "Syarat dan ketentuannya perlu disetujui dulu, ya" }),
 });
 export type OrderInput = z.infer<typeof orderInputSchema>;
 

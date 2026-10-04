@@ -1,0 +1,6 @@
+name: kuwera
+version: 1.0.0
+description: "Konfirmasi bayar manual QRIS KUWERA 5K dari Telegram: daftar order menunggu, setujui, tolak, total pemasukan"
+author: dreinst
+license: MIT
+provides_tools: [kuwera_menunggu, kuwera_setujui, kuwera_tolak, kuwera_pemasukan]

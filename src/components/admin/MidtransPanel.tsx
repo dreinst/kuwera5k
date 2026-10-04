@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { checkMidtransAction, syncMidtransAction } from "@/app/admin/actions";
+import { checkMidtransAction, syncMidtransAction } from "@/app/kuweraadmin/actions";
 import type { MidtransCheck } from "@/lib/admin-shared";
 import { VerdictBadge } from "@/components/admin/Badges";
 

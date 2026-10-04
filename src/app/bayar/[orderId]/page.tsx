@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import type { OrderStatus } from "@prisma/client";
 import { notFound, redirect } from "next/navigation";
 import Navbar from "@/components/sections/Navbar";
 import Footer from "@/components/sections/Footer";
@@ -7,6 +8,7 @@ import { prisma } from "@/lib/db";
 import { needsSync, paymentMode, syncOrderWithMidtrans, trackCheckout } from "@/lib/orders";
 import { midtrans } from "@/lib/midtrans";
 import { maskEmail } from "@/lib/registration";
+import { priceLines } from "@/lib/manual-payment";
 import { rateLimit } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
@@ -19,15 +21,20 @@ export default async function BayarPage({ params }: { params: Promise<{ orderId:
   const { orderId } = await params;
   const order = await prisma.order.findUnique({
     where: { id: orderId },
-    include: { category: true, participant: true, ticket: true },
+    include: { category: true, participants: { orderBy: { position: "asc" } }, _count: { select: { proofs: true } } },
   });
-  if (!order || !order.participant) notFound();
-  if (order.status === "PAID" && order.ticket) redirect(`/tiket/${order.ticket.code}`);
+  const buyer = order?.participants[0];
+  if (!order || !buyer) notFound();
+  if (order.status === "PAID") redirect(`/tiket/${order.id}`);
+  const mode = paymentMode();
+  const manual = mode === "manual" && order.status === "PENDING"
+    ? { lines: priceLines(order), bukti: order._count.proofs }
+    : null;
 
   // Peserta yang kembali ke halaman ini (misal setelah notifikasi Midtrans gagal) langsung dicek ulang.
   // syncOrderWithMidtrans tidak melempar error dan fetch ke Midtrans punya batas waktu, jadi halaman
   // tetap tampil dengan status dari database kalau Midtrans atau database sedang bermasalah.
-  let status = order.status;
+  let status: OrderStatus = order.status;
   if (needsSync(order)) {
     const r = await syncOrderWithMidtrans(order);
     if (r.status === "PAID" && r.code) redirect(`/tiket/${r.code}`);
@@ -49,11 +56,13 @@ export default async function BayarPage({ params }: { params: Promise<{ orderId:
             expiresAt: order.expiresAt?.toISOString() ?? null,
             paymentMethod: order.paymentMethod,
             category: order.category.name,
-            name: order.participant.fullName,
-            email: maskEmail(order.participant.email),
+            name: buyer.fullName,
+            email: maskEmail(buyer.email),
             hasSnap: !!order.snapToken,
+            quantity: order.quantity,
           }}
-          paymentMode={paymentMode()}
+          manual={manual}
+          paymentMode={mode}
           trackCheckout={trackCheckout()}
           snap={{ clientKey: midtrans.clientKey, scriptUrl: midtrans.snapJs }}
         />

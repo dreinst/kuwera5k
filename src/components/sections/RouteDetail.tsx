@@ -50,8 +50,8 @@ export default function RouteDetail() {
             <span className="text-brand-yellow underline decoration-brand-yellow decoration-4 underline-offset-8">Rute</span>
           </h2>
           <p className="mt-5 text-white/80">
-            Rute {route.distanceKm} km dengan batas waktu {route.cutOffMinutes} menit. Water station ada di km 2,5, tepatnya di
-            Denzibang, dan {marshalPosts.length} pos marshal berjaga di sepanjang jalur.
+            Rute {route.distanceKm} km dengan batas waktu {route.cutOffMinutes} menit, dan {marshalPosts.length} pos marshal berjaga di
+            sepanjang jalur.
           </p>
         </Reveal>
 
@@ -71,7 +71,6 @@ export default function RouteDetail() {
             <div className="flex flex-wrap gap-x-6 gap-y-2 text-xs text-white/80">
               <span className="flex items-center gap-2"><span className="flex"><LegendFlag color="#3DDC3D" /><LegendFlag color="#E53935" /></span> Start dan finish</span>
               <span className="flex items-center gap-2"><span className="inline-block h-4 w-4 rounded-md bg-green-deep ring-1 ring-white/50" /> Pos marshal</span>
-              <span className="flex items-center gap-2"><span className="inline-block h-4 w-4 rounded-full bg-cream ring-1 ring-white/50" /> Water station</span>
               <span className="flex items-center gap-2"><span className="inline-block h-0.5 w-6 bg-brand-yellow" /> Rute</span>
               <span className="flex items-center gap-2"><span className="inline-block h-4 w-4 rotate-45 bg-brand-yellow" /> KM</span>
             </div>

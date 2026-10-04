@@ -10,8 +10,9 @@ import { useNow } from "@/lib/use-now";
 type Order = {
   id: string; status: string; total: number; subtotal: number; discount: number; fee: number;
   expiresAt: string | null; paymentMethod: string | null; category: string; name: string; email: string;
-  hasSnap: boolean;
+  hasSnap: boolean; quantity: number;
 };
+type Manual = { lines: [string, string][]; bukti: number } | null;
 
 // Setelah timer habis, order yang sudah membuka Snap masih dicek ke Midtrans selama ini sebelum
 // dinyatakan habis, karena pembayaran di detik terakhir bisa baru dikonfirmasi sesudahnya.
@@ -34,7 +35,7 @@ function loadSnap({ clientKey, scriptUrl }: SnapConfig) {
   });
 }
 
-export default function PaymentWaiting({ order, paymentMode, snap, trackCheckout }: { order: Order; paymentMode: "mock" | "off" | "midtrans"; snap?: SnapConfig; trackCheckout: boolean }) {
+export default function PaymentWaiting({ order, paymentMode, snap, trackCheckout, manual = null }: { order: Order; paymentMode: "mock" | "off" | "midtrans" | "manual"; snap?: SnapConfig; trackCheckout: boolean; manual?: Manual }) {
   const router = useRouter();
   // Waktu diisi di klien saja supaya HTML server dan klien sama (hindari hydration mismatch).
   const now = useNow();
@@ -43,6 +44,8 @@ export default function PaymentWaiting({ order, paymentMode, snap, trackCheckout
   const [snapNote, setSnapNote] = useState("");
   const [serverStatus, setServerStatus] = useState(order.status);
   const [snapOpened, setSnapOpened] = useState(false);
+  const [terunggah, setTerunggah] = useState(manual?.bukti ?? 0);
+  const fileRef = useRef<HTMLInputElement>(null);
   const expiresAt = order.expiresAt ? new Date(order.expiresAt).getTime() : null;
   const remaining = expiresAt && now ? Math.max(0, expiresAt - now) : 0;
   const timeUp = expiresAt !== null && now !== null && remaining === 0;
@@ -90,6 +93,25 @@ export default function PaymentWaiting({ order, paymentMode, snap, trackCheckout
     return () => { cancelled = true; };
   }, [expired, serverStatus, canBePaidLate, order.id, router]);
 
+  const unggah = async () => {
+    const file = fileRef.current?.files?.[0];
+    if (!file) { setError("Pilih gambar bukti bayarnya dulu, ya."); return; }
+    setBusy(true); setError("");
+    try {
+      const body = new FormData();
+      body.append("bukti", file);
+      const res = await fetch(`/api/orders/${order.id}/bukti`, { method: "POST", body });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) { setError(data.error ?? "Bukti bayar belum berhasil diunggah. Coba lagi sebentar, ya."); return; }
+      setTerunggah((n) => n + 1);
+      if (fileRef.current) fileRef.current.value = "";
+    } catch {
+      setError("Koneksi terputus saat mengunggah. Coba lagi sebentar, ya.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const simulate = async () => {
     setBusy(true); setError("");
     try {
@@ -118,7 +140,7 @@ export default function PaymentWaiting({ order, paymentMode, snap, trackCheckout
         onSuccess: () => setSnapNote("Pembayaran diterima, menunggu konfirmasi dari Midtrans..."),
         onPending: () => setSnapNote("Instruksi pembayaran sudah dibuat. Halaman ini otomatis pindah ke e-ticket begitu pembayaran masuk."),
         onError: () => setError("Pembayaran gagal di Midtrans, coba metode lain atau ulangi."),
-        onClose: () => setSnapNote("Jendela pembayaran ditutup. Tekan tombol Bayar lagi untuk melihat instruksinya selama timer masih berjalan."),
+        onClose: () => setSnapNote("Jendela pembayaran tertutup. Tombol Bayar bisa kamu tekan lagi untuk melihat instruksinya selama timer masih berjalan."),
       });
     } catch {
       setError("Tidak bisa memuat halaman pembayaran Midtrans, periksa koneksi lalu coba lagi");
@@ -129,7 +151,9 @@ export default function PaymentWaiting({ order, paymentMode, snap, trackCheckout
 
   // Sebelum jam klien terisi, tampilkan spasi selebar angka (bukan tanda pisah) supaya layout tidak bergeser.
   const blank = "\u2007\u2007";
-  const mm = now === null ? blank : String(Math.floor(remaining / 60000)).padStart(2, "0");
+  // Bayar manual ditahan beberapa jam, jadi timer menampilkan jam juga.
+  const hh = Math.floor(remaining / 3_600_000);
+  const mm = now === null ? blank : String(Math.floor((hh ? remaining % 3_600_000 : remaining) / 60000)).padStart(2, "0");
   const ss = now === null ? blank : String(Math.floor((remaining % 60000) / 1000)).padStart(2, "0");
 
   return (
@@ -144,12 +168,12 @@ export default function PaymentWaiting({ order, paymentMode, snap, trackCheckout
           : expired
             ? "Kuota untuk order ini sudah dilepas. Silakan daftar ulang, datamu tidak tersimpan di order yang kedaluwarsa."
             : checking
-              ? "Waktu bayar sudah habis. Kami sedang memastikan ke Midtrans apakah pembayaranmu sudah masuk, biasanya tidak sampai tiga menit. Jangan tutup halaman ini."
+              ? "Waktu bayar sudah habis. Kami sedang memastikan ke Midtrans apakah pembayaranmu sudah masuk, biasanya tidak sampai tiga menit. Halaman ini dibiarkan terbuka dulu, ya."
               : `Order ${order.id} menahan kuota kamu sampai timer di bawah habis.`}
       </p>
-      {expired && !failed && canBePaidLate && (
+      {expired && !failed && (canBePaidLate || paymentMode === "manual") && (
         <p className="mt-2 text-white/70">
-          Sudah membayar tapi halaman ini tidak berubah? <a href={waLink(waText.sudahBayar(order.id))} target="_blank" rel="noopener noreferrer" className="text-brand-yellow underline">Hubungi panitia lewat WhatsApp</a>, nomor order sudah otomatis ada di pesannya.
+          Sudah membayar tapi halaman ini tidak berubah? <a href={waLink(waText.sudahBayar(order.id))} target="_blank" rel="noopener noreferrer" className="text-brand-yellow underline">Kabari panitia lewat WhatsApp</a>, nomor order sudah otomatis ada di pesannya.
         </p>
       )}
 
@@ -162,22 +186,28 @@ export default function PaymentWaiting({ order, paymentMode, snap, trackCheckout
           {!expired && !checking && (
             <div className="text-right">
               <p className="text-sm text-white/75">Sisa waktu</p>
-              <p className="font-display text-3xl text-white tabular-nums">{mm}:{ss}</p>
+              <p className="font-display text-3xl text-white tabular-nums">{now !== null && hh > 0 ? `${hh}:` : ""}{mm}:{ss}</p>
             </div>
           )}
         </div>
 
         <dl className="mt-6 grid gap-3 text-sm sm:grid-cols-2">
-          <div><dt className="text-white/75">Peserta</dt><dd className="font-medium text-white">{order.name}</dd></div>
+          <div><dt className="text-white/75">{order.quantity > 1 ? "Pemesan" : "Peserta"}</dt><dd className="font-medium text-white">{order.name}{order.quantity > 1 ? ` (${order.quantity} tiket)` : ""}</dd></div>
           <div><dt className="text-white/75">Kategori</dt><dd className="font-medium text-white">{order.category}</dd></div>
           <div><dt className="text-white/75">Metode</dt><dd className="font-medium text-white">{method}</dd></div>
           <div><dt className="text-white/75">Email e-ticket</dt><dd className="font-medium text-white">{order.email}</dd></div>
         </dl>
 
         <div className="mt-6 rounded-2xl bg-white/5 p-4 text-sm">
-          <div className="flex justify-between py-1"><span className="text-white/70">Harga tiket</span><span className="text-white">{formatRupiah(order.subtotal)}</span></div>
-          {order.discount > 0 && <div className="flex justify-between py-1"><span className="text-white/70">Diskon</span><span className="text-white">{"\u2212"}{formatRupiah(order.discount)}</span></div>}
-          <div className="flex justify-between py-1"><span className="text-white/70">Biaya layanan</span><span className="text-white">{formatRupiah(order.fee)}</span></div>
+          {manual ? manual.lines.map(([k, v]) => (
+            <div key={k} className="flex justify-between py-1"><span className="text-white/70">{k}</span><span className="text-white">{v}</span></div>
+          )) : (
+            <>
+              <div className="flex justify-between py-1"><span className="text-white/70">Harga tiket</span><span className="text-white">{formatRupiah(order.subtotal)}</span></div>
+              {order.discount > 0 && <div className="flex justify-between py-1"><span className="text-white/70">Diskon</span><span className="text-white">{"\u2212"}{formatRupiah(order.discount)}</span></div>}
+              <div className="flex justify-between py-1"><span className="text-white/70">Biaya layanan</span><span className="text-white">{formatRupiah(order.fee)}</span></div>
+            </>
+          )}
           <div className="mt-2 flex items-center justify-between border-t border-white/10 pt-3">
             <span className="font-semibold text-white">Total</span>
             <span className="font-display text-2xl text-brand-yellow">{formatRupiah(order.total)}</span>
@@ -202,6 +232,40 @@ export default function PaymentWaiting({ order, paymentMode, snap, trackCheckout
             </button>
             {snapNote && <p className="mt-3 text-sm text-white/80">{snapNote}</p>}
             <p className="mt-3 text-xs text-white/75">Pembayaran diproses Midtrans. Setelah lunas, e-ticket muncul otomatis di halaman ini.</p>
+          </div>
+        )}
+        {!expired && paymentMode === "manual" && manual && (
+          <div className="mt-6">
+            <ol className="list-decimal space-y-1 pl-5 text-sm text-white/80">
+              <li>Scan QRIS di bawah dari aplikasi bank atau e-wallet apa pun. Kalau membayar dari HP yang sama, tekan Simpan QRIS lalu unggah gambarnya di aplikasi pembayaranmu.</li>
+              <li>Nominalnya sudah terisi otomatis, <span className="font-semibold text-brand-yellow">{formatRupiah(order.total)}</span>. Mohon dibayar sesuai angka itu, ya.</li>
+              <li>Setelah membayar, unggah screenshot bukti bayarnya di bawah.</li>
+              <li>Admin mengecek pembayaran, lalu halaman ini berubah menjadi e-ticket dan e-ticket juga dikirim ke email {order.email}.</li>
+            </ol>
+            {/* eslint-disable-next-line @next/next/no-img-element -- kartu bayar dibuat rute /qris, bukan aset statis */}
+            <img src={`/api/orders/${order.id}/qris`} alt={`QRIS pembayaran order ${order.id} sebesar ${formatRupiah(order.total)}`} className="mx-auto mt-5 w-full max-w-xs rounded-2xl" />
+            <a href={`/api/orders/${order.id}/qris`} download={`QRIS-${order.id}.png`} className="mt-4 flex w-full items-center justify-center rounded-full border border-brand-yellow px-6 py-3 text-center text-sm font-semibold text-brand-yellow">
+              Simpan QRIS
+            </a>
+            <div className="mt-6 rounded-2xl bg-white/5 p-4">
+              <p className="text-sm font-semibold text-white">Unggah bukti bayar</p>
+              {terunggah > 0 && (
+                <p className="mt-2 rounded-xl border border-brand-yellow/40 bg-brand-yellow/10 px-4 py-3 text-sm text-brand-yellow">
+                  Bukti bayar sudah kami terima. Admin mengeceknya paling lama 1x24 jam, dan halaman ini berubah menjadi e-ticket begitu terverifikasi.
+                </p>
+              )}
+              <input
+                ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" aria-label="Gambar bukti bayar"
+                className="mt-3 block w-full text-sm text-white/80 file:mr-3 file:rounded-full file:border-0 file:bg-white/15 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white"
+              />
+              <button type="button" onClick={unggah} disabled={busy} className="mt-3 w-full rounded-full bg-brand-yellow px-6 py-3 text-sm font-semibold text-green-deep disabled:opacity-60">
+                {busy ? "Mengunggah..." : terunggah > 0 ? "Unggah bukti lain" : "Kirim bukti bayar"}
+              </button>
+            </div>
+            <p className="mt-3 text-xs text-white/75">
+              Pembayaran QRIS ini dicek langsung oleh admin, belum otomatis, maksimal 1x24 jam. Kuota kamu ditahan sampai timer habis.
+              Ada kendala? <a href={waLink(waText.bayar(order.id))} target="_blank" rel="noopener noreferrer" className="text-brand-yellow underline">Chat panitia di WhatsApp</a>, dibalas langsung oleh admin.
+            </p>
           </div>
         )}
         {error && <p className="mt-4 text-sm text-yellow-lime">{error}</p>}

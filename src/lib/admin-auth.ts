@@ -7,7 +7,8 @@ import { prisma } from "@/lib/db";
 // Autentikasi halaman admin. Setiap halaman, server action, dan route handler admin memanggil
 // requireAdmin() sendiri (layout tidak cukup, lihat panduan autentikasi Next 16).
 
-export type AdminRole = "admin" | "panitia";
+import { ROLES, homeFor, type AdminRole } from "@/lib/admin-roles";
+export * from "@/lib/admin-roles";
 export type AdminSession = { id: string; username: string; role: AdminRole };
 
 const COOKIE = "kw_admin";
@@ -61,14 +62,14 @@ export async function startSession(user: { id: string; sessionVersion: number })
   const payload = b64(JSON.stringify({ u: user.id, v: user.sessionVersion, exp }));
   const token = `${payload}.${sign(payload, await sessionSecret())}`;
   (await cookies()).set(COOKIE, token, {
-    httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax", path: "/admin", maxAge: SESSION_HOURS * 3600,
+    httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax", path: "/kuweraadmin", maxAge: SESSION_HOURS * 3600,
   });
 }
 
 // Keluar = semua sesi akun itu tidak berlaku lagi (juga salinan cookie di perangkat lain).
 export async function endSession(userId?: string) {
   if (userId) await prisma.adminUser.update({ where: { id: userId }, data: { sessionVersion: { increment: 1 } } }).catch(() => null);
-  (await cookies()).delete({ name: COOKIE, path: "/admin" });
+  (await cookies()).delete({ name: COOKIE, path: "/kuweraadmin" });
 }
 
 // Sesi yang sah atau null. Tanda tangan, masa berlaku, dan versi sesi di database semuanya dicek.
@@ -85,15 +86,25 @@ export async function getAdmin(): Promise<AdminSession | null> {
   if (!data.exp || data.exp < Date.now()) return null;
   const user = await prisma.adminUser.findUnique({ where: { id: data.u } });
   if (!user || !user.passwordHash || user.sessionVersion !== data.v) return null;
-  return { id: user.id, username: user.username, role: user.role === "admin" ? "admin" : "panitia" };
+  // Peran tak dikenal diperlakukan sebagai petugas (hak paling sedikit).
+  const role = (ROLES as string[]).includes(user.role) ? (user.role as AdminRole) : "petugas";
+  return { id: user.id, username: user.username, role };
 }
 
-// Untuk halaman: belum login dialihkan ke /admin/login. `role: "admin"` membatasi fitur khusus admin.
-export async function requireAdmin(opts: { role?: "admin" } = {}) {
+// Untuk halaman: belum login dialihkan ke /kuweraadmin/login; peran yang tidak termasuk `roles` dialihkan ke halaman awalnya.
+export async function requireAdmin(roles: AdminRole[] = ROLES) {
   const admin = await getAdmin();
-  if (!admin) redirect("/admin/login");
-  if (opts.role === "admin" && admin.role !== "admin") redirect("/admin");
+  if (!admin) redirect("/kuweraadmin/login");
+  if (!roles.includes(admin.role)) redirect(homeFor(admin.role));
   return admin;
+}
+
+// Perangkat singkat dari user agent, untuk catatan login di halaman superadmin.
+export async function deviceName() {
+  const ua = (await headers()).get("user-agent") ?? "";
+  const os = /iPhone|iPad/.test(ua) ? "iPhone/iPad" : /Android/.test(ua) ? "Android" : /Mac OS X/.test(ua) ? "Mac" : /Windows/.test(ua) ? "Windows" : /Linux/.test(ua) ? "Linux" : "lainnya";
+  const browser = /Edg\//.test(ua) ? "Edge" : /SamsungBrowser/.test(ua) ? "Samsung Internet" : /Chrome\//.test(ua) ? "Chrome" : /Firefox\//.test(ua) ? "Firefox" : /Safari\//.test(ua) ? "Safari" : "browser lain";
+  return `${browser} di ${os}`;
 }
 
 export async function clientIp() {
@@ -108,7 +119,7 @@ export const LOGIN_ERROR = `Username atau kata sandi salah. Setelah ${MAX_FAILED
 
 // Login: satu jatah percobaan dipesan secara atomik sebelum kata sandi dicek, jadi permintaan bersamaan
 // tidak bisa melewati batas. Akun tidak ada, terkunci, dan sandi salah mendapat pesan dan waktu yang sama.
-export async function attemptLogin(username: string, password: string): Promise<{ ok: true } | { ok: false; message: string }> {
+export async function attemptLogin(username: string, password: string): Promise<{ ok: true; role: AdminRole } | { ok: false; message: string }> {
   const now = new Date();
   const user = await prisma.adminUser.findUnique({ where: { username } });
   let reserved = false;
@@ -127,11 +138,12 @@ export async function attemptLogin(username: string, password: string): Promise<
         data: { failedLogins: 0, lockedUntil: new Date(now.getTime() + LOCK_MINUTES * 60_000) },
       });
     }
-    await logAdmin(username, user && !reserved ? "login_terkunci" : "login_gagal");
+    await logAdmin(username, user && !reserved ? "login_terkunci" : "login_gagal", await deviceName());
     return { ok: false, message: LOGIN_ERROR };
   }
   await prisma.adminUser.update({ where: { id: user.id }, data: { failedLogins: 0, lockedUntil: null, lastLoginAt: now } });
   await startSession(user);
-  await logAdmin(user.username, "login");
-  return { ok: true };
+  await logAdmin(user.username, "login", await deviceName());
+  const role = (ROLES as string[]).includes(user.role) ? (user.role as AdminRole) : "petugas";
+  return { ok: true, role };
 }

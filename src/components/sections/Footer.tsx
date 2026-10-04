@@ -15,9 +15,6 @@ export default function Footer() {
             <a href={waLink(waText.umum)} target="_blank" rel="noopener noreferrer" className="hover:text-brand-yellow">
               WhatsApp Panitia
             </a>
-            <a href="mailto:halo@kuwera5k.id" className="hover:text-brand-yellow">
-              halo@kuwera5k.id
-            </a>
           </div>
           <div className="flex flex-wrap justify-center gap-x-5 gap-y-2 sm:justify-end">
             <a href="/syarat" className="hover:text-brand-yellow">
