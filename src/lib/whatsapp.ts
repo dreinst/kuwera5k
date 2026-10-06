@@ -9,6 +9,7 @@ export const waLink = (text: string) => `https://wa.me/${WA_ADMIN}?text=${encode
 
 export const waText = {
   umum: "Halo kak, izin bertanya soal KUWERA Fun Run 5K: ",
+  bio: "Halo kak, saya dari Instagram, izin bertanya soal KUWERA Fun Run 5K: ",
   daftar: "Halo kak, izin menyampaikan ada error di pendaftaran KUWERA Fun Run 5K. Detailnya: ",
   bayar: (orderId: string) => `Halo kak, izin menyampaikan ada kendala pembayaran KUWERA Fun Run 5K. Nomor order ${orderId}. Kendalanya: `,
   sudahBayar: (orderId: string) =>
