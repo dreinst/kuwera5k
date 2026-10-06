@@ -21,7 +21,7 @@ export default function Page() {
           <li>Peserta dalam kondisi sehat untuk berlari 5 km.</li>
           <li>Satu tiket berlaku untuk satu peserta sesuai data yang diisi dan tidak dapat dipindahtangankan. Satu pembelian boleh berisi beberapa tiket.</li>
           <li>Biaya pendaftaran yang sudah lunas tidak dikembalikan secara otomatis. Kasus khusus bisa diajukan ke panitia lewat WhatsApp.</li>
-          <li>Race pack diambil oleh peserta sendiri pada jadwal pengambilan, dengan membawa e-ticket dan KTP atau KIA asli.</li>
+          <li>Race pack diambil pada jadwal pengambilan dengan membawa e-ticket dan KTP atau KIA asli. Boleh diambilkan orang lain yang membawa surat keterangan dari peserta, dan panitia akan memastikan ke peserta lewat WhatsApp atau telepon. Di hari lomba tidak ada pengambilan, dan race pack yang tidak diambil sampai jadwal berakhir dianggap hangus.</li>
           <li>Panitia berhak mengubah rute atau jadwal karena kondisi cuaca atau keamanan.</li>
         </ul>
       </main>
