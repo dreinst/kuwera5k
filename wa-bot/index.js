@@ -833,7 +833,7 @@ async function processPaid() {
         '',
         `E-ticket lengkap: ${SITE_URL}/tiket/${o.id}`,
         '',
-        `Race pack bisa diambil pada ${RACE_PACK}. Kamis pukul 08.00 sampai 20.00 WIB, Jumat pukul 08.00 sampai 19.00 WIB. Di hari lomba tidak ada pengambilan. Jangan lupa bawa KTP atau KIA asli setiap peserta, ya.`,
+        `Race pack bisa diambil pada ${RACE_PACK}. Buka pukul 08.00 sampai 20.00 WIB di kedua hari. Di hari lomba tidak ada pengambilan. Jangan lupa bawa KTP atau KIA asli setiap peserta, ya.`,
         `Hari lomba: ${RACE_DAY}.`,
         '',
         'QR setiap peserta kami kirim di bawah ini. Disimpan baik-baik ya, sampai jumpa di garis start!',

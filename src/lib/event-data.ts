@@ -17,7 +17,7 @@ export const eventData = {
   registrationCloseLabel: "Sabtu, 17 Oktober 2026 pukul 23.59 WIB", // sama dengan registrationCloseIso
   racePackDates,
   racePackPlace: "Kudam V/Brawijaya",
-  racePackHours: "Kamis pukul 08.00 sampai 20.00 WIB, Jumat pukul 08.00 sampai 19.00 WIB. Di hari lomba tidak ada pengambilan race pack.",
+  racePackHours: "Buka pukul 08.00 sampai 20.00 WIB di kedua hari. Di hari lomba tidak ada pengambilan race pack.",
   // Untuk data terstruktur (schema.org) dan metadata; sumber koordinat: OpenStreetMap way 295948065.
   startIso: "2026-10-24T06:00:00+07:00",
   registrationOpenIso: "2026-09-01T00:00:00+07:00", // jendela jual kategori di seed
@@ -91,7 +91,7 @@ export const faqs = [
   },
   {
     q: "Bolehkah race pack diambilkan orang lain?",
-    a: "Boleh. Titipkan surat keterangan dari kamu, KTP atau KIA asli, dan QR di e-ticket ke orang yang mengambilkan. Panitia akan menghubungi kamu lewat WhatsApp atau telepon untuk memastikan. Race pack yang tidak diambil sampai Jumat, 23 Oktober 2026 pukul 19.00 WIB dianggap hangus.",
+    a: "Boleh. Titipkan surat keterangan dari kamu, KTP atau KIA asli, dan QR di e-ticket ke orang yang mengambilkan. Panitia akan menghubungi kamu lewat WhatsApp atau telepon untuk memastikan. Race pack yang tidak diambil sampai Jumat, 23 Oktober 2026 pukul 20.00 WIB dianggap hangus.",
   },
   {
     q: "Apakah ada kategori kelompok atau komunitas?",
