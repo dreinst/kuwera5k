@@ -5,6 +5,7 @@ import { prisma } from "@/lib/db";
 import { fetchTransactionStatus, mapTransactionStatus, midtrans, type LiveStatus, type MidtransNotification } from "@/lib/midtrans";
 import { DEFAULT_FEES, MAX_TICKETS_HARD, PAYMENT_METHOD_IDS, type PaymentMethodId } from "@/lib/registration";
 import { currentPrice, getPricing, isOpen } from "@/lib/pricing";
+import { PENARIKAN_KEY, ringkasPenarikan, type Penarikan } from "@/lib/penarikan";
 
 type Db = Prisma.TransactionClient;
 
@@ -162,7 +163,27 @@ export async function pickUniqueCode(base: number, now: Date, db: Db) {
   const taken = new Set(rows.map((r) => r.total));
   const free = [];
   for (let c = 200; c <= 349; c++) if (!taken.has(base + c)) free.push(c);
-  return free.length ? free[randomInt(free.length)] : null;
+  const pilihan = pilihanKode(free, await kekuranganPotongan(db));
+  return pilihan.length ? pilihan[randomInt(pilihan.length)] : null;
+}
+
+// Selama potongan GoPay yang tercatat di halaman Penarikan lebih besar dari kode unik yang sudah terkumpul, order
+// berikutnya memakai bagian atas rentang (300..349) supaya selisihnya lebih cepat tertutup. Rentangnya tetap
+// 200..349, jadi teks di formulir tidak berubah dan nominalnya tetap tidak bertabrakan dengan DriveTech (350..500).
+export const KODE_ATAS = 300;
+export const pilihanKode = (bebas: number[], kurang: number) => {
+  const atas = bebas.filter((c) => c >= KODE_ATAS);
+  return kurang > 0 && atas.length ? atas : bebas;
+};
+
+// Potongan penarikan yang belum tertutup kode unik (positif berarti masih kurang).
+export async function kekuranganPotongan(db: Db) {
+  const [row, sums] = await Promise.all([
+    db.setting.findUnique({ where: { key: PENARIKAN_KEY } }),
+    db.order.aggregate({ where: { status: "PAID", isTest: false }, _sum: { uniqueCode: true } }),
+  ]);
+  const list = Array.isArray(row?.value) ? (row.value as Penarikan[]) : [];
+  return ringkasPenarikan(list).potongan - (sums._sum.uniqueCode ?? 0);
 }
 
 // Order bayar manual yang lewat batas bayar ditandai EXPIRED (sebelumnya tetap PENDING sampai ada yang menyentuhnya),

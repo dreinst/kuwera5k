@@ -1,6 +1,6 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
-import { fullNameOf, type OrderInput } from "@/lib/registration";
+import { biayaLayananQris, fullNameOf, type OrderInput } from "@/lib/registration";
 import { currentPrice, getPricing, isOpen, promoUsed } from "@/lib/pricing";
 import {
   ORDER_LOCK_KEY, activeOrderWhere, getSettings, heldCount, newOrderId, paymentMode, pickUniqueCode, syncOrderWithMidtrans, validatePromo,
@@ -127,7 +127,10 @@ export async function createOrder(input: OrderInput, now = new Date()): Promise<
           discount = res.discount;
           promoCode = res.promo.code;
         }
-        const base = Math.max(0, subtotal - discount) + fee;
+        const hargaBersih = Math.max(0, subtotal - discount);
+        // Bayar manual (QRIS GoPay): biaya layanan hanya untuk order yang kena potongan MDR, lihat biayaLayananQris.
+        const biaya = manual ? biayaLayananQris(hargaBersih) : fee;
+        const base = hargaBersih + biaya;
         let uniqueCode = 0;
         if (manual) {
           const code = await pickUniqueCode(base, now, tx);
@@ -138,7 +141,7 @@ export async function createOrder(input: OrderInput, now = new Date()): Promise<
 
         const created = await tx.order.create({
           data: {
-            id, categoryId: category.id, status: "PENDING", subtotal, discount, fee, total, promoCode, quantity, uniqueCode,
+            id, categoryId: category.id, status: "PENDING", subtotal, discount, fee: biaya, total, promoCode, quantity, uniqueCode,
             paymentMethod, buyerEmail: p.email, buyerPhone: p.phone, expiresAt,
             participants: {
               create: people.map((x, i) => ({

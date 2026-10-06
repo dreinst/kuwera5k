@@ -5,7 +5,7 @@ import { formatRupiah } from "@/lib/registration";
 // Bahan halaman /bayar dan kartu bayar untuk mode manual (QRIS dinamis + unggah bukti bayar di halaman).
 
 type OrderForManual = {
-  id: string; total: number; subtotal: number; discount: number; uniqueCode: number; quantity: number; promoCode: string | null;
+  id: string; total: number; subtotal: number; discount: number; fee: number; uniqueCode: number; quantity: number; promoCode: string | null;
   participants: { position: number; fullName: string; jerseySize: string }[];
 };
 
@@ -43,6 +43,7 @@ export function priceLines(o: OrderForManual) {
     ["Harga", o.quantity > 1 ? `${o.quantity} × ${formatRupiah(unit)}` : formatRupiah(unit)],
   ];
   if (o.discount > 0) lines.push([`Diskon ${o.promoCode ?? ""}`.trim(), `−${formatRupiah(o.discount)}`]);
+  if (o.fee > 0) lines.push(["Biaya layanan QRIS", formatRupiah(o.fee)]);
   if (o.uniqueCode > 0) lines.push(["Kode unik", formatRupiah(o.uniqueCode)]);
   return lines;
 }

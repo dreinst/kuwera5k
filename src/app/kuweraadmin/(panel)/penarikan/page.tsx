@@ -25,7 +25,7 @@ export default async function PenarikanPage() {
     ["Sudah ditarik", formatRupiah(r.masuk), `Masuk rekening, dari saldo ${formatRupiah(r.saldo)}`],
     ["Potongan tarik", formatRupiah(r.potongan), kodeUnik >= r.potongan
       ? `Tertutup kode unik ${formatRupiah(kodeUnik)}, sisa ${formatRupiah(kodeUnik - r.potongan)}`
-      : `Kode unik ${formatRupiah(kodeUnik)}, masih kurang ${formatRupiah(r.potongan - kodeUnik)}`],
+      : `Kode unik ${formatRupiah(kodeUnik)}, masih kurang ${formatRupiah(r.potongan - kodeUnik)}. Order berikutnya otomatis memakai kode unik Rp300 sampai Rp349 sampai tertutup`],
   ];
   return (
     <div>
