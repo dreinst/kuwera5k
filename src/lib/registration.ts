@@ -56,6 +56,18 @@ export const PAYMENT_METHODS = [
 export type PaymentMethodId = (typeof PAYMENT_METHODS)[number]["id"];
 export const PAYMENT_METHOD_IDS = PAYMENT_METHODS.map((m) => m.id) as [PaymentMethodId, ...PaymentMethodId[]];
 
+// QRIS GoPay memotong MDR 0,3% dari pembayaran di atas Rp500.000 (terlihat di laporan GoPay Merchant 29 Sep sampai
+// 5 Okt 2026: tiga transaksi Rp625 ribuan terpotong, yang Rp300 ribuan ke bawah tidak). Order bayar manual sebesar
+// itu dikenai biaya layanan senilai potongannya, supaya uang yang diterima panitia tetap utuh. Dihitung dari harga
+// setelah diskon ditambah kode unik terbesar, dibulatkan ke atas. Dipakai formulir dan server, jadi angkanya sama.
+export const QRIS_MDR_BATAS = 500_000;
+export const QRIS_MDR = 0.003;
+export const KODE_UNIK_MAKS = 349;
+export const biayaLayananQris = (hargaSetelahDiskon: number) =>
+  hargaSetelahDiskon + KODE_UNIK_MAKS > QRIS_MDR_BATAS
+    ? Math.ceil(((hargaSetelahDiskon + KODE_UNIK_MAKS) * QRIS_MDR) / (1 - QRIS_MDR))
+    : 0;
+
 export const DEFAULT_FEES: Record<PaymentMethodId, number> = {
   qris: 1500, bca_va: 4500, bni_va: 4500, bri_va: 4500, mandiri_va: 4500, permata_va: 4500, cimb_va: 4500,
   gopay: 4000, shopeepay: 4000, credit_card: 7500,

@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState, useSyncExternalStore, type ReactNode } fr
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import {
-  BLOOD_TYPES, JERSEY_CHART, JERSEY_CHART_COLUMNS, JERSEY_SIZES, PAYMENT_METHODS, PROVINCES, formatRupiah, fullNameOf, issuesToMap,
+  BLOOD_TYPES, JERSEY_CHART, JERSEY_CHART_COLUMNS, JERSEY_SIZES, PAYMENT_METHODS, PROVINCES, biayaLayananQris, formatRupiah, fullNameOf, issuesToMap,
   participantSchema, type ParticipantForm, type PaymentMethodId,
 } from "@/lib/registration";
 import { trackPixel } from "@/lib/meta-pixel";
@@ -98,9 +98,9 @@ function FormSteps({ categories, fees, methods, paymentMode, trackCheckout, maxT
 
   const category = useMemo(() => categories.find((c) => c.id === categoryId) ?? null, [categories, categoryId]);
   const manual = paymentMode === "manual";
-  const fee = manual ? 0 : fees[paymentMethod] ?? 0;
   const subtotal = (category?.price ?? 0) * quantity;
   const discount = promo?.discount ?? 0;
+  const fee = manual ? biayaLayananQris(Math.max(0, subtotal - discount)) : fees[paymentMethod] ?? 0;
   const total = Math.max(0, subtotal - discount) + fee;
 
   useEffect(() => {
@@ -440,6 +440,7 @@ function FormSteps({ categories, fees, methods, paymentMode, trackCheckout, maxT
               <div className="mt-6 rounded-2xl bg-white/5 p-4 text-sm">
                 <Line k="Harga tiket" v={quantity > 1 ? `${quantity} × ${formatRupiah(category.price)} = ${formatRupiah(subtotal)}` : formatRupiah(subtotal)} />
                 {discount > 0 && <Line k={`Diskon ${promo?.code}`} v={`\u2212${formatRupiah(discount)}`} />}
+                {manual && fee > 0 && <Line k="Biaya layanan QRIS (pembayaran di atas Rp500.000)" v={formatRupiah(fee)} />}
                 {manual
                   ? <Line k="Kode unik" v="Rp200 sampai Rp349, muncul di halaman bayar" muted />
                   : <Line k="Biaya layanan" v="ditentukan di langkah pembayaran" muted />}
@@ -493,6 +494,7 @@ function FormSteps({ categories, fees, methods, paymentMode, trackCheckout, maxT
               <div className="mt-6 rounded-2xl bg-white/5 p-4 text-sm">
                 <Line k="Harga tiket" v={quantity > 1 ? `${quantity} × ${formatRupiah(category.price)}` : formatRupiah(subtotal)} />
                 {discount > 0 && <Line k={`Diskon ${promo?.code}`} v={`\u2212${formatRupiah(discount)}`} />}
+                {manual && fee > 0 && <Line k="Biaya layanan QRIS (pembayaran di atas Rp500.000)" v={formatRupiah(fee)} />}
                 {manual ? <Line k="Kode unik" v="+ Rp200 sampai Rp349 di halaman bayar" muted /> : <Line k="Biaya layanan" v={formatRupiah(fee)} />}
                 <div className="mt-2 flex items-center justify-between border-t border-white/10 pt-3">
                   <span className="font-semibold text-white">{manual ? "Total sebelum kode unik" : "Total bayar"}</span>

@@ -19,7 +19,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   const order = await prisma.order.findUnique({
     where: { id },
     select: {
-      id: true, status: true, total: true, subtotal: true, discount: true, uniqueCode: true, quantity: true, promoCode: true, expiresAt: true,
+      id: true, status: true, total: true, subtotal: true, discount: true, fee: true, uniqueCode: true, quantity: true, promoCode: true, expiresAt: true,
       participants: { select: { position: true, fullName: true, jerseySize: true } },
     },
   });
