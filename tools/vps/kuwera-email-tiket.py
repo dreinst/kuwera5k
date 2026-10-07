@@ -6,7 +6,7 @@
 
 Dipasang di VPS dreinst sebagai /usr/local/bin/kuwera-email-tiket, dijalankan timer systemd tiap menit.
 Order yang sudah dikirimi dicatat di /var/lib/kuwera-email/terkirim.json, jadi setiap order hanya menerima satu email.
-Pengirim: dproductionorganizer@gmail.com lewat Gmail API (token OAuth milik Hermes, hanya dibaca).
+Pengirim: dproductioncare@gmail.com lewat Gmail API (token OAuth khusus kirim di /root/dpro-blast, hanya dibaca).
 
   kuwera-email-tiket            kirim ke semua order lunas yang belum dikirimi
   kuwera-email-tiket --kering   tampilkan yang akan dikirim, tanpa mengirim
@@ -17,11 +17,11 @@ import base64, glob, html, json, os, subprocess, sys, time, urllib.parse, urllib
 from email.message import EmailMessage
 from email.utils import formataddr
 
-TOKEN = "/root/.hermes/google_token_akun3_dproductionorganizer.json"
+TOKEN = "/root/dpro-blast/google_token_blast.json"
 STATE = "/var/lib/kuwera-email/terkirim.json"
 DB = ["docker", "exec", "uvx3zbwvek7pig9oiwyzgivg", "psql", "-U", "kuwera", "-d", "kuwera5k", "-At", "-c"]
 SITE = "https://kuwera5k.vercel.app"
-DARI = ("KUWERA Fun Run 5K", "dproductionorganizer@gmail.com")
+DARI = ("KUWERA Fun Run 5K", "dproductioncare@gmail.com")
 WA_BANTUAN = "0822-2855-5254"
 RACE_PACK = "Kamis dan Jumat, 22 dan 23 Oktober 2026 di Kudam V/Brawijaya"
 RACE_DAY = "Sabtu, 24 Oktober 2026, 06.00 WIB di Lapangan Rampal"
