@@ -59,10 +59,20 @@ const noSubscribe = () => () => {};
 
 // Draf hanya ada di browser. Form dirender dulu tanpa draf (sama dengan HTML server), lalu dipasang ulang
 // sekali dengan isi draf begitu berjalan di browser. Hanya pasangan browser yang menyimpan draf.
+const REF_KEY = "kw_ref";
+// Penanda iklan (?ref= atau utm_campaign) disimpan di perangkat supaya tetap ikut kalau pendaftaran dilanjutkan lain waktu.
+function readRef() {
+  const q = new URLSearchParams(location.search);
+  const ref = q.get("ref") ?? q.get("utm_campaign");
+  if (ref) localStorage.setItem(REF_KEY, ref);
+  return ref ?? localStorage.getItem(REF_KEY) ?? undefined;
+}
+
 export default function RegistrationForm(props: Props) {
   const inBrowser = useSyncExternalStore(noSubscribe, () => true, () => false);
   const { categories } = props;
   useEffect(() => {
+    readRef();
     trackPixel("ViewContent", { content_name: "Pendaftaran KUWERA Fun Run 5K", value: categories[0]?.price ?? 0, currency: "IDR" });
   }, [categories]);
   return <FormSteps key={inBrowser ? "browser" : "server"} {...props} draft={inBrowser ? readDraft() : null} saveDraft={inBrowser} />;
@@ -218,7 +228,7 @@ function FormSteps({ categories, fees, methods, paymentMode, trackCheckout, maxT
     try {
       const res = await fetch("/api/orders", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ categoryId: category.id, participants: people.slice(0, quantity), promoCode: promo?.code ?? "", paymentMethod: manual ? "qris" : paymentMethod, agreeTerms: agree, turnstileToken }),
+        body: JSON.stringify({ categoryId: category.id, participants: people.slice(0, quantity), promoCode: promo?.code ?? "", paymentMethod: manual ? "qris" : paymentMethod, agreeTerms: agree, turnstileToken, ref: readRef() }),
       });
       const data = await res.json();
       if (!res.ok) {
