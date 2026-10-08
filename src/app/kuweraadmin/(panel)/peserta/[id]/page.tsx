@@ -118,6 +118,7 @@ export default async function PesertaDetailPage({ params }: { params: Promise<{ 
               <Item k="Harga tiket" v={`${formatRupiah(order.subtotal)}${order.quantity > 1 ? ` (${order.quantity} tiket)` : ""}`} />
               {order.uniqueCode > 0 && <Item k="Kode unik" v={formatRupiah(order.uniqueCode)} />}
               <Item k="Diskon" v={order.discount ? `${formatRupiah(order.discount)} (${order.promoCode})` : "-"} />
+              <Item k="Penanda iklan" v={order.adRef ?? "-"} />
               <Item k="Biaya layanan" v={formatRupiah(order.fee)} />
               <Item k="Total" v={formatRupiah(order.total)} />
               <Item k="Didaftarkan" v={fmtDateTime(order.createdAt)} />
