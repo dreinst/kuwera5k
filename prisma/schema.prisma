@@ -141,6 +141,7 @@ model RefundRequest {
   accountName   String
   status        String    @default("DIAJUKAN") // DIAJUKAN | PERLU_PERBAIKAN | SELESAI
   note          String? // alasan saat admin meminta perbaikan data rekening
+  verified      Boolean   @default(false) // pengaju mengetik nomor WhatsApp dan email yang sama dengan data pendaftaran
   dataNote      String? // koreksi data tiket dari pemesan, satu baris per kode tiket ("KWR-...-1: nama seharusnya ...")
   submittedAt   DateTime  @default(now())
   transferredAt DateTime?

@@ -35,14 +35,14 @@ export async function POST(req: Request, { params }: { params: Promise<{ orderId
   const hasil = await prisma.$transaction(async (tx) => {
     // Hanya pengajuan berstatus Diajukan yang bisa ditutup; yang sedang diminta perbaikan menunggu rekening baru dulu.
     const r = await tx.refundRequest.updateMany({
-      where: { orderId, status: "DIAJUKAN", order: { status: "PAID" } },
+      where: { orderId, status: "DIAJUKAN", verified: true, order: { status: "PAID" } },
       data: { status: "SELESAI", transferredAt: new Date(), processedBy: admin.username, proofName: `${stempelWib()}-refund-${orderId}.${jenis.ext}`, proofMime: file.type, proofData: data },
     });
     if (r.count !== 1) return null;
     await tx.order.update({ where: { id: orderId }, data: { status: "REFUNDED" } });
     return tx.refundRequest.findUnique({ where: { orderId }, select: { amount: true } });
   });
-  if (!hasil) return gagal("Pengajuan ini tidak sedang menunggu transfer. Muat ulang halaman.", 409);
+  if (!hasil) return gagal("Pengajuan ini tidak sedang menunggu transfer atau belum terverifikasi. Muat ulang halaman.", 409);
   await logAdmin(admin.username, "refund_selesai", `${orderId} Rp${hasil.amount}`);
   revalidatePath("/kuweraadmin/refund");
   return Response.json({ ok: true });

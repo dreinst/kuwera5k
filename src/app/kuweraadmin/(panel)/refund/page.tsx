@@ -4,7 +4,7 @@ import { SUPER, requireAdmin } from "@/lib/admin-auth";
 import { fmtDateTime } from "@/lib/admin-data";
 import { prisma } from "@/lib/db";
 import { formatRupiah } from "@/lib/registration";
-import { REFUND_STATUS_LABEL, getRefund, refundAmount, refundBatas, refundLink, tglPanjang, type RefundStatus } from "@/lib/refund";
+import { REFUND_STATUS_LABEL, getRefund, namaCocok, refundAmount, refundBatas, refundLink, tglPanjang, type RefundStatus } from "@/lib/refund";
 import RefundAksi, { SalinTautan } from "@/components/admin/RefundAksi";
 
 export const metadata: Metadata = { title: "Refund" };
@@ -92,13 +92,28 @@ export default async function RefundAdminPage() {
                   <div><dt className="text-xs text-white/65">Atas nama</dt><dd className="mt-0.5 text-white">{r.accountName}</dd></div>
                 </dl>
               )}
+              {r && kelompok !== "SELESAI" && (
+                <ul className="mt-4 space-y-1 text-sm">
+                  <li className={r.verified ? "text-yellow-lime" : "font-semibold text-red-200"}>
+                    {r.verified ? "Lolos verifikasi: pengaju mengetik nomor WhatsApp dan email yang sama dengan pendaftaran." : "BELUM TERVERIFIKASI: diajukan sebelum verifikasi nomor WhatsApp dan email berlaku. Klik Minta perbaikan supaya pemesan mengirim ulang, jangan ditransfer dulu."}
+                  </li>
+                  <li className={namaCocok(r.accountName, o.participants.map((p) => p.fullName)) ? "text-yellow-lime" : "font-semibold text-brand-yellow"}>
+                    {namaCocok(r.accountName, o.participants.map((p) => p.fullName))
+                      ? "Nama pemilik rekening sama dengan nama peserta di order ini."
+                      : "Nama pemilik rekening BERBEDA dari semua nama peserta di order ini. Pastikan dulu ke pemesan lewat nomor WhatsApp terdaftar sebelum mentransfer."}
+                  </li>
+                  {r.method === "ewallet" && (
+                    <li className="text-white/75">{r.accountNumber === o.buyerPhone.replace(/\D/g, "").replace(/^62/, "0") ? "Nomor dompet sama dengan nomor WhatsApp terdaftar." : "Nomor dompet berbeda dari nomor WhatsApp terdaftar."}</li>
+                  )}
+                </ul>
+              )}
               {r?.dataNote && <p className="mt-4 rounded-xl border border-brand-yellow/40 bg-brand-yellow/10 px-4 py-3 text-sm whitespace-pre-line text-brand-yellow">Pemesan menandai data tiket tidak sesuai:{"\n"}{r.dataNote}</p>}
               <div className="mt-4">
                 {kelompok === "BELUM" && <SalinTautan link={refundLink(cfg, o.id)} />}
                 {kelompok === "DIAJUKAN" && (
                   <>
                     <p className="mb-4 text-sm text-white/75">Diajukan {fmtDateTime(r!.submittedAt)}{r!.updatedAt.getTime() - r!.submittedAt.getTime() > 60_000 ? `, rekening diperbarui ${fmtDateTime(r!.updatedAt)}` : ""}.</p>
-                    <RefundAksi orderId={o.id} nominal={formatRupiah(nominal)} />
+                    <RefundAksi orderId={o.id} nominal={formatRupiah(nominal)} verified={r!.verified} />
                   </>
                 )}
                 {kelompok === "PERLU_PERBAIKAN" && (
