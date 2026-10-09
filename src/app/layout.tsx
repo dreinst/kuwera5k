@@ -51,7 +51,8 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
       lang="id"
       className={`${anton.variable} ${inter.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col bg-green-deep">
+      {/* data-batal dipakai Navbar (lewat varian in-data-batal) untuk mengganti menu dan tombol Daftar saat acara dibatalkan. */}
+      <body className="min-h-full flex flex-col bg-green-deep" data-batal={batal || undefined}>
         <PageTexture />
         {children}
         {batal && <Pita />}
