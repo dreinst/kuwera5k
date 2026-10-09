@@ -19,6 +19,8 @@ export default function RefundForm({ orderId, k, total, tiket, awal, tombol = "A
   const [accountNumber2, setAccountNumber2] = useState("");
   const [accountName, setAccountName] = useState(awal?.accountName ?? "");
   const [setuju, setSetuju] = useState(false);
+  const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
   const [sesuai, setSesuai] = useState(true);
   const [koreksi, setKoreksi] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
@@ -32,7 +34,7 @@ export default function RefundForm({ orderId, k, total, tiket, awal, tombol = "A
     try {
       const res = await fetch(`/api/refund/${orderId}`, {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ k, method, provider, accountNumber, accountNumber2, accountName, setuju, koreksi: sesuai ? {} : koreksi }),
+        body: JSON.stringify({ k, phone, email, method, provider, accountNumber, accountNumber2, accountName, setuju, koreksi: sesuai ? {} : koreksi }),
       });
       const data = (await res.json().catch(() => ({}))) as { error?: string; fields?: Record<string, string> };
       if (res.ok) { router.refresh(); return; }
@@ -49,6 +51,18 @@ export default function RefundForm({ orderId, k, total, tiket, awal, tombol = "A
   const salahTeks = (awalan: string) => { const k2 = Object.keys(fields).find((f) => f.startsWith(awalan)); return k2 ? salah(k2) : null; };
   return (
     <form onSubmit={kirim} className="grid gap-4">
+      <div className="grid gap-4 rounded-xl border border-glass-border bg-white/5 p-4">
+        <p className="text-sm text-white/80">Untuk memastikan dana kembali ke orang yang tepat, isi nomor WhatsApp dan email pemesan persis seperti saat mendaftar.</p>
+        <label className="grid gap-2 text-sm font-medium text-white">
+          Nomor WhatsApp saat mendaftar
+          <input value={phone} onChange={(e) => setPhone(e.target.value)} required inputMode="tel" autoComplete="off" placeholder="08xxxxxxxxxx" className={`${inputCls} font-mono`} />
+        </label>
+        <label className="grid gap-2 text-sm font-medium text-white">
+          Email saat mendaftar
+          <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required autoComplete="off" placeholder="nama@gmail.com" className={inputCls} />
+          {salah("verifikasi")}
+        </label>
+      </div>
       <fieldset className="grid gap-2 text-sm font-medium text-white">
         <legend className="mb-2">Apakah data tiket di atas sudah benar?</legend>
         <div className="grid gap-2 sm:grid-cols-2">

@@ -41,7 +41,8 @@ export default async function RefundOrderPage({ params, searchParams }: { params
   if (amount !== order.total) lines.push(["Potongan saat pembayaran", `−${formatRupiah(order.total - amount)}`]);
   const rekening = r && `${r.provider} ${samar(r.accountNumber)} atas nama ${r.accountName}`;
   const tiket = order.participants.filter((p) => p.ticket).map((p) => ({ code: p.ticket!.code, nama: p.fullName }));
-  const awal = r ? { method: r.method as RefundMethod, provider: r.provider, accountNumber: r.accountNumber, accountName: r.accountName } : undefined;
+  // Nomor rekening lama tidak diisikan ulang ke formulir: yang mengganti rekening mengetiknya dari awal.
+  const awal = r ? { method: r.method as RefundMethod, provider: r.provider, accountNumber: "", accountName: r.accountName } : undefined;
 
   return (
     <div className="relative flex flex-1 flex-col">
@@ -72,7 +73,7 @@ export default async function RefundOrderPage({ params, searchParams }: { params
                   <dl className="grid gap-1">
                     <div><dt className="sr-only">Kode tiket</dt><dd className="font-mono font-semibold">{p.ticket?.code ?? "-"}</dd></div>
                     <div><dt className="sr-only">Nama</dt><dd>{p.fullName}</dd></div>
-                    <div><dt className="sr-only">Jersey dan nomor HP</dt><dd className="text-white/65">Jersey {p.jerseySize} &middot; HP {samar(p.phone)}</dd></div>
+                    <div><dt className="sr-only">Jersey</dt><dd className="text-white/65">Jersey {p.jerseySize}</dd></div>
                   </dl>
                 </li>
               ))}
