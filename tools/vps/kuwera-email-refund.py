@@ -36,7 +36,7 @@ SQL = """select coalesce(json_agg(x order by x.paid), '[]') from (
          (select p."fullName" from "Participant" p where p."orderId" = o.id order by p.position limit 1) as pemesan,
          (select json_agg(t.code order by t.code) from "Ticket" t where t."orderId" = o.id) as tiket,
          (select json_build_object('status', r.status, 'nominal', r.amount, 'metode', r.method, 'bank', r.provider, 'nomor', r."accountNumber",
-                 'nama', r."accountName", 'catatan', r.note, 'ubah', r."updatedAt", 'transfer', r."transferredAt")
+                 'nama', r."accountName", 'catatan', r.note, 'data', r."dataNote", 'ubah', r."updatedAt", 'transfer', r."transferredAt")
             from "RefundRequest" r where r."orderId" = o.id) as r
     from "Order" o
    where o.status in ('PAID', 'REFUNDED') and not o."isTest" and o."buyerEmail" like '%@%') x"""
@@ -136,7 +136,8 @@ def rekap(semua, cfg):
     kepala = (f"<@{SUPERADMIN}> KUWERA refund: {len(antre)} pengajuan menunggu transfer, total {rupiah(sum(o['r']['nominal'] for o in antre))}. "
               f"Sudah selesai {len(selesai)} order ({rupiah(sum(o['r']['nominal'] for o in selesai))}), belum mengajukan {sum(1 for o in semua if not o['r'])} order.")
     butir = [f"{i}. {o['r']['bank']} {o['r']['nomor']} a.n. {o['r']['nama']}\n   {rupiah(o['r']['nominal'])} · order {o['id']} ({o['pemesan']})\n"
-             f"   Tiket: {', '.join(o['tiket'] or [])}\n   Dibayar {tgl(o['paid'], jam=True)}" for i, o in enumerate(antre, 1)]
+             f"   Tiket: {', '.join(o['tiket'] or [])}\n   Dibayar {tgl(o['paid'], jam=True)}"
+             + (f"\n   Data tidak sesuai menurut pemesan: {o['r']['data'].replace(chr(10), '; ')}" if o['r'].get('data') else "") for i, o in enumerate(antre, 1)]
     pesan, kini = [], kepala
     for b in butir + [f"Unggah bukti transfer di {SITE}/kuweraadmin/refund"]:
         if len(kini) + len(b) > 1800:  # batas pesan Discord 2000 huruf

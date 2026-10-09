@@ -8,7 +8,10 @@ import { REFUND_METHODS, REFUND_PROVIDERS, type RefundMethod } from "@/lib/refun
 type Awal = { method: RefundMethod; provider: string; accountNumber: string; accountName: string };
 
 // Formulir rekening tujuan refund. Nominal tidak ada di sini: server yang menghitungnya dari order.
-export default function RefundForm({ orderId, k, total, awal, tombol = "Ajukan refund" }: { orderId: string; k: string; total: string; awal?: Awal; tombol?: string }) {
+type Tiket = { code: string; nama: string };
+
+// Formulir dibuka dengan konfirmasi data tiket: kalau ada yang tidak sesuai, pemesan menulis data yang benar per kode tiket.
+export default function RefundForm({ orderId, k, total, tiket, awal, tombol = "Ajukan refund" }: { orderId: string; k: string; total: string; tiket: Tiket[]; awal?: Awal; tombol?: string }) {
   const router = useRouter();
   const [method, setMethod] = useState<RefundMethod>(awal?.method ?? "bank");
   const [provider, setProvider] = useState(awal?.provider ?? "");
@@ -16,6 +19,8 @@ export default function RefundForm({ orderId, k, total, awal, tombol = "Ajukan r
   const [accountNumber2, setAccountNumber2] = useState("");
   const [accountName, setAccountName] = useState(awal?.accountName ?? "");
   const [setuju, setSetuju] = useState(false);
+  const [sesuai, setSesuai] = useState(true);
+  const [koreksi, setKoreksi] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [fields, setFields] = useState<Record<string, string>>({});
@@ -27,7 +32,7 @@ export default function RefundForm({ orderId, k, total, awal, tombol = "Ajukan r
     try {
       const res = await fetch(`/api/refund/${orderId}`, {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ k, method, provider, accountNumber, accountNumber2, accountName, setuju }),
+        body: JSON.stringify({ k, method, provider, accountNumber, accountNumber2, accountName, setuju, koreksi: sesuai ? {} : koreksi }),
       });
       const data = (await res.json().catch(() => ({}))) as { error?: string; fields?: Record<string, string> };
       if (res.ok) { router.refresh(); return; }
@@ -40,8 +45,33 @@ export default function RefundForm({ orderId, k, total, awal, tombol = "Ajukan r
   }
 
   const salah = (f: string) => fields[f] && <span className="text-xs font-normal text-brand-yellow">{fields[f]}</span>;
+  // Pesan salah koreksi datang per kode tiket (kunci "koreksi.<kode>").
+  const salahTeks = (awalan: string) => { const k2 = Object.keys(fields).find((f) => f.startsWith(awalan)); return k2 ? salah(k2) : null; };
   return (
     <form onSubmit={kirim} className="grid gap-4">
+      <fieldset className="grid gap-2 text-sm font-medium text-white">
+        <legend className="mb-2">Apakah data tiket di atas sudah benar?</legend>
+        <div className="grid gap-2 sm:grid-cols-2">
+          {([[true, "Sudah benar"], [false, "Ada yang tidak sesuai"]] as const).map(([v, label]) => (
+            <label key={label} className={`flex cursor-pointer items-center gap-3 rounded-xl border px-4 py-3 ${sesuai === v ? "border-brand-yellow bg-brand-yellow/10" : "border-glass-border bg-white/5"}`}>
+              <input type="radio" name="sesuai" checked={sesuai === v} onChange={() => setSesuai(v)} className="accent-brand-yellow" />
+              {label}
+            </label>
+          ))}
+        </div>
+      </fieldset>
+      {!sesuai && (
+        <div className="grid gap-3 rounded-xl border border-glass-border bg-white/5 p-4">
+          <p className="text-sm text-white/80">Tulis data yang benar di tiket yang tidak sesuai. Tiket yang sudah benar boleh dikosongkan.</p>
+          {tiket.map((t) => (
+            <label key={t.code} className="grid gap-2 text-sm font-medium text-white">
+              <span><span className="font-mono">{t.code}</span> <span className="font-normal text-white/65">({t.nama})</span></span>
+              <input value={koreksi[t.code] ?? ""} onChange={(e) => setKoreksi({ ...koreksi, [t.code]: e.target.value })} maxLength={200} placeholder="Misalnya: nama seharusnya Budi Santosa" className={inputCls} />
+            </label>
+          ))}
+          {salahTeks("koreksi")}
+        </div>
+      )}
       <fieldset className="grid gap-2 text-sm font-medium text-white">
         <legend className="mb-2">Dana dikembalikan ke</legend>
         <div className="grid gap-2 sm:grid-cols-2">
