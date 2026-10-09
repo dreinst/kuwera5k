@@ -51,6 +51,8 @@ export const refundSchema = z.object({
   accountNumber2: z.string().transform((v) => v.replace(/[\s.-]/g, "")),
   accountName: z.string().trim().min(3, "Mohon isi nama pemilik rekening sesuai buku tabungan atau aplikasinya.").max(80).regex(/^[\p{L}][\p{L}\s.,'-]*$/u, "Nama pemilik rekening diisi huruf saja, ya."),
   setuju: z.literal(true, "Mohon centang persetujuannya dulu, ya."),
+  // Koreksi data per kode tiket, diisi hanya kalau pemesan menandai ada data yang tidak sesuai.
+  koreksi: z.record(z.string(), z.string().trim().max(200, "Koreksi data paling panjang 200 huruf per tiket, ya.")).optional(),
 }).superRefine((v, ctx) => {
   if (!REFUND_PROVIDERS[v.method].includes(v.provider)) ctx.addIssue({ code: "custom", path: ["provider"], message: "Mohon pilih bank atau dompet digitalnya dulu." });
   if (v.accountNumber !== v.accountNumber2) ctx.addIssue({ code: "custom", path: ["accountNumber2"], message: "Nomor yang diketik ulang belum sama. Mohon cek lagi, ya." });
