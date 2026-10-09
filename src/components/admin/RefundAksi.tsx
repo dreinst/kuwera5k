@@ -21,7 +21,7 @@ export function SalinTautan({ link }: { link: string }) {
 
 // Dua tindakan untuk pengajuan yang menunggu transfer: tandai selesai (wajib unggah bukti transfer) atau minta
 // pemesan memperbaiki data rekening.
-export default function RefundAksi({ orderId, nominal }: { orderId: string; nominal: string }) {
+export default function RefundAksi({ orderId, nominal, verified }: { orderId: string; nominal: string; verified: boolean }) {
   const router = useRouter();
   const file = useRef<HTMLInputElement>(null);
   const [alasan, setAlasan] = useState("");
@@ -56,7 +56,7 @@ export default function RefundAksi({ orderId, nominal }: { orderId: string; nomi
       <div>
         <p className="text-sm font-semibold text-white">Sudah ditransfer</p>
         <input ref={file} type="file" accept="image/jpeg,image/png,image/webp" aria-label="Gambar bukti transfer" className="mt-2 block w-full text-sm text-white/85 file:mr-3 file:rounded-full file:border-0 file:bg-white/15 file:px-4 file:py-1.5 file:text-sm file:text-white" />
-        <button type="button" onClick={selesai} disabled={sibuk || pending} className="mt-3 rounded-full bg-brand-yellow px-5 py-2 text-sm font-semibold text-green-deep disabled:opacity-60">
+        <button type="button" onClick={selesai} disabled={sibuk || pending || !verified} className="mt-3 rounded-full bg-brand-yellow px-5 py-2 text-sm font-semibold text-green-deep disabled:opacity-60">
           {sibuk ? "Mengunggah..." : "Unggah bukti dan tandai selesai"}
         </button>
       </div>
