@@ -1,0 +1,7 @@
+[Unit]
+Description=Email dan rekap refund pembatalan KUWERA
+After=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/kuwera-email-refund

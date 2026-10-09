@@ -11,6 +11,7 @@ import { waLink, waText } from "@/lib/whatsapp";
 import { maskEmail } from "@/lib/registration";
 import { isRealGateway } from "@/lib/orders";
 import { rateLimit } from "@/lib/rate-limit";
+import { refundAktif } from "@/lib/refund";
 
 export const dynamic = "force-dynamic";
 
@@ -29,6 +30,28 @@ export default async function TiketPage({ params }: { params: Promise<{ code: st
       participants: { orderBy: { position: "asc" }, include: { ticket: true } },
     },
   });
+  // Acara dibatalkan: tiket tidak berlaku lagi. Halaman ini bisa dibuka siapa pun yang memegang kode tiket, jadi
+  // yang ditampilkan hanya arah ke /refund, bukan tautan refund pribadi pemesan.
+  const batal = await refundAktif();
+  if (batal && (order?.status === "PAID" || order?.status === "REFUNDED")) {
+    return (
+      <div className="relative flex flex-1 flex-col">
+        <Navbar />
+        <main className="relative mx-auto w-full max-w-2xl flex-1 px-6 pt-28 pb-24">
+          <p className="text-xs font-semibold tracking-wide text-gold uppercase">E-ticket</p>
+          <h1 className="font-display mt-2 text-4xl text-white uppercase">Acara <span className="text-brand-yellow">dibatalkan</span></h1>
+          <p className="mt-3 text-white/80">
+            Mohon maaf, KUWERA Fun Run 5K 2026 batal diselenggarakan, jadi tiket order {order.id} tidak berlaku lagi.{" "}
+            {order.status === "REFUNDED" ? "Uang pendaftaran order ini sudah kami kembalikan." : "Uang pendaftarannya kami kembalikan 100%, termasuk kode unik."}
+          </p>
+          {order.status === "PAID" && (
+            <Link href="/refund" className="mt-6 inline-block rounded-full bg-brand-yellow px-6 py-2.5 text-sm font-semibold text-green-deep">Ajukan refund</Link>
+          )}
+        </main>
+        <Footer />
+      </div>
+    );
+  }
   if (!order || order.status !== "PAID") notFound();
   const tickets = order.participants
     .filter((p) => p.ticket && (!single || p.ticket.code === code))

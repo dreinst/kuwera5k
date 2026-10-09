@@ -14,6 +14,7 @@ export const waText = {
   bayar: (orderId: string) => `Halo kak, izin menyampaikan ada kendala pembayaran KUWERA Fun Run 5K. Nomor order ${orderId}. Kendalanya: `,
   sudahBayar: (orderId: string) =>
     `Halo kak, izin menyampaikan saya sudah membayar pendaftaran KUWERA Fun Run 5K tapi e-ticket belum muncul. Nomor order ${orderId}.`,
+  refund: "Halo kak, saya mau mengajukan pengembalian dana KUWERA Fun Run 5K. Nomor order saya: ",
   tiket: (code: string) => `Halo kak, izin bertanya soal tiket KUWERA Fun Run 5K saya. Kode tiket ${code}: `,
 };
 
