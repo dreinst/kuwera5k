@@ -21,12 +21,14 @@ export async function POST(req: Request, { params }: { params: Promise<{ orderId
     const fields = issuesToMap(parsed.error.issues);
     return Response.json({ error: Object.values(fields)[0] ?? "Ada isian yang perlu dicek lagi.", fields }, { status: 400 });
   }
-  const order = await prisma.order.findUnique({ where: { id: orderId }, select: { id: true, total: true, status: true } });
+  const order = await prisma.order.findUnique({ where: { id: orderId }, select: { id: true, total: true, status: true, tickets: { select: { code: true }, orderBy: { code: "asc" } } } });
   if (order?.status === "REFUNDED") return gagal("Dana order ini sudah kami kembalikan.", 409);
   if (!order || order.status !== "PAID") return gagal("Order tidak ditemukan", 404);
 
-  const { method, provider, accountNumber, accountName } = parsed.data;
-  const data = { amount: refundAmount(cfg, order), method, provider, accountNumber, accountName, status: "DIAJUKAN", note: null };
+  const { method, provider, accountNumber, accountName, koreksi = {} } = parsed.data;
+  // Koreksi hanya diterima untuk kode tiket milik order ini.
+  const dataNote = order.tickets.filter((t) => koreksi[t.code]).map((t) => `${t.code}: ${koreksi[t.code]}`).join("\n") || null;
+  const data = { amount: refundAmount(cfg, order), method, provider, accountNumber, accountName, dataNote, status: "DIAJUKAN", note: null };
   // updateMany bersyarat supaya kiriman ulang tidak menimpa pengajuan yang baru saja ditandai selesai oleh admin.
   const diubah = await prisma.refundRequest.updateMany({ where: { orderId, status: { not: "SELESAI" } }, data });
   if (diubah.count === 0) {

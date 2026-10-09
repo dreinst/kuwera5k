@@ -27,7 +27,7 @@ export default async function RefundOrderPage({ params, searchParams }: { params
   const order = await prisma.order.findUnique({
     where: { id: orderId },
     include: {
-      participants: { orderBy: { position: "asc" }, include: { ticket: { select: { code: true } } } },
+      participants: { orderBy: { position: "asc" }, include: { ticket: { select: { code: true, qrSvg: true } } } },
       refund: { omit: { proofData: true } },
     },
   });
@@ -40,6 +40,7 @@ export default async function RefundOrderPage({ params, searchParams }: { params
   const lines = priceLines(order);
   if (amount !== order.total) lines.push(["Potongan saat pembayaran", `−${formatRupiah(order.total - amount)}`]);
   const rekening = r && `${r.provider} ${samar(r.accountNumber)} atas nama ${r.accountName}`;
+  const tiket = order.participants.filter((p) => p.ticket).map((p) => ({ code: p.ticket!.code, nama: p.fullName }));
   const awal = r ? { method: r.method as RefundMethod, provider: r.provider, accountNumber: r.accountNumber, accountName: r.accountName } : undefined;
 
   return (
@@ -64,11 +65,15 @@ export default async function RefundOrderPage({ params, searchParams }: { params
           </dl>
           <div className="mt-5 border-t border-white/10 pt-4">
             <p className="text-xs font-semibold tracking-wide text-gold uppercase">Tiket</p>
-            <ul className="mt-2 space-y-2 text-sm">
+            <ul className="mt-3 space-y-4 text-sm">
               {order.participants.map((p) => (
-                <li key={p.id} className="flex flex-wrap items-baseline justify-between gap-x-4 text-white">
-                  <span>{p.fullName} <span className="text-white/65">(jersey {p.jerseySize})</span></span>
-                  <span className="font-mono text-white/85">{p.ticket?.code ?? "-"}</span>
+                <li key={p.id} className="flex items-center gap-4 text-white">
+                  {p.ticket && <div className="w-24 shrink-0 rounded-xl bg-white p-1.5" role="img" aria-label={`QR tiket ${p.ticket.code}`} dangerouslySetInnerHTML={{ __html: p.ticket.qrSvg }} />}
+                  <dl className="grid gap-1">
+                    <div><dt className="sr-only">Kode tiket</dt><dd className="font-mono font-semibold">{p.ticket?.code ?? "-"}</dd></div>
+                    <div><dt className="sr-only">Nama</dt><dd>{p.fullName}</dd></div>
+                    <div><dt className="sr-only">Jersey dan nomor HP</dt><dd className="text-white/65">Jersey {p.jerseySize} &middot; HP {samar(p.phone)}</dd></div>
+                  </dl>
                 </li>
               ))}
             </ul>
@@ -104,9 +109,10 @@ export default async function RefundOrderPage({ params, searchParams }: { params
               <p className="mt-2 text-white/85">
                 {total} akan kami transfer ke {rekening}, {REFUND_PROSES} sejak pengajuan ini masuk. Begitu dana terkirim, bukti transfernya kami kirim ke emailmu dan tampil di halaman ini.
               </p>
+              {r.dataNote && <p className="mt-3 text-sm whitespace-pre-line text-white/75">Koreksi data yang kamu kirim:{"\n"}{r.dataNote}</p>}
               <details className="mt-5 border-t border-white/10 pt-4">
                 <summary className="cursor-pointer text-sm font-semibold text-brand-yellow">Ubah data rekening</summary>
-                <div className="mt-4"><RefundForm orderId={order.id} k={k} total={total} awal={awal} tombol="Simpan rekening baru" /></div>
+                <div className="mt-4"><RefundForm orderId={order.id} k={k} total={total} tiket={tiket} awal={awal} tombol="Simpan rekening baru" /></div>
               </details>
             </>
           ) : (
@@ -117,7 +123,7 @@ export default async function RefundOrderPage({ params, searchParams }: { params
               ) : (
                 <p className="mt-2 text-sm text-white/75">Isi rekening tujuannya, lalu dana kami transfer {REFUND_PROSES}. Biaya transfer kami yang tanggung.</p>
               )}
-              <div className="mt-5"><RefundForm orderId={order.id} k={k} total={total} awal={awal} tombol={r ? "Kirim perbaikan" : "Ajukan refund"} /></div>
+              <div className="mt-5"><RefundForm orderId={order.id} k={k} total={total} tiket={tiket} awal={awal} tombol={r ? "Kirim perbaikan" : "Ajukan refund"} /></div>
             </>
           )}
         </section>
