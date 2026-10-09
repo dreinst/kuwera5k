@@ -1,19 +1,14 @@
 import { prisma } from "@/lib/db";
 import { paymentMode } from "@/lib/orders";
 import { rateLimit, tooMany } from "@/lib/rate-limit";
+import { JENIS, MAKS_BYTE, stempelWib } from "@/lib/berkas-gambar";
 
 export const runtime = "nodejs";
 
 // Unggah bukti bayar QRIS dari halaman /bayar (pengganti kiriman screenshot lewat WhatsApp). Buktinya masuk tabel
 // PaymentProof dengan source "web"; skrip kuwera-email-tiket di VPS meneruskannya ke Discord #chatbot dengan tombol
 // Setujui dan Tolak, sama seperti bukti yang dulu diteruskan bot WhatsApp.
-const MAKS_BYTE = 4 * 1024 * 1024; // di bawah batas badan permintaan fungsi Vercel (4,5 MB)
 const MAKS_PER_ORDER = 5;
-const JENIS: Record<string, { ext: string; cocok: (b: Buffer) => boolean }> = {
-  "image/jpeg": { ext: "jpg", cocok: (b) => b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff },
-  "image/png": { ext: "png", cocok: (b) => b.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])) },
-  "image/webp": { ext: "webp", cocok: (b) => b.subarray(0, 4).toString("latin1") === "RIFF" && b.subarray(8, 12).toString("latin1") === "WEBP" },
-};
 
 const gagal = (error: string, status = 400) => Response.json({ error }, { status });
 
@@ -39,7 +34,6 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   if (jumlah >= MAKS_PER_ORDER) return gagal("Bukti bayar order ini sudah kami terima beberapa kali. Mohon tunggu pengecekan admin, ya.", 429);
 
   // Nama file memakai waktu WIB, sama dengan bukti dari WhatsApp (contoh 2026-10-04_091502-bukti.jpg).
-  const stamp = new Date(Date.now() + 7 * 3600_000).toISOString().slice(0, 19).replace("T", "_").replace(/:/g, "");
-  await prisma.paymentProof.create({ data: { orderId: id, fileName: `${stamp}-bukti.${jenis.ext}`, mimeType: file.type, data, source: "web" } });
+  await prisma.paymentProof.create({ data: { orderId: id, fileName: `${stempelWib()}-bukti.${jenis.ext}`, mimeType: file.type, data, source: "web" } });
   return Response.json({ ok: true });
 }

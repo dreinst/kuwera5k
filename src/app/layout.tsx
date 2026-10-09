@@ -4,6 +4,8 @@ import "./globals.css";
 import WhatsAppButton from "@/components/WhatsAppButton";
 import PageTexture from "@/components/PageTexture";
 import MetaPixel from "@/components/MetaPixel";
+import Pita from "@/components/Pita";
+import { refundAktif } from "@/lib/refund";
 import { openGraphBase, siteName, siteUrl } from "@/lib/site";
 
 const anton = Anton({
@@ -39,16 +41,22 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = { themeColor: "#0B4A2C" };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+// Pita pembatalan dibaca dari database, jadi halaman statis ikut diperbarui paling lama tiap 60 detik.
+export const revalidate = 60;
+
+export default async function RootLayout({ children }: LayoutProps<"/">) {
+  const batal = await refundAktif();
   return (
     <html
       lang="id"
       className={`${anton.variable} ${inter.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col bg-green-deep">
+      {/* data-batal dipakai Navbar (lewat varian in-data-batal) untuk mengganti menu dan tombol Daftar saat acara dibatalkan. */}
+      <body className="min-h-full flex flex-col bg-green-deep" data-batal={batal || undefined}>
         <PageTexture />
         {children}
-        <WhatsAppButton />
+        {batal && <Pita />}
+        <WhatsAppButton naik={batal} />
         <MetaPixel />
       </body>
     </html>

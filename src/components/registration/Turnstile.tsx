@@ -34,7 +34,8 @@ function loadScript() {
 
 // onToken harus stabil (misalnya setter dari useState). resetSignal dinaikkan setelah submit ditolak,
 // karena token Turnstile hanya berlaku sekali.
-export default function Turnstile({ onToken, resetSignal }: { onToken: (token: string) => void; resetSignal: number }) {
+// `tombol` = nama tombol yang menunggu verifikasi, untuk teks bantuan (form refund memakai komponen yang sama).
+export default function Turnstile({ onToken, resetSignal, tombol = "pembayaran" }: { onToken: (token: string) => void; resetSignal: number; tombol?: string }) {
   const box = useRef<HTMLDivElement>(null);
   const widget = useRef<string | null>(null);
   // Tombol bayar baru aktif setelah ada token. Kalau kotak verifikasi tidak muncul (browser dalam aplikasi, pemblokir
@@ -84,7 +85,7 @@ export default function Turnstile({ onToken, resetSignal }: { onToken: (token: s
       <div ref={box} className="min-h-[65px]" />
       {!selesai && (macet ? (
         <div className="mt-2 rounded-xl border border-brand-yellow/40 bg-brand-yellow/10 px-4 py-3 text-xs text-brand-yellow">
-          <p>Verifikasi bukan robot belum muncul, jadi tombol pembayaran belum bisa ditekan. Biasanya karena halaman dibuka dari dalam aplikasi Instagram atau WhatsApp, koneksi sedang lambat, atau ada pemblokir iklan. Coba buka halaman ini langsung di Chrome atau Safari, ya.</p>
+          <p>Verifikasi bukan robot belum muncul, jadi tombol {tombol} belum bisa ditekan. Biasanya karena halaman dibuka dari dalam aplikasi Instagram atau WhatsApp, koneksi sedang lambat, atau ada pemblokir iklan. Coba buka halaman ini langsung di Chrome atau Safari, ya.</p>
           <p className="mt-2">
             <button type="button" onClick={() => { setMacet(false); setPercobaan((n) => n + 1); }} className="font-semibold underline">Coba lagi</button>
             {" atau "}
@@ -92,7 +93,7 @@ export default function Turnstile({ onToken, resetSignal }: { onToken: (token: s
           </p>
         </div>
       ) : (
-        <p className="mt-2 text-xs text-white/75">Tombol pembayaran aktif setelah verifikasi bukan robot di atas selesai.</p>
+        <p className="mt-2 text-xs text-white/75">Tombol {tombol} aktif setelah verifikasi bukan robot di atas selesai.</p>
       ))}
     </div>
   );

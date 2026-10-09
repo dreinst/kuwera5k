@@ -20,7 +20,7 @@ from email.utils import formataddr
 TOKEN = "/root/dpro-blast/google_token_blast.json"
 STATE = "/var/lib/kuwera-email/terkirim.json"
 DB = ["docker", "exec", "uvx3zbwvek7pig9oiwyzgivg", "psql", "-U", "kuwera", "-d", "kuwera5k", "-At", "-c"]
-SITE = "https://kuwera5k.vercel.app"
+SITE = "https://kuwera.dpro.events"
 DARI = ("KUWERA Fun Run 5K", "dproductioncare@gmail.com")
 WA_BANTUAN = "0822-2855-5254"
 RACE_PACK = "Kamis dan Jumat, 22 dan 23 Oktober 2026 di Kudam V/Brawijaya"

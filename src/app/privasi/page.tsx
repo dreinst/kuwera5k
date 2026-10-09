@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { pageMeta } from "@/lib/site";
 import Navbar from "@/components/sections/Navbar";
 import Footer from "@/components/sections/Footer";
+import { refundAktif } from "@/lib/refund";
 
 export const metadata: Metadata = {
   title: "Kebijakan Privasi",
@@ -9,7 +10,8 @@ export const metadata: Metadata = {
   ...pageMeta("/privasi"),
 };
 
-export default function Page() {
+export default async function Page() {
+  const batal = await refundAktif();
   return (
     <div className="relative flex flex-1 flex-col">
       <Navbar />
@@ -26,6 +28,9 @@ export default function Page() {
           <li>Konfirmasi pembayaran lewat halaman pembayaran: gambar bukti bayar yang kamu unggah sendiri disimpan bersama ordernya dan diperiksa admin. Setelah pembayaran dikonfirmasi, tautan e-ticket dikirim ke email pemesan lewat Gmail. Chat WhatsApp ke nomor panitia dibalas langsung oleh admin.</li>
           <li>Saat iklan berjalan, situs ini memakai Meta Pixel untuk mengukur hasil iklan di Facebook dan Instagram, misalnya berapa kunjungan yang berujung pendaftaran. Meta menerima alamat halaman yang dibuka (di halaman pembayaran dan e-ticket termasuk nomor order), alamat IP, jenis perangkat dan browser, cookie Meta, serta kategori, metode, dan nilai pembayaran. Isi formulir pendaftaran seperti nama, email, dan nomor HP tidak kami kirimkan ke Meta.</li>
           <li>Pesan langsung (DM) dan komentar ke Instagram @kuwerafunrun bisa dibalas oleh asisten virtual panitia. Yang kami terima dari Instagram hanya username, isi pesan atau komentar, dan gambar yang kamu kirim sendiri. Data ini dipakai untuk menjawab pertanyaanmu dan diteruskan ke admin panitia kalau perlu ditangani langsung. Riwayat chat disimpan paling lama tiga hari. Kalau ingin datanya dihapus lebih cepat, cukup kirim DM &quot;hapus data saya&quot; ke @kuwerafunrun atau WhatsApp panitia, nanti kami bantu hapus.</li>
+          {batal && (
+            <li>Pengembalian dana: kalau kamu mengajukan refund, kami menyimpan nama bank atau dompet digital, nomor rekening, dan nama pemilik rekening yang kamu isi. Data itu hanya dipakai panitia untuk mentransfer dana, dan bukti transfernya disimpan bersama ordermu.</li>
+          )}
         </ul>
       </main>
       <Footer />
