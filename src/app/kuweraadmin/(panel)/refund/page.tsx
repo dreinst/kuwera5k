@@ -92,6 +92,7 @@ export default async function RefundAdminPage() {
                   <div><dt className="text-xs text-white/65">Atas nama</dt><dd className="mt-0.5 text-white">{r.accountName}</dd></div>
                 </dl>
               )}
+              {r?.dataNote && <p className="mt-4 rounded-xl border border-brand-yellow/40 bg-brand-yellow/10 px-4 py-3 text-sm whitespace-pre-line text-brand-yellow">Pemesan menandai data tiket tidak sesuai:{"\n"}{r.dataNote}</p>}
               <div className="mt-4">
                 {kelompok === "BELUM" && <SalinTautan link={refundLink(cfg, o.id)} />}
                 {kelompok === "DIAJUKAN" && (
