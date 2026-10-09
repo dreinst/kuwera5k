@@ -23,6 +23,8 @@ const nextConfig: NextConfig = {
   // Build Docker untuk VPS (lihat Dockerfile) memakai output standalone; build Vercel tidak terpengaruh.
   output: process.env.NEXT_OUTPUT === "standalone" ? "standalone" : undefined,
   poweredByHeader: false,
+  // Di VPS, kompresi (br, zstd, gzip) dikerjakan Traefik lewat middleware kompresi@file. Build Vercel tidak terpengaruh.
+  compress: process.env.NEXT_OUTPUT === "standalone" ? false : undefined,
   // Font dan logo dibaca dari disk saat menggambar kartu bayar QRIS.
   outputFileTracingIncludes: {
     "/api/orders/[id]/qris": [
