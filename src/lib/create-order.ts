@@ -142,7 +142,7 @@ export async function createOrder(input: OrderInput, now = new Date()): Promise<
         const created = await tx.order.create({
           data: {
             id, categoryId: category.id, status: "PENDING", subtotal, discount, fee: biaya, total, promoCode, quantity, uniqueCode,
-            paymentMethod, buyerEmail: p.email, buyerPhone: p.phone, expiresAt,
+            paymentMethod, buyerEmail: p.email, buyerPhone: p.phone, expiresAt, adRef: input.ref ?? null,
             participants: {
               create: people.map((x, i) => ({
                 position: i + 1,

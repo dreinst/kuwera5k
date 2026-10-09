@@ -1,9 +1,7 @@
 FROM node:24-alpine
-RUN apk add --no-cache git
 WORKDIR /app
 COPY package.json ./
 RUN npm install --omit=dev
-COPY index.js cli.js drivetech.js ./
-RUN mkdir -p /data/auth
+COPY index.js cli.js drivetech.js waha-sock.js ./
 VOLUME ["/data"]
 CMD ["node", "index.js"]

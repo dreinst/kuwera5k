@@ -17,6 +17,7 @@ function messageFor(path: string) {
 export default function WhatsAppButton() {
   const path = usePathname() ?? "/";
   if (path.startsWith("/kuweraadmin")) return null; // halaman admin tidak butuh tombol chat peserta
+  if (path === "/link") return null; // halaman tautan bio sudah punya tombol WhatsApp sendiri
   return (
     <a
       href={waLink(messageFor(path))}

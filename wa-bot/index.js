@@ -19,8 +19,7 @@
 
 const fs = require('node:fs');
 const crypto = require('node:crypto');
-const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, fetchLatestBaileysVersion, downloadMediaMessage, BufferJSON } = require('@whiskeysockets/baileys');
-const { Boom } = require('@hapi/boom');
+const { makeWahaSock, BufferJSON } = require('./waha-sock');
 const { Pool } = require('pg');
 const pino = require('pino');
 const QRCode = require('qrcode');
@@ -192,7 +191,7 @@ async function mediaOf(msg) {
   msg._media = null;
   if (kind) {
     try {
-      const buffer = await downloadMediaMessage(msg, 'buffer', {});
+      const buffer = await sock.downloadMedia(msg);
       const name = kind === 'document' ? (doc.fileName || 'dokumen').replace(/[^\w.\- ]/g, '_') : 'bukti.jpg';
       const mime = (kind === 'document' ? doc.mimetype : msg.message.imageMessage.mimetype) || 'application/octet-stream';
       msg._media = { kind, buffer, name, mime };
@@ -834,7 +833,7 @@ async function processPaid() {
         '',
         `E-ticket lengkap: ${SITE_URL}/tiket/${o.id}`,
         '',
-        `Race pack bisa diambil pada ${RACE_PACK}. Jam pengambilannya kami kabarkan lewat WhatsApp ini menjelang hari H. Jangan lupa bawa KTP atau KIA asli setiap peserta, ya.`,
+        `Race pack bisa diambil pada ${RACE_PACK}. Buka pukul 08.00 sampai 20.00 WIB di kedua hari. Di hari lomba tidak ada pengambilan. Jangan lupa bawa KTP atau KIA asli setiap peserta, ya.`,
         `Hari lomba: ${RACE_DAY}.`,
         '',
         'QR setiap peserta kami kirim di bawah ini. Disimpan baik-baik ya, sampai jumpa di garis start!',
@@ -1043,68 +1042,25 @@ async function paidLoop() {
   }
 }
 
-let pairingRequested = false;
+// Sesi WhatsApp (tautan QR, sambung ulang) dipegang WAHA; bot hanya memakai API dan webhook-nya (lihat waha-sock.js).
 async function start() {
-  const { state, saveCreds } = await useMultiFileAuthState(AUTH_DIR);
-  const { version } = await fetchLatestBaileysVersion();
-  const s = makeWASocket({ auth: state, version, logger: pino({ level: 'silent' }), browser: ['KUWERA 5K', 'Chrome', '1.0'] });
-  s.ev.on('creds.update', saveCreds);
-  const send = s.sendMessage.bind(s);
+  const s = makeWahaSock({ logger });
+  const send = s.sendMessage;
   s.sendMessage = async (...args) => {
     const sent = await send(...args);
     if (sent?.key?.id) fs.appendFileSync(SENT_IDS, sent.key.id + '\n');
     return sent;
   };
-  if (!PRIBADI) { // kontak HP pribadi tidak disimpan
-    s.ev.on('contacts.upsert', rememberContacts);
-    s.ev.on('contacts.update', rememberContacts);
-  }
-  s.ev.on('connection.update', async ({ connection, lastDisconnect, qr }) => {
-    if (qr) {
-      // Belum tertaut: pakai kode 8 huruf (Perangkat tertaut > Tautkan dengan nomor telepon) kalau
-      // PAIRING_PHONE diisi, dan simpan QR sebagai cadangan.
-      QRCode.toFile('/data/latest-qr.png', qr, { width: 400 }).catch(() => {});
-      if (PAIRING_PHONE && !pairingRequested) {
-        pairingRequested = true;
-        try {
-          const code = await s.requestPairingCode(PAIRING_PHONE);
-          fs.writeFileSync('/data/pairing-code.txt', `${code}\n${new Date().toISOString()}\n`);
-          logger.info({ code }, 'kode tautan WhatsApp (masukkan di HP dalam beberapa menit)');
-        } catch (e) {
-          pairingRequested = false;
-          logger.error({ err: e.message }, 'gagal meminta kode tautan');
-        }
-      }
-    }
-    if (connection === 'close') {
-      connected = false;
-      pairingRequested = false; // kode lama kedaluwarsa, sambungan berikutnya meminta kode baru
-      const code = new Boom(lastDisconnect && lastDisconnect.error).output.statusCode;
-      const again = code !== DisconnectReason.loggedOut;
-      logger.warn({ statusCode: code, reconnect: again }, 'koneksi WhatsApp terputus');
-      if (again) setTimeout(() => start().catch((e) => logger.error({ err: e.message }, 'gagal menyambung ulang')), 3000);
-    } else if (connection === 'open') {
-      sock = s;
-      connected = true;
-      pairingRequested = false;
-      logger.info({ pribadi: PRIBADI }, 'bot KUWERA terhubung ke WhatsApp');
-      if (PRIBADI) return; // grup dan kontak di bawah milik nomor kantor
-      // Daftar grup yang diikuti nomor kantor (id -> nama), dipakai worker CS untuk laporan ke grup tim.
-      s.groupFetchAllParticipating()
-        .then((g) => {
-          fs.writeFileSync('/data/groups.json', JSON.stringify(Object.fromEntries(Object.values(g).map((x) => [x.id, x.subject]))));
-          fs.writeFileSync('/data/groups-meta.json', JSON.stringify(Object.values(g).map((x) => ({
-            id: x.id, subject: x.subject, isCommunity: !!x.isCommunity, isCommunityAnnounce: !!x.isCommunityAnnounce, linkedParent: x.linkedParent || null,
-          })), null, 1));
-        })
-        .catch((e) => logger.warn({ err: e.message }, 'gagal mengambil daftar grup'));
-      // Sekali saja: tarik ulang app state supaya nama kontak dari HP kantor terkirim lewat contacts.upsert.
-      if (!fs.existsSync('/data/contacts-synced')) {
-        s.resyncAppState(['critical_unblock_low', 'regular_high', 'regular_low', 'critical_block', 'regular'], true)
-          .then(() => { fs.writeFileSync('/data/contacts-synced', new Date().toISOString()); logger.info({ jumlah: Object.keys(contacts).length }, 'kontak tersinkron'); })
-          .catch((e) => logger.warn({ err: e.message }, 'sinkron kontak gagal'));
-      }
-    }
+  sock = s;
+  s.ev.on('connection.update', ({ connection, statusCode, status }) => {
+    connected = connection === 'open';
+    if (!connected) { logger.warn({ statusCode, status, reconnect: statusCode !== 401 }, 'koneksi WhatsApp terputus'); return; }
+    logger.info({ pribadi: PRIBADI }, 'bot KUWERA terhubung ke WhatsApp');
+    if (PRIBADI) return; // daftar grup di bawah milik nomor kantor
+    // Daftar grup yang diikuti nomor kantor (id -> nama), dipakai worker CS untuk laporan ke grup tim.
+    s.groupFetchAllParticipating()
+      .then((g) => fs.writeFileSync('/data/groups.json', JSON.stringify(Object.fromEntries(Object.values(g).map((x) => [x.id, x.subject])))))
+      .catch((e) => logger.warn({ err: e.message }, 'gagal mengambil daftar grup'));
   });
   s.ev.on('messages.upsert', async ({ messages, type }) => {
     for (const m of messages) {
