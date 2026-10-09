@@ -27,11 +27,15 @@ export default function Footer() {
         </nav>
       </div>
 
-      {/* Kredit standar situs grup D'Pro (sama dengan Produksia, Pet Blessing, EasyLearnn): logo di atas, satu baris kredit di bawahnya, terpusat. */}
-      <div className="mx-auto mt-8 flex max-w-6xl flex-col items-center gap-2 border-t border-white/10 pt-6 text-center">
-        {/* eslint-disable-next-line @next/next/no-img-element -- SVG statis, tanpa optimasi */}
-        <img src="/logo-dpro.svg" alt="D'Production Event Organizer" width={322} height={163} className="h-12 w-auto" />
-        <p className="text-xs text-white/80">Made by dreinst, organized by D&rsquo;Production Event Organizer</p>
+      {/* Kredit standar situs grup D'Pro: pembuat, garis pemisah, lalu penyelenggara dengan logo D'PRO, sebaris dan terpusat. */}
+      <div className="mx-auto mt-8 flex max-w-6xl items-center justify-center gap-4 border-t border-white/10 pt-6 text-xs text-white/80">
+        <span>Made by dreinst</span>
+        <span aria-hidden="true" className="h-4 w-px bg-white/30" />
+        <span className="flex items-center gap-2.5">
+          Organized by
+          {/* eslint-disable-next-line @next/next/no-img-element -- SVG statis, tanpa optimasi */}
+          <img src="/logo-dpro-ringkas.svg" alt="D'PRO" className="h-5 w-auto shrink-0" />
+        </span>
       </div>
     </footer>
   );
