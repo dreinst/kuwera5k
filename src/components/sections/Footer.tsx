@@ -29,7 +29,12 @@ export default function Footer() {
 
       {/* Kredit standar situs grup D'Pro: pembuat, garis pemisah, lalu penyelenggara dengan logo D'PRO, sebaris dan terpusat. */}
       <div className="mx-auto mt-8 flex max-w-6xl items-center justify-center gap-4 border-t border-white/10 pt-6 text-xs text-white/80">
-        <span>Made by dreinst</span>
+        <span>
+              Made by{" "}
+              <a href="https://www.instagram.com/dreiinst/" target="_blank" rel="noopener noreferrer" className="underline-offset-4 hover:underline">
+                dreinst
+              </a>
+            </span>
         <span aria-hidden="true" className="h-4 w-px bg-white/30" />
         <span className="flex items-center gap-2.5">
           Organized by
