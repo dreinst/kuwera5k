@@ -4,8 +4,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 // Pita pembatalan di bawah semua halaman publik selama refund aktif (Setting "refund"). Tidak tampil di halaman
-// admin dan di halaman refund sendiri. Tombol WhatsApp melayang ikut naik supaya tidak tertutup (lihat WhatsAppButton).
-export const pitaTampil = (path: string) => !path.startsWith("/kuweraadmin") && !path.startsWith("/refund");
+// admin, di halaman refund sendiri, dan di beranda (beranda sudah berganti menjadi pengumuman pembatalan). Tombol WhatsApp melayang ikut naik supaya tidak tertutup (lihat WhatsAppButton).
+export const pitaTampil = (path: string) => path !== "/" && !path.startsWith("/kuweraadmin") && !path.startsWith("/refund");
 
 export default function Pita() {
   const path = usePathname() ?? "/";

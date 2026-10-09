@@ -30,7 +30,7 @@ export default function Navbar() {
       }`}
     >
       <nav className="mx-auto grid max-w-6xl grid-cols-[1fr_auto_1fr] items-center py-3">
-        <ul className="col-start-1 row-start-1 hidden items-center gap-7 text-sm text-white/80 md:flex">
+        <ul className="col-start-1 row-start-1 hidden items-center gap-7 text-sm text-white/80 md:flex in-data-batal:!hidden">
           {NAV_LINKS.map((link) => (
             <li key={link.href}>
               <a href={link.href} className="transition-colors hover:text-brand-yellow">
@@ -47,11 +47,19 @@ export default function Navbar() {
 
         <a
           href="/daftar"
-          className="col-start-3 row-start-1 inline-flex items-center gap-3 justify-self-end rounded-full bg-brand-yellow py-1.5 pr-1.5 pl-5 text-sm font-semibold text-green-deep transition-transform hover:translate-x-0.5"
+          className="col-start-3 row-start-1 inline-flex items-center gap-3 justify-self-end rounded-full bg-brand-yellow py-1.5 pr-1.5 pl-5 text-sm font-semibold text-green-deep transition-transform hover:translate-x-0.5 in-data-batal:hidden"
         >
           Daftar
           <ArrowCircle small />
         </a>
+        {/* Acara dibatalkan (body data-batal): menu beranda dan tombol Daftar diganti satu tombol ke halaman refund. */}
+        <Link
+          href="/refund"
+          className="col-start-3 row-start-1 hidden items-center gap-3 justify-self-end rounded-full bg-brand-yellow py-1.5 pr-1.5 pl-5 text-sm font-semibold text-green-deep transition-transform hover:translate-x-0.5 in-data-batal:inline-flex"
+        >
+          Refund
+          <ArrowCircle small />
+        </Link>
       </nav>
     </header>
   );
