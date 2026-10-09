@@ -44,7 +44,27 @@ export const refundAmount = (c: RefundConfig, o: { id: string; total: number }) 
 
 export const ORDER_ID_RE = /^KWR-\d{4}-[A-Z0-9]{6}$/;
 
+// Nama pemilik rekening dianggap cocok kalau berbagi dua kata dengan nama salah satu peserta di order (satu kata
+// cukup kalau salah satu namanya memang hanya satu kata). Hanya penanda untuk admin, bukan penolakan: ada peserta
+// yang memakai rekening keluarganya.
+const kata = (s: string) => s.toLowerCase().replace(/[^\p{L}\s]/gu, " ").split(/\s+/).filter((k) => k.length >= 3);
+export function namaCocok(accountName: string, peserta: string[]) {
+  const a = kata(accountName);
+  return peserta.some((p) => {
+    const b = kata(p);
+    const sama = a.filter((k) => b.includes(k)).length;
+    return sama >= Math.min(2, a.length, b.length) && sama > 0;
+  });
+}
+
+// Percobaan verifikasi yang salah dibatasi per order (bukan per IP), supaya nomor dan email tidak bisa ditebak-tebak.
+export const VERIF_MAKS = 5;
+export const VERIF_JENDELA_DETIK = 24 * 3600;
+
 export const refundSchema = z.object({
+  // Lapis kedua setelah tautan pribadi: harus sama dengan nomor WhatsApp dan email pemesan di data pendaftaran.
+  phone: z.string().trim().min(8, "Mohon isi nomor WhatsApp yang kamu pakai saat mendaftar.").max(20),
+  email: z.string().trim().toLowerCase().min(5, "Mohon isi email yang kamu pakai saat mendaftar.").max(120),
   method: z.enum(["bank", "ewallet"]),
   provider: z.string(),
   accountNumber: z.string().transform((v) => v.replace(/[\s.-]/g, "")).pipe(z.string().regex(/^\d{8,20}$/, "Nomor rekening atau nomor HP dompet berisi 8 sampai 20 angka, ya.")),
