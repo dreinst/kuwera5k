@@ -117,9 +117,9 @@ def isi_status(cfg, o):
                 f"Nominal: {rupiah(r['nominal'])}\nTujuan: {rek}\n\nDana kami transfer {PROSES}. Begitu terkirim, bukti transfernya kami kirim ke email ini.\n\n"
                 f"Status dan data rekening bisa Kakak lihat atau ubah di sini:\n{link}" + SALAM)
     if r["status"] == "PERLU_PERBAIKAN":
-        return (f"Data rekening refund order {o['id']} perlu diperbaiki",
-                sapa(o) + f"Mohon maaf, dana refund order {o['id']} belum bisa kami transfer karena data rekeningnya perlu dicek lagi.\n\n"
-                f"Catatan panitia: {r['catatan'] or 'mohon periksa lagi data rekeningnya.'}\n\nKakak bisa memperbaikinya di sini:\n{link}" + SALAM)
+        return (f"Pengajuan refund order {o['id']} perlu dilengkapi",
+                sapa(o) + f"Mohon maaf, pengajuan refund order {o['id']} perlu dilengkapi dulu sebelum dananya kami transfer.\n\n"
+                f"Catatan panitia: {r['catatan'] or 'mohon periksa lagi data rekeningnya.'}\n\nKakak bisa mengirim ulang pengajuannya di sini:\n{link}" + SALAM)
     return (f"Dana refund order {o['id']} sudah kami transfer",
             sapa(o) + f"Dana refund order {o['id']} sebesar {rupiah(r['nominal'])} sudah kami transfer ke {rek}"
             + (f" pada {tgl(r['transfer'])}" if r.get("transfer") else "") + ". Bukti transfernya terlampir di email ini.\n\n"
