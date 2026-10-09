@@ -4,6 +4,8 @@ Setting "refund" aktif. Tugas tiap putaran:
 1. Kirim tautan refund pribadi ke pemesan yang memintanya di halaman /refund (kolom Order.refundLinkAt).
 2. Kirim email sesuai status pengajuan: tanda terima, permintaan perbaikan rekening, dan bukti transfer saat selesai.
 3. Setiap ada pengajuan baru atau rekening diganti, kirim rekap rekening yang menunggu transfer ke DM Discord superadmin.
+5. Tiap 10 menit, cek email yang memantul (alamat salah atau kotak masuk penuh) dan laporkan ke DM Discord superadmin.
+   Pemberitahuan lewat WhatsApp ke pemesan itu baru dikirim setelah superadmin setuju (perintah owner 9 Okt 2026).
 4. Pengingat ke pemesan yang belum mengajukan pada hari ke-14 dan ke-25 sejak pengumuman (setelah --umumkan dijalankan).
 
 Dipasang sebagai /usr/local/bin/kuwera-email-refund. Pengirim, token Gmail, dan akses database sama dengan
@@ -14,8 +16,9 @@ kuwera-email-tiket (fungsinya dimuat dari berkas itu). Catatan kiriman ada di /v
   kuwera-email-refund --umumkan --kering tampilkan siapa yang akan dikirimi, tanpa mengirim
   kuwera-email-refund --uji A            kirim contoh pengumuman (order lunas pertama) ke alamat A, tanpa mencatat
   kuwera-email-refund --rekap            kirim rekap rekening ke DM superadmin sekarang
+  kuwera-email-refund --pantulan         cek email memantul sekarang
 """
-import base64, hashlib, hmac, json, os, sys, time, urllib.request
+import base64, hashlib, hmac, json, os, sys, time, urllib.parse, urllib.request
 from datetime import datetime, timedelta, timezone
 from email.message import EmailMessage
 from email.utils import formataddr
@@ -32,7 +35,7 @@ SALAM = f"\n\nKalau ada yang ingin ditanyakan, Kakak bisa chat panitia di WhatsA
 
 # Semua order lunas atau sudah direfund (tanpa data uji), dengan pengajuannya kalau ada. Bukti transfer diambil terpisah.
 SQL = """select coalesce(json_agg(x order by x.paid), '[]') from (
-  select o.id, o.total, o."buyerEmail" as email, o.status, o."paidAt" as paid, o."refundLinkAt" as minta,
+  select o.id, o.total, o."buyerEmail" as email, o."buyerPhone" as hp, o.status, o."paidAt" as paid, o."refundLinkAt" as minta,
          (select p."fullName" from "Participant" p where p."orderId" = o.id order by p.position limit 1) as pemesan,
          (select json_agg(t.code order by t.code) from "Ticket" t where t."orderId" = o.id) as tiket,
          (select json_build_object('status', r.status, 'nominal', r.amount, 'metode', r.method, 'bank', r.provider, 'nomor', r."accountNumber",
@@ -145,6 +148,11 @@ def rekap(semua, cfg):
         else:
             kini += "\n\n" + b
     pesan.append(kini)
+    dm_superadmin(pesan)
+    print("rekap terkirim ke DM superadmin,", len(antre), "menunggu transfer")
+
+
+def dm_superadmin(pesan):
     env = dict(l.strip().split("=", 1) for l in open(T.BOT_ENV) if "=" in l and not l.startswith("#"))
     h = {"Authorization": "Bot " + env["DISCORD_BOT_TOKEN"].strip('"'), "User-Agent": "DiscordBot (dpro-ops, 1.0)", "Content-Type": "application/json"}
     pos = lambda url, data: json.loads(urllib.request.urlopen(urllib.request.Request(url, data=json.dumps(data).encode(), headers=h), timeout=30).read())
@@ -152,7 +160,33 @@ def rekap(semua, cfg):
     for p in pesan:
         pos(f"https://discord.com/api/v10/channels/{dm}/messages", {"content": p, "allowed_mentions": {"users": [SUPERADMIN]}, "flags": 4})
         time.sleep(1)
-    print("rekap terkirim ke DM superadmin,", len(antre), "menunggu transfer")
+
+
+def pantulan(semua, cfg, s):
+    """Email refund yang memantul: cocokkan alamat gagalnya dengan pemesan, lapor sekali per email pantulan."""
+    token = T.akses()
+    g = lambda u: json.loads(urllib.request.urlopen(urllib.request.Request("https://gmail.googleapis.com/gmail/v1/users/me/" + u, headers={"Authorization": f"Bearer {token}"}), timeout=30).read())
+    sejak = int(datetime.fromisoformat(cfg["diumumkan"].replace("Z", "")).replace(tzinfo=timezone.utc).timestamp()) if cfg.get("diumumkan") else 0
+    q = urllib.parse.quote(f"from:(mailer-daemon OR postmaster) after:{sejak}")
+    butir = []
+    for m in g("messages?q=" + q).get("messages", []):
+        if m["id"] in s["pantul"]:
+            continue
+        d = g(f"messages/{m['id']}?format=full")
+        bagian, teks = [d["payload"]], d.get("snippet", "")
+        while bagian:  # kumpulkan semua teks di badan email pantulan
+            b = bagian.pop()
+            bagian += b.get("parts", [])
+            if b.get("body", {}).get("data"):
+                teks += " " + base64.urlsafe_b64decode(b["body"]["data"] + "==").decode("utf-8", "replace")
+        kena = [o for o in semua if o["email"].lower() in teks.lower()]
+        s["pantul"][m["id"]] = [o["id"] for o in kena]
+        butir += [f"- {o['pemesan']} · order {o['id']} · {o['email']} · HP {o['hp']} · {'sudah mengajukan' if o['r'] else 'belum mengajukan'}\n  Tautan: {tautan(cfg, o['id'])}" for o in kena]
+    if butir:
+        dm_superadmin([f"<@{SUPERADMIN}> KUWERA refund: email ke pemesan berikut MEMANTUL, jadi tautan refundnya belum sampai.\n\n" + "\n".join(butir)
+                       + "\n\nBalas \"setuju\" kalau pemberitahuan boleh dikirim lewat WhatsApp ke mereka, dari nomor yang dulu mereka hubungi (perintah Om Doni). Atau balaskan sendiri tautan di atas."])
+    json.dump(s, open(STATE, "w"))
+    print("pantulan baru:", len(butir))
 
 
 def main():
@@ -168,8 +202,16 @@ def main():
         return rekap(semua, cfg)
     os.makedirs(os.path.dirname(STATE), exist_ok=True)
     s = json.load(open(STATE)) if os.path.exists(STATE) else {}
-    for k in ("umum", "tautan", "status", "ingat"):
+    for k in ("umum", "tautan", "status", "ingat", "pantul"):
         s.setdefault(k, {})
+
+    if "--pantulan" in a or (not a and datetime.now().minute % 10 == 0):
+        try:
+            pantulan(semua, cfg, s)
+        except Exception as e:
+            print("GAGAL pantulan", e)
+        if a:
+            return
 
     # Antrean email putaran ini: (kelompok catatan, kunci, nilai, order, pembuat isi, perlu lampiran)
     antre = []
