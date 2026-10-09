@@ -13,6 +13,7 @@ const LINKS = [
   { href: "/kuweraadmin/regulang", label: "Reg ulang", roles: SCAN },
   { href: "/kuweraadmin/superadmin", label: "Superadmin", roles: SUPER },
   { href: "/kuweraadmin/kudam", label: "Anggota Kudam", roles: SUPER },
+  { href: "/kuweraadmin/refund", label: "Refund", roles: SUPER },
   { href: "/kuweraadmin/harga", label: "Harga", roles: SUPER },
   { href: "/kuweraadmin/penarikan", label: "Penarikan GoPay", roles: SUPER },
   { href: "/kuweraadmin/cocok", label: "Cocokkan GoPay", roles: SUPER },

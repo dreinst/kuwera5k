@@ -6,7 +6,7 @@ import { siteName, siteUrl } from "@/lib/site";
 // FAQPage (isinya sama dengan FAQ yang tampil). Harga event mengikuti aturan Google: harga terendah termasuk
 // biaya wajib, jadi tiket ditambah biaya layanan termurah. Kalau biaya layanan di tabel Setting diubah, angka
 // ini baru ikut setelah deploy ulang. `remaining` = sisa kuota dari database (null sebelum go-live), `price` = harga tiket yang berlaku.
-export function homeJsonLd(remaining: number | null, price: number) {
+export function homeJsonLd(remaining: number | null, price: number, batal = false) {
   const lowestFee = Math.min(...Object.values(DEFAULT_FEES));
   const v = eventData.venue;
   const start = new Date(eventData.startIso);
@@ -25,7 +25,7 @@ export function homeJsonLd(remaining: number | null, price: number) {
     startDate: eventData.startIso,
     // Selesai = start + batas waktu lari, sama dengan tombol Tambah ke kalender di hero.
     endDate: new Date(start.getTime() + route.cutOffMinutes * 60_000).toISOString(),
-    eventStatus: "https://schema.org/EventScheduled",
+    eventStatus: batal ? "https://schema.org/EventCancelled" : "https://schema.org/EventScheduled",
     eventAttendanceMode: "https://schema.org/OfflineEventAttendanceMode",
     inLanguage: "id-ID",
     location: {

@@ -12,6 +12,7 @@ import { homeJsonLd } from "@/lib/structured-data";
 import { pageMeta } from "@/lib/site";
 import { getPublicStats, isLive, paymentMode } from "@/lib/orders";
 import { eventData, remainingQuota } from "@/lib/event-data";
+import { refundAktif } from "@/lib/refund";
 import { DEFAULT_PRICING, currentPrice, getPricing, isOpen, nextPromoAt, promoEndsAt } from "@/lib/pricing";
 
 export const metadata: Metadata = pageMeta("/");
@@ -31,7 +32,7 @@ export default async function Home() {
   const price = currentPrice(pricing);
   return (
     <div className="flex flex-1 flex-col">
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: homeJsonLd(live ? stats?.remaining ?? null : null, price.price) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: homeJsonLd(live ? stats?.remaining ?? null : null, price.price, await refundAktif()) }} />
       <Navbar />
       <main className="flex flex-1 flex-col">
         <Hero stats={stats} price={price} promoEnd={promoEndsAt(pricing)}
