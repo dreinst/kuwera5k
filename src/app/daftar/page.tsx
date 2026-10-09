@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { pageMeta } from "@/lib/site";
 import Navbar from "@/components/sections/Navbar";
 import Footer from "@/components/sections/Footer";
@@ -6,6 +7,7 @@ import RegistrationForm from "@/components/registration/RegistrationForm";
 import { getOpenCategories, getSettings, paymentMode, trackCheckout } from "@/lib/orders";
 import { getPricing, isOpen, nextPromoAt } from "@/lib/pricing";
 import { prisma } from "@/lib/db";
+import { refundAktif } from "@/lib/refund";
 
 export const dynamic = "force-dynamic";
 
@@ -18,11 +20,11 @@ export const metadata: Metadata = {
 
 export default async function DaftarPage() {
   const now = new Date();
-  const [categories, settings, pricing, promoCount] = await Promise.all([
-    getOpenCategories(), getSettings(), getPricing(),
+  const [categories, settings, pricing, batal, promoCount] = await Promise.all([
+    getOpenCategories(), getSettings(), getPricing(), refundAktif(),
     prisma.promoCode.count({ where: { isActive: true, validFrom: { lte: now }, validUntil: { gt: now } } }),
   ]);
-  const closed = !isOpen(pricing);
+  const closed = batal || !isOpen(pricing);
   const opensAt = closed && pricing.open && pricing.openAt ? new Date(pricing.openAt) : null;
   const mode = paymentMode();
   const promoNext = nextPromoAt(pricing, now);
@@ -35,7 +37,9 @@ export default async function DaftarPage() {
           Daftar <span className="text-brand-yellow">KUWERA 5K</span>
         </h1>
         <p className="mt-3 max-w-xl text-white/70">
-          {closed
+          {batal
+            ? "Mohon maaf, KUWERA Fun Run 5K 2026 batal diselenggarakan, jadi pendaftaran kami tutup."
+            : closed
             ? "Sambil menunggu, yuk siapkan kartu identitas (KTP atau KIA), kontak darurat, dan ukuran jersey kamu, ya."
             : "Cukup empat langkah, sekitar tiga menit. Tenang saja, isianmu tersimpan otomatis di perangkat ini selama 24 jam."}
         </p>
@@ -47,7 +51,13 @@ export default async function DaftarPage() {
           </p>
         )}
         <div className="mt-8">
-          {closed ? (
+          {batal ? (
+            <div className="rounded-[20px] border border-glass-border bg-card p-8 text-center">
+              <p className="font-display text-2xl text-brand-yellow uppercase">Acara dibatalkan</p>
+              <p className="mt-2 text-white/75">Kalau kamu sudah mendaftar dan membayar, uang pendaftaranmu kami kembalikan 100%.</p>
+              <Link href="/refund" className="mt-5 inline-block rounded-full bg-brand-yellow px-6 py-2.5 text-sm font-semibold text-green-deep">Ajukan refund</Link>
+            </div>
+          ) : closed ? (
             <div className="rounded-[20px] border border-glass-border bg-card p-8 text-center">
               <p className="font-display text-2xl text-brand-yellow uppercase">{opensAt ? "Pendaftaran segera dibuka" : "Pendaftaran sedang ditutup"}</p>
               <p className="mt-2 text-white/75">

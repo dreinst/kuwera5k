@@ -57,6 +57,8 @@ model Order {
   uniqueCode  Int         @default(0) // kode unik 3 digit di akhir nominal (bayar manual QRIS)
   waNotifiedAt    DateTime? // bot WA sudah mengirim tautan tiket ke pemesan
   adminNotifiedAt DateTime? // superadmin sudah dikabari lewat Telegram
+  refundLinkAt DateTime? // pemesan meminta tautan refund lewat /refund; skrip email di VPS yang mengirimkannya
+  refund      RefundRequest?
   participants Participant[]
   payments    Payment[]
   proofs      PaymentProof[]
@@ -125,6 +127,27 @@ model PaymentProof {
   createdAt DateTime @default(now())
 
   @@index([orderId])
+}
+
+// Pengajuan refund karena acara dibatalkan (9 Okt 2026), satu baris per order. Nominal dihitung server dari order,
+// tidak pernah diisi peserta atau admin. Setelah superadmin mengunggah bukti transfer, status SELESAI dan order REFUNDED.
+model RefundRequest {
+  orderId       String    @id
+  order         Order     @relation(fields: [orderId], references: [id])
+  amount        Int
+  method        String // "bank" | "ewallet"
+  provider      String // nama bank atau dompet digital
+  accountNumber String
+  accountName   String
+  status        String    @default("DIAJUKAN") // DIAJUKAN | PERLU_PERBAIKAN | SELESAI
+  note          String? // alasan saat admin meminta perbaikan data rekening
+  submittedAt   DateTime  @default(now())
+  transferredAt DateTime?
+  processedBy   String? // username admin yang menandai sudah ditransfer
+  proofName     String?
+  proofMime     String?
+  proofData     Bytes? // bukti transfer, bisa diunduh peserta di halaman status
+  updatedAt     DateTime  @updatedAt
 }
 
 model Ticket {

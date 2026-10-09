@@ -10,6 +10,8 @@ import MidtransPanel from "@/components/admin/MidtransPanel";
 import RacepackButton from "@/components/admin/RacepackButton";
 import ManualPayPanel from "@/components/admin/ManualPayPanel";
 import { MANUAL_GATEWAY, expireStaleOrders } from "@/lib/orders";
+import { SalinTautan } from "@/components/admin/RefundAksi";
+import { getRefund, refundAmount, refundLink } from "@/lib/refund";
 
 export const metadata: Metadata = { title: "Detail peserta" };
 export const dynamic = "force-dynamic";
@@ -50,6 +52,8 @@ export default async function PesertaDetailPage({ params }: { params: Promise<{ 
   const manualOrder = order.uniqueCode > 0 || order.source === "kudam" || order.payments.some((x) => x.gateway === MANUAL_GATEWAY);
   const verifiedBy = (order.payments.find((x) => x.gateway === MANUAL_GATEWAY)?.rawPayload as { verifiedBy?: string } | undefined)?.verifiedBy;
   const method = PAYMENT_METHODS.find((m) => m.id === order.paymentMethod)?.label ?? order.paymentMethod;
+  // Refund pembatalan: tautan pribadi untuk dibalaskan ke pemesan di chat (khusus superadmin).
+  const refund = allowed(admin.role, SUPER) && (order.status === "PAID" || order.status === "REFUNDED") ? await getRefund() : null;
   const usesMidtrans = !!order.snapToken || order.payments.some((x) => x.gateway.startsWith("midtrans"));
 
   return (
@@ -137,6 +141,18 @@ export default async function PesertaDetailPage({ params }: { params: Promise<{ 
               </div>
             )}
           </Section>
+
+          {refund && (
+            <Section title="Refund">
+              <p className="mb-4 text-sm text-white/85">
+                {order.status === "REFUNDED"
+                  ? "Dana order ini sudah dikembalikan."
+                  : `Acara dibatalkan. Dana yang dikembalikan ke pemesan ${formatRupiah(refundAmount(refund, order))}. Balaskan tautan ini di chat supaya pemesan bisa mengisi rekening tujuannya.`}
+                {" "}<Link href="/kuweraadmin/refund" className="text-brand-yellow underline">Buka daftar refund</Link>
+              </p>
+              <SalinTautan link={refundLink(refund, order.id)} />
+            </Section>
+          )}
 
           {(manualOrder || order.proofs.length > 0) && (
             <Section title="Bukti bayar">
