@@ -145,6 +145,8 @@ export const orderInputSchema = z.object({
   promoCode: z.string().trim().toUpperCase().max(30).optional().or(z.literal("")),
   paymentMethod: z.enum(PAYMENT_METHOD_IDS, { message: "Metode pembayarannya belum dipilih" }),
   agreeTerms: z.literal(true, { message: "Syarat dan ketentuannya perlu disetujui dulu, ya" }),
+  // Penanda iklan dari tautan; isian yang tidak wajar dibuang supaya tidak menggagalkan pendaftaran.
+  ref: z.string().trim().regex(/^[\w.-]{1,40}$/).optional().catch(undefined),
 });
 export type OrderInput = z.infer<typeof orderInputSchema>;
 
