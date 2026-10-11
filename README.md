@@ -1,12 +1,12 @@
 # KUWERA 5K
 
-Website resmi fun run KUWERA 5K di Malang: landing page, pendaftaran peserta dengan pembayaran lewat Midtrans, dan e-ticket otomatis. Live di https://kuwera5k.vercel.app.
+Website resmi fun run KUWERA 5K di Malang: landing page, pendaftaran peserta dengan pembayaran lewat Midtrans, dan e-ticket otomatis. Live di https://kuwera.dpro.events.
 
 Dokumen kebutuhan lengkap ada di `docs/PRD.md`, termasuk status implementasi terbaru di bagian 12.
 
 ## Stack
 
-Next.js 16 (App Router), Tailwind CSS 4, framer-motion, Prisma 7 dengan PostgreSQL 16. Frontend di Vercel, database di VPS panitia lewat Coolify.
+Next.js 16 (App Router), Tailwind CSS 4, framer-motion, Prisma 7 dengan PostgreSQL 16. Aplikasi dan database di VPS panitia lewat Coolify.
 
 ## Struktur folder
 

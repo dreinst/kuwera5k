@@ -1,10 +1,6 @@
 // Alamat publik situs untuk canonical, Open Graph, sitemap, dan data terstruktur.
-// Di Vercel produksi terisi otomatis dari domain produksi (ikut pindah kalau nanti domain sendiri dipasang);
-// bisa ditimpa lewat NEXT_PUBLIC_SITE_URL.
-export const siteUrl = (
-  process.env.NEXT_PUBLIC_SITE_URL ||
-  (process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : "https://kuwera5k.vercel.app")
-).replace(/\/$/, "");
+// Bisa ditimpa lewat NEXT_PUBLIC_SITE_URL.
+export const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || "https://kuwera.dpro.events").replace(/\/$/, "");
 
 export const siteName = "KUWERA Fun Run 5K Malang";
 

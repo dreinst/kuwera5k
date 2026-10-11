@@ -6,7 +6,7 @@ const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
 
 // TLS ke Postgres: kalau DB_SSL_CA berisi sertifikat CA (PEM), koneksi dienkripsi dan sertifikat server wajib
 // ditandatangani CA itu. Sertifikat buatan Coolify memuat nama resource database, bukan IP publik server, jadi
-// saat terhubung lewat IP (dari Vercel) nama yang dicocokkan diambil dari DB_SSL_SERVERNAME; di dalam VPS
+// saat terhubung lewat IP nama yang dicocokkan diambil dari DB_SSL_SERVERNAME; di dalam VPS
 // host-nya memang nama resource itu dan pengecekan biasa berlaku. DATABASE_URL tidak boleh memuat sslmode:
 // parameter di URL mengalahkan pengaturan ssl di sini. Tanpa DB_SSL_CA koneksi tetap seperti URL-nya.
 export function dbSsl() {

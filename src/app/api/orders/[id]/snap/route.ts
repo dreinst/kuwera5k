@@ -27,8 +27,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   }
 
   // Alamat kembali dari Midtrans memakai alamat situs sendiri, bukan header Origin yang bisa dipalsukan.
-  // Di luar production (lokal, preview) alamat asal permintaan dipakai supaya uji tetap kembali ke tempatnya.
-  const origin = process.env.VERCEL_ENV === "production" ? siteUrl : new URL(req.url).origin;
+  // Di luar production (lokal) alamat asal permintaan dipakai supaya uji tetap kembali ke tempatnya.
+  const origin = process.env.NODE_ENV === "production" ? siteUrl : new URL(req.url).origin;
   try {
     const snap = await createSnapToken({
       id: order.id, subtotal: order.subtotal, discount: order.discount, fee: order.fee, total: order.total,

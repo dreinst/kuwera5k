@@ -13,7 +13,7 @@
 const fs = require('node:fs');
 
 const BOOKING_RE = /BK-[0-9A-F]{10}/i;
-const API = (process.env.DRIVETECH_URL || 'https://drive-tech-sigma.vercel.app').replace(/\/$/, '');
+const API = (process.env.DRIVETECH_URL || 'https://drivetech.dpro.events').replace(/\/$/, '');
 const KEY = process.env.DRIVETECH_BOT_KEY || '';
 const CHAT_FILE = process.env.DRIVETECH_CHAT_FILE || '/data/drivetech-chat.json'; // jid -> kode booking terakhir yang dibahas di chat itu
 

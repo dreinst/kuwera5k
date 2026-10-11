@@ -25,7 +25,7 @@ const pino = require('pino');
 const QRCode = require('qrcode');
 
 const logger = pino({ level: 'info' });
-const SITE_URL = (process.env.SITE_URL || 'https://kuwera5k.vercel.app').replace(/\/$/, '');
+const SITE_URL = (process.env.SITE_URL || 'https://kuwera.dpro.events').replace(/\/$/, '');
 const PAIRING_PHONE = (process.env.PAIRING_PHONE || '').replace(/\D/g, '');
 const TG_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '';
 const TG_CHAT = process.env.TELEGRAM_CHAT_ID || '';

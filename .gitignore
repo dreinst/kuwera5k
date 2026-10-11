@@ -34,8 +34,6 @@ yarn-error.log*
 .env*
 !.env.example
 
-# vercel
-.vercel
 
 # aset referensi desain (video/berat, potensi bukan milik sendiri; repo ini public)
 /docs/design-reference/

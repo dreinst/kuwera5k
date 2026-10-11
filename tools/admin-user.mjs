@@ -30,6 +30,6 @@ const existing = await prisma.adminUser.findUnique({ where: { username } });
 if (existing) await prisma.adminUser.update({ where: { username }, data: { ...data, sessionVersion: { increment: 1 } } });
 else await prisma.adminUser.create({ data: { username, ...data } });
 await prisma.$disconnect();
-const site = (process.env.NEXT_PUBLIC_SITE_URL || "https://kuwera5k.vercel.app").replace(/\/$/, "");
+const site = (process.env.NEXT_PUBLIC_SITE_URL || "https://kuwera.dpro.events").replace(/\/$/, "");
 console.log(`${existing ? "Akun direset" : "Akun dibuat"}: ${username} (${role})`);
 console.log(`Link atur kata sandi (sekali pakai, berlaku 24 jam):\n${site}/kuweraadmin/setup?token=${token}`);
