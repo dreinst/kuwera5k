@@ -2,8 +2,38 @@
 
 import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { refundPerbaikanAction } from "@/app/kuweraadmin/refund-actions";
+import { refundManualAction, refundPerbaikanAction } from "@/app/kuweraadmin/refund-actions";
 import { inputCls } from "@/components/admin/LoginForm";
+import { REFUND_METHODS, REFUND_PROVIDERS, type RefundMethod } from "@/lib/refund-shared";
+
+// Rekening dari chat WhatsApp untuk pemesan yang tidak mengisi tautan refund.
+export function RefundManual({ orderId }: { orderId: string }) {
+  const router = useRouter();
+  const [buka, setBuka] = useState(false);
+  const [method, setMethod] = useState<RefundMethod>("bank");
+  const [pesan, setPesan] = useState("");
+  const [pending, start] = useTransition();
+  if (!buka) return <button type="button" onClick={() => setBuka(true)} className="rounded-full bg-brand-yellow px-4 py-1.5 text-sm font-semibold text-green-deep">Isi rekening manual</button>;
+  const simpan = (f: FormData) => start(async () => {
+    const r = await refundManualAction(orderId, { method, provider: String(f.get("provider")), accountNumber: String(f.get("nomor")), accountName: String(f.get("nama")) });
+    setPesan(r.error ?? r.ok ?? "");
+    if (r.ok) router.refresh();
+  });
+  return (
+    <form action={simpan} className="grid gap-3 sm:grid-cols-4">
+      <select value={method} onChange={(e) => setMethod(e.target.value as RefundMethod)} aria-label="Jenis" className={`${inputCls} py-2 text-sm`}>
+        {Object.entries(REFUND_METHODS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+      </select>
+      <select name="provider" key={method} aria-label="Bank atau dompet" className={`${inputCls} py-2 text-sm`}>
+        {REFUND_PROVIDERS[method].map((p) => <option key={p}>{p}</option>)}
+      </select>
+      <input name="nomor" required inputMode="numeric" placeholder="Nomor rekening" aria-label="Nomor rekening" className={`${inputCls} py-2 text-sm`} />
+      <input name="nama" required placeholder="Atas nama" aria-label="Atas nama" className={`${inputCls} py-2 text-sm`} />
+      <button disabled={pending} className="rounded-full bg-brand-yellow px-5 py-2 text-sm font-semibold text-green-deep disabled:opacity-60">{pending ? "Menyimpan..." : "Simpan rekening"}</button>
+      {pesan && <p className="text-sm text-brand-yellow sm:col-span-3">{pesan}</p>}
+    </form>
+  );
+}
 
 export function SalinTautan({ link }: { link: string }) {
   const [pesan, setPesan] = useState("");
