@@ -5,7 +5,7 @@ import { fmtDateTime } from "@/lib/admin-data";
 import { prisma } from "@/lib/db";
 import { formatRupiah } from "@/lib/registration";
 import { REFUND_STATUS_LABEL, getRefund, namaCocok, refundAmount, refundBatas, refundLink, tglPanjang, type RefundStatus } from "@/lib/refund";
-import RefundAksi, { SalinTautan } from "@/components/admin/RefundAksi";
+import RefundAksi, { RefundManual, SalinTautan } from "@/components/admin/RefundAksi";
 
 export const metadata: Metadata = { title: "Refund" };
 export const dynamic = "force-dynamic";
@@ -109,7 +109,12 @@ export default async function RefundAdminPage() {
               )}
               {r?.dataNote && <p className="mt-4 rounded-xl border border-brand-yellow/40 bg-brand-yellow/10 px-4 py-3 text-sm whitespace-pre-line text-brand-yellow">Pemesan menandai data tiket tidak sesuai:{"\n"}{r.dataNote}</p>}
               <div className="mt-4">
-                {kelompok === "BELUM" && <SalinTautan link={refundLink(cfg, o.id)} />}
+                {kelompok === "BELUM" && (
+                  <div className="space-y-3">
+                    <SalinTautan link={refundLink(cfg, o.id)} />
+                    <RefundManual orderId={o.id} />
+                  </div>
+                )}
                 {kelompok === "DIAJUKAN" && (
                   <>
                     <p className="mb-4 text-sm text-white/75">Diajukan {fmtDateTime(r!.submittedAt)}{r!.updatedAt.getTime() - r!.submittedAt.getTime() > 60_000 ? `, rekening diperbarui ${fmtDateTime(r!.updatedAt)}` : ""}.</p>
@@ -120,6 +125,7 @@ export default async function RefundAdminPage() {
                   <div className="space-y-3 text-sm text-white/85">
                     <p>Menunggu pemesan memperbaiki rekening. Alasan: {r!.note}</p>
                     <SalinTautan link={refundLink(cfg, o.id)} />
+                    <RefundManual orderId={o.id} />
                   </div>
                 )}
                 {kelompok === "SELESAI" && (
